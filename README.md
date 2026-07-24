@@ -5,7 +5,7 @@ Rarostock e um sistema web para controle de estoque, aquisicoes e baixas de mate
 ## Funcionalidades
 
 - Cadastro de produtos de estoque com codigo automatico, categoria, unidade, tipo, marca, limite minimo e observacoes.
-- Dashboard com visao geral de saldos e alertas.
+- Dashboard com visao geral de saldos, alertas e graficos de analise mensal.
 - Pagina Produto com cadastro, busca, filtros e edicao.
 - Registro de aquisicoes com carrinho de itens, valores unitarios, total calculado e anexo de nota fiscal.
 - Upload de notas fiscais para Supabase Storage.
@@ -133,6 +133,19 @@ Arquivos importantes:
 - `src/db/schema.ts`: definicao Drizzle das tabelas.
 - `drizzle.config.ts`: configuracao do Drizzle Kit lendo `.env.local`.
 - `migrations/`: scripts SQL executaveis em ordem.
+
+## Dashboard
+
+O Dashboard exibe cards de resumo e graficos analiticos dos ultimos 12 meses:
+
+- entradas vs baixas por mes;
+- valor total de aquisicoes por mes;
+- top produtos com mais saida;
+- top produtos mais comprados;
+- status atual do estoque;
+- distribuicao de produtos por categoria.
+
+Os graficos usam a API `GET /api/dashboard/analytics` e a biblioteca `recharts`.
 
 ## Supabase Storage
 
