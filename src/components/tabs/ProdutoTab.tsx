@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { CATEGORIES, UNITS } from "@/types/stock";
 import { Toast } from "@/components/ui/Toast";
+import { ProductList } from "@/components/products/ProductList";
 
-export function CadastroTab() {
+export function ProdutoTab() {
   // Form state
   const [formName, setFormName] = useState("");
   const [formCategory, setFormCategory] = useState("");
@@ -23,6 +24,7 @@ export function CadastroTab() {
   
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; subMessage?: string } | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const addBrand = () => {
     const trimmed = brandInput.trim();
@@ -71,11 +73,12 @@ export function CadastroTab() {
     
     const data = await res.json();
     setToast({
-      message: "Item cadastrado com sucesso!",
+      message: "Produto cadastrado com sucesso!",
       subMessage: `Código: ${data.code}`,
     });
     resetForm();
     setShowOptional(false);
+    setRefreshKey((key) => key + 1);
     setSubmitting(false);
   };
 
@@ -93,9 +96,9 @@ export function CadastroTab() {
 
       {/* Header */}
       <div className="text-center lg:text-left">
-        <h2 className="text-2xl font-bold text-white">Cadastro</h2>
+        <h2 className="text-2xl font-bold text-white">Produto</h2>
         <p className="text-slate-400 text-sm mt-1">
-          Cadastre novos itens no estoque
+          Cadastre e gerencie os produtos do estoque
         </p>
       </div>
 
@@ -313,7 +316,7 @@ export function CadastroTab() {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  Cadastrar Item
+                  Cadastrar Produto
                 </>
               )}
             </button>
@@ -321,14 +324,18 @@ export function CadastroTab() {
         </form>
       </div>
 
-      {/* Help Card */}
+      <ProductList refreshKey={refreshKey} />
+
+      {false && (
+      /* Help Card */
       <div className="bg-slate-900/50 border border-slate-800/50 rounded-xl p-4 text-center lg:text-left">
         <h3 className="text-sm font-medium text-slate-400 mb-2">💡 Dica</h3>
         <p className="text-xs text-slate-500">
           O código do item (RST-XXXX) é gerado automaticamente. Após cadastrar, você pode visualizar 
-          e gerenciar todos os itens no <span className="text-blue-400">Dashboard</span>.
+          e gerenciar todos os produtos na lista abaixo.
         </p>
       </div>
+      )}
     </div>
   );
 }

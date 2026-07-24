@@ -4,8 +4,9 @@ Rarostock e um sistema web para controle de estoque, aquisicoes e baixas de mate
 
 ## Funcionalidades
 
-- Cadastro de itens de estoque com codigo automatico, categoria, unidade, tipo, marca, limite minimo e observacoes.
-- Dashboard de estoque com busca, filtros, status de saldo e exportacao CSV.
+- Cadastro de produtos de estoque com codigo automatico, categoria, unidade, tipo, marca, limite minimo e observacoes.
+- Dashboard com visao geral de saldos e alertas.
+- Pagina Produto com cadastro, busca, filtros, edicao e exportacao CSV.
 - Registro de aquisicoes com carrinho de itens, valores unitarios, total calculado e anexo de nota fiscal.
 - Upload de notas fiscais para Supabase Storage.
 - Registro de baixas de estoque com motivo e validacao de saldo disponivel.

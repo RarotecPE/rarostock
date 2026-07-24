@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback, type ReactNode } from "react";
-import { CadastroTab } from "@/components/tabs/CadastroTab";
+import { ProdutoTab } from "@/components/tabs/ProdutoTab";
 import { AquisicaoTab } from "@/components/tabs/AquisicaoTab";
 import { BaixaTab } from "@/components/tabs/BaixaTab";
 import { DashboardTab } from "@/components/tabs/DashboardTab";
 import { Item, getStockStatus, formatMinimumLimit } from "@/types/stock";
 
-type Tab = "cadastro" | "aquisicao" | "baixa" | "dashboard";
+type Tab = "produto" | "aquisicao" | "baixa" | "dashboard";
 
 const tabs: { key: Tab; label: string; icon: ReactNode }[] = [
   {
@@ -20,11 +20,11 @@ const tabs: { key: Tab; label: string; icon: ReactNode }[] = [
     ),
   },
   {
-    key: "cadastro",
-    label: "Cadastro",
+    key: "produto",
+    label: "Produto",
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7.5l-8-4-8 4m16 0l-8 4m8-4v9l-8 4m0-9l-8-4m8 4v9m-8-13v9l8 4" />
       </svg>
     ),
   },
@@ -292,7 +292,7 @@ export default function HomePage() {
         {/* Main Content */}
         <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-6">
           {activeTab === "dashboard" && <DashboardTab />}
-          {activeTab === "cadastro" && <CadastroTab />}
+          {activeTab === "produto" && <ProdutoTab />}
           {activeTab === "aquisicao" && <AquisicaoTab />}
           {activeTab === "baixa" && <BaixaTab />}
         </main>
