@@ -3,8 +3,17 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "RaroStock — Gestão de Estoque",
-  description: "Plataforma de controle interno e gestão de processos operacionais de estoque.",
+  title: "RaroStock - Gestao de Estoque",
+  description:
+    "Plataforma de controle interno e gestao de processos operacionais de estoque.",
+  icons: {
+    icon: [
+      { url: "/icon.svg?v=2", type: "image/svg+xml" },
+      { url: "/favicon.ico?v=2", sizes: "any" },
+    ],
+    shortcut: "/favicon.ico?v=2",
+    apple: "/rarostock-logo.svg?v=2",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

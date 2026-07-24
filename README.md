@@ -145,6 +145,22 @@ src/app/api/upload/route.ts
 
 Se o bucket for publico, a API retorna uma URL publica. Se o bucket for privado, a API cria uma URL assinada.
 
+## Identidade Visual
+
+O logo principal do sistema fica em:
+
+```text
+public/rarostock-logo.svg
+```
+
+O favicon do app fica em:
+
+```text
+src/app/icon.svg
+```
+
+Ao atualizar a marca, substitua os dois arquivos para manter menu principal e favicon alinhados.
+
 ## Atualizando Este README
 
 Atualize este documento sempre que houver:

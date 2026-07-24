@@ -115,11 +115,11 @@ export default function HomePage() {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-800">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
-            </div>
+            <img
+              src="/rarostock-logo.svg"
+              alt="RaroStock"
+              className="w-11 h-11 rounded-xl bg-white object-contain"
+            />
             <div>
               <h1 className="text-xl font-bold text-white tracking-tight">
                 Raro<span className="text-blue-400">Stock</span>
@@ -182,11 +182,11 @@ export default function HomePage() {
 
             {/* Mobile logo */}
             <div className="lg:hidden flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              </div>
+              <img
+                src="/rarostock-logo.svg"
+                alt="RaroStock"
+                className="w-9 h-9 rounded-lg bg-white object-contain"
+              />
               <span className="text-lg font-bold text-white">
                 Raro<span className="text-blue-400">Stock</span>
               </span>
