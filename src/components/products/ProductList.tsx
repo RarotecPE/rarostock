@@ -10,8 +10,6 @@ import {
 import { StatusBadge, TypeBadge } from "@/components/ui/Badge";
 import { ItemDetailModal } from "@/components/modals/ItemDetailModal";
 
-const PER_PAGE_OPTIONS = [5, 10, 20, 50, 0] as const;
-
 type SortField =
   | "code"
   | "name"
@@ -33,8 +31,6 @@ export function ProductList({ refreshKey = 0 }: ProductListProps) {
   const [typeFilter, setTypeFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [perPage, setPerPage] = useState<number>(10);
-  const [page, setPage] = useState(1);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [sortField, setSortField] = useState<SortField>("code");
@@ -154,52 +150,23 @@ export function ProductList({ refreshKey = 0 }: ProductListProps) {
     return cats;
   }, [items]);
 
-  const totalPages =
-    perPage === 0 ? 1 : Math.max(1, Math.ceil(filtered.length / perPage));
-  const paginated =
-    perPage === 0 ? filtered : filtered.slice((page - 1) * perPage, page * perPage);
   const activeFiltersCount = [typeFilter, categoryFilter, statusFilter].filter(Boolean).length;
-
-  const resetPage = () => {
-    setPage(1);
-  };
-
-  const handleExportCSV = () => {
-    const params = new URLSearchParams();
-    if (search) params.set("search", search);
-    if (typeFilter) params.set("type", typeFilter);
-    if (categoryFilter) params.set("category", categoryFilter);
-    if (statusFilter) params.set("status", statusFilter);
-    window.open(`/api/export?${params}`, "_blank");
-  };
 
   const clearFilters = () => {
     setTypeFilter("");
     setCategoryFilter("");
     setStatusFilter("");
-    resetPage();
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-center sm:items-center justify-between gap-4">
-        <div className="text-center lg:text-left">
-          <h3 className="text-lg font-semibold text-white">
-            Produtos cadastrados
-          </h3>
-          <p className="text-slate-400 text-sm mt-1">
-            Consulte, filtre e edite os produtos do estoque
-          </p>
-        </div>
-        <button
-          onClick={handleExportCSV}
-          className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition-colors"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          Exportar CSV
-        </button>
+      <div className="text-center lg:text-left">
+        <h3 className="text-lg font-semibold text-white">
+          Produtos cadastrados
+        </h3>
+        <p className="text-slate-400 text-sm mt-1">
+          Consulte, filtre e edite os produtos do estoque
+        </p>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -209,10 +176,7 @@ export function ProductList({ refreshKey = 0 }: ProductListProps) {
           </svg>
           <input
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              resetPage();
-            }}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por nome ou codigo..."
             className="w-full pl-9 pr-3 py-2.5 bg-slate-900/90 border border-slate-800 rounded-lg text-white text-sm placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none"
           />
@@ -253,10 +217,7 @@ export function ProductList({ refreshKey = 0 }: ProductListProps) {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <select
               value={typeFilter}
-              onChange={(e) => {
-                setTypeFilter(e.target.value);
-                resetPage();
-              }}
+              onChange={(e) => setTypeFilter(e.target.value)}
               className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
             >
               <option value="">Todos os Tipos</option>
@@ -265,10 +226,7 @@ export function ProductList({ refreshKey = 0 }: ProductListProps) {
             </select>
             <select
               value={categoryFilter}
-              onChange={(e) => {
-                setCategoryFilter(e.target.value);
-                resetPage();
-              }}
+              onChange={(e) => setCategoryFilter(e.target.value)}
               className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
             >
               <option value="">Todas as Categorias</option>
@@ -280,10 +238,7 @@ export function ProductList({ refreshKey = 0 }: ProductListProps) {
             </select>
             <select
               value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                resetPage();
-              }}
+              onChange={(e) => setStatusFilter(e.target.value)}
               className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
             >
               <option value="">Todos os Status</option>
@@ -346,7 +301,7 @@ export function ProductList({ refreshKey = 0 }: ProductListProps) {
                 </tr>
               </thead>
               <tbody>
-                {paginated.map((item) => (
+                {filtered.map((item) => (
                   <tr
                     key={item.id}
                     onClick={() => setSelectedItem(item)}
@@ -372,7 +327,7 @@ export function ProductList({ refreshKey = 0 }: ProductListProps) {
           </div>
 
           <div className="lg:hidden space-y-3">
-            {paginated.map((item) => (
+            {filtered.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setSelectedItem(item)}
@@ -397,38 +352,6 @@ export function ProductList({ refreshKey = 0 }: ProductListProps) {
             ))}
           </div>
 
-          {perPage > 0 && (
-            <div className="flex items-center justify-between text-xs">
-              <select
-                value={perPage}
-                onChange={(e) => {
-                  setPerPage(parseInt(e.target.value));
-                  resetPage();
-                }}
-                className="px-2 py-1 bg-slate-800 border border-slate-700 rounded text-slate-300 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
-              >
-                {PER_PAGE_OPTIONS.map((n) => (
-                  <option key={n} value={n}>
-                    {n === 0 ? "Todos" : `${n}/pag`}
-                  </option>
-                ))}
-              </select>
-
-              {totalPages > 1 && (
-                <div className="flex items-center gap-1">
-                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 disabled:opacity-40 disabled:hover:bg-slate-800">
-                    {"<"}
-                  </button>
-                  <span className="px-2 text-slate-500">
-                    {page} / {totalPages}
-                  </span>
-                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 disabled:opacity-40 disabled:hover:bg-slate-800">
-                    {">"}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
         </>
       )}
 
