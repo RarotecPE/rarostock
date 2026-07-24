@@ -355,12 +355,14 @@ export function ProductList({ refreshKey = 0 }: ProductListProps) {
                     <td className="px-4 py-3 font-mono text-blue-400 text-xs">{item.code}</td>
                     <td className="px-4 py-3 text-white">{item.name}</td>
                     <td className="px-4 py-3 text-slate-300">{item.category}</td>
-                    <td className="px-4 py-3"><TypeBadge type={item.type} /></td>
+                    <td className="px-4 py-3 min-w-36">
+                      <TypeBadge type={item.type} />
+                    </td>
                     <td className="px-4 py-3 text-center text-white">{item.quantity}</td>
                     <td className="px-4 py-3 text-center text-slate-400">
                       {formatMinimumLimit(item.minimumLimit)}
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3 text-center min-w-40">
                       <StatusBadge quantity={item.quantity} minimumLimit={item.minimumLimit} />
                     </td>
                   </tr>

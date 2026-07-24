@@ -16,7 +16,9 @@ export function StatusBadge({
         ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
         : "bg-rose-500/15 text-rose-300 border border-rose-500/30";
   return (
-    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}`}>
+    <span
+      className={`inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}`}
+    >
       {status}
     </span>
   );
@@ -28,7 +30,9 @@ export function TypeBadge({ type }: { type: string }) {
       ? "bg-blue-500/15 text-blue-300 border border-blue-500/30"
       : "bg-sky-500/15 text-sky-300 border border-sky-500/30";
   return (
-    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}`}>
+    <span
+      className={`inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}`}
+    >
       {type}
     </span>
   );
