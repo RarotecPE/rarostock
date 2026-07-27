@@ -66,11 +66,15 @@ export function BaixaTab() {
   }, []);
 
   useEffect(() => {
-    fetchItems();
+    const initialFetch = setTimeout(fetchItems, 0);
+
+    return () => clearTimeout(initialFetch);
   }, [fetchItems]);
 
   useEffect(() => {
-    fetchIssues();
+    const initialFetch = setTimeout(fetchIssues, 0);
+
+    return () => clearTimeout(initialFetch);
   }, [fetchIssues]);
 
   const filteredItems = useMemo(() => {

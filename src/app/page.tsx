@@ -87,9 +87,12 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    fetchAlerts();
+    const initialFetch = setTimeout(fetchAlerts, 0);
     const interval = setInterval(fetchAlerts, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(initialFetch);
+      clearInterval(interval);
+    };
   }, [fetchAlerts]);
 
   const unavailableCount = alertItems.filter((a) => a.status === "Indisponível").length;
@@ -114,7 +117,15 @@ export default function HomePage() {
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-800">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("dashboard");
+              setSidebarOpen(false);
+            }}
+            className="w-full flex items-center gap-3 px-5 py-5 border-b border-slate-800 text-left transition-colors hover:bg-slate-800/40"
+            aria-label="Voltar para o Dashboard"
+          >
             <img
               src="/rarostock-logo.svg"
               alt="RaroStock"
@@ -126,7 +137,7 @@ export default function HomePage() {
               </h1>
               <p className="text-xs text-slate-500">Gestão de Estoque</p>
             </div>
-          </div>
+          </button>
 
           {/* Navigation */}
           <nav className="flex-1 px-3 py-4 space-y-1">
@@ -181,7 +192,15 @@ export default function HomePage() {
             </div>
 
             {/* Mobile logo */}
-            <div className="lg:hidden flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("dashboard");
+                setSidebarOpen(false);
+              }}
+              className="lg:hidden flex items-center gap-2 rounded-lg px-2 py-1 transition-colors hover:bg-slate-800"
+              aria-label="Voltar para o Dashboard"
+            >
               <img
                 src="/rarostock-logo.svg"
                 alt="RaroStock"
@@ -190,7 +209,7 @@ export default function HomePage() {
               <span className="text-lg font-bold text-white">
                 Raro<span className="text-blue-400">Stock</span>
               </span>
-            </div>
+            </button>
 
             {/* Notifications */}
             <div className="relative">
@@ -291,7 +310,7 @@ export default function HomePage() {
 
         {/* Main Content */}
         <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-6">
-          {activeTab === "dashboard" && <DashboardTab />}
+          {activeTab === "dashboard" && <DashboardTab onNavigate={setActiveTab} />}
           {activeTab === "produto" && <ProdutoTab />}
           {activeTab === "aquisicao" && <AquisicaoTab />}
           {activeTab === "baixa" && <BaixaTab />}
