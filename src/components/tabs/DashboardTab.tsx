@@ -49,6 +49,12 @@ type DashboardAnalytics = {
   categoryDistribution: DistributionPoint[];
 };
 
+type QuickAccessTab = "produto" | "aquisicao" | "baixa";
+
+type DashboardTabProps = {
+  onNavigate: (tab: QuickAccessTab) => void;
+};
+
 const STATUS_COLORS = ["#34d399", "#f59e0b", "#fb7185"];
 const CATEGORY_COLORS = [
   "#60a5fa",
@@ -67,6 +73,48 @@ const formatCurrency = (value: number) =>
     currency: "BRL",
     maximumFractionDigits: 0,
   }).format(value);
+
+const quickAccessItems: {
+  key: QuickAccessTab;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  accent: string;
+}[] = [
+  {
+    key: "produto",
+    title: "Produto",
+    description: "Cadastrar e gerenciar produtos",
+    accent: "text-blue-400 bg-blue-500/15 border-blue-500/30 group-hover:border-blue-400/50",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7.5l-8-4-8 4m16 0l-8 4m8-4v9l-8 4m0-9l-8-4m8 4v9m-8-13v9l8 4" />
+      </svg>
+    ),
+  },
+  {
+    key: "aquisicao",
+    title: "Aquisição",
+    description: "Registrar entradas no estoque",
+    accent: "text-emerald-400 bg-emerald-500/15 border-emerald-500/30 group-hover:border-emerald-400/50",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    ),
+  },
+  {
+    key: "baixa",
+    title: "Baixa",
+    description: "Registrar saídas de itens",
+    accent: "text-rose-400 bg-rose-500/15 border-rose-500/30 group-hover:border-rose-400/50",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+      </svg>
+    ),
+  },
+];
 
 function ChartCard({
   title,
@@ -91,7 +139,7 @@ function ChartCard({
   );
 }
 
-export function DashboardTab() {
+export function DashboardTab({ onNavigate }: DashboardTabProps) {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
@@ -177,6 +225,49 @@ export function DashboardTab() {
           Visao geral dos saldos, alertas e analises mensais do estoque
         </p>
       </div>
+
+      <section className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 sm:p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-4">
+          <h3 className="text-lg font-semibold text-white">Acesso Rápido</h3>
+          <p className="text-sm text-slate-500">
+            Escolha uma ação para continuar
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {quickAccessItems.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => onNavigate(item.key)}
+              className="group flex items-center justify-between gap-4 rounded-lg border border-slate-800 bg-slate-800/40 px-4 py-4 text-left transition-all hover:border-slate-700 hover:bg-slate-800"
+            >
+              <span className="flex items-center gap-3 min-w-0">
+                <span
+                  className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg border transition-colors ${item.accent}`}
+                >
+                  {item.icon}
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-semibold text-white">
+                    {item.title}
+                  </span>
+                  <span className="block text-sm text-slate-400">
+                    {item.description}
+                  </span>
+                </span>
+              </span>
+              <svg
+                className="w-5 h-5 flex-shrink-0 text-slate-500 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-300"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          ))}
+        </div>
+      </section>
 
       {loading ? (
         <div className="flex justify-center py-12">

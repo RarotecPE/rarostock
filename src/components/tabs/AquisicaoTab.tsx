@@ -83,8 +83,12 @@ export function AquisicaoTab() {
   }, []);
 
   useEffect(() => {
-    fetchAcquisitions();
-    fetchItems();
+    const initialFetch = setTimeout(() => {
+      fetchAcquisitions();
+      fetchItems();
+    }, 0);
+
+    return () => clearTimeout(initialFetch);
   }, [fetchAcquisitions, fetchItems]);
 
   useEffect(() => {
