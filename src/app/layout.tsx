@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "RaroStock - Gestao de Estoque",
+  title: "RaroStock",
   description:
     "Plataforma de controle interno e gestao de processos operacionais de estoque.",
   icons: {

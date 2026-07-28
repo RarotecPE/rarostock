@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildSessionPayload, getRoleFromRequest } from "@/lib/auth-server";
+import { buildSessionPayload, getSessionFromRequest } from "@/lib/auth-server";
 import { canAccessApp } from "@/lib/roles";
 
 export async function GET(request: NextRequest) {
-  const role = getRoleFromRequest(request);
+  const session = getSessionFromRequest(request);
+  const role = session?.role ?? null;
 
   if (!role || !canAccessApp(role)) {
     return NextResponse.json({
@@ -18,5 +19,5 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  return NextResponse.json(buildSessionPayload(role));
+  return NextResponse.json(buildSessionPayload(role, session));
 }

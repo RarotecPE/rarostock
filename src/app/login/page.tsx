@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { APP_ROLES, AppRole, roleConfigs } from "@/lib/roles";
 
@@ -13,8 +13,42 @@ const debugRoles: AppRole[] = [...APP_ROLES];
 export default function LoginPage() {
   const router = useRouter();
   const [loadingRole, setLoadingRole] = useState<AppRole | null>(null);
+  const [ssoLoading, setSsoLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const popupRef = useRef<Window | null>(null);
+  const popupCheckRef = useRef<number | null>(null);
+
+  const stopPopupCheck = () => {
+    if (popupCheckRef.current !== null) {
+      window.clearInterval(popupCheckRef.current);
+      popupCheckRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type !== "raronexus:sso") return;
+
+      stopPopupCheck();
+      setSsoLoading(false);
+      popupRef.current = null;
+
+      if (event.data.status === "success") {
+        router.replace("/");
+        return;
+      }
+
+      setError(event.data.message || "Nao foi possivel entrar com RaroNexus.");
+    }
+
+    window.addEventListener("message", handleMessage);
+    return () => {
+      window.removeEventListener("message", handleMessage);
+      stopPopupCheck();
+    };
+  }, [router]);
 
   const simulateLogin = async (role: AppRole) => {
     setLoadingRole(role);
@@ -36,6 +70,33 @@ export default function LoginPage() {
     }
 
     router.replace("/");
+  };
+
+  const startRaroNexusLogin = () => {
+    setError("");
+    setMessage("");
+    setSsoLoading(true);
+
+    const popup = window.open(
+      "/api/auth/raronexus/start",
+      "raronexus-login",
+      "width=520,height=720,menubar=no,toolbar=no,location=no,status=no"
+    );
+
+    if (!popup) {
+      setSsoLoading(false);
+      setError("Permita popups para entrar com RaroNexus.");
+      return;
+    }
+
+    popupRef.current = popup;
+    stopPopupCheck();
+    popupCheckRef.current = window.setInterval(() => {
+      if (!popupRef.current?.closed) return;
+      stopPopupCheck();
+      popupRef.current = null;
+      setSsoLoading(false);
+    }, 500);
   };
 
   return (
@@ -60,16 +121,14 @@ export default function LoginPage() {
         <section className="rounded-xl border border-slate-800 bg-slate-900/90 p-6 shadow-2xl">
           <button
             type="button"
-            onClick={() => {
-              setError("");
-              setMessage("O fluxo real do RaroNexus sera conectado na proxima etapa.");
-            }}
+            onClick={startRaroNexusLogin}
+            disabled={ssoLoading}
             className="flex w-full items-center justify-center gap-3 rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-blue-500"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4v-3.586l5.257-5.257A6 6 0 1121 9z" />
             </svg>
-            Entrar com RaroNexus
+            {ssoLoading ? "Aguardando RaroNexus..." : "Entrar com RaroNexus"}
           </button>
 
           {debugAuthEnabled && (

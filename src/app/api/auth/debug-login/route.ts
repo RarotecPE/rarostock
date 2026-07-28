@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  AUTH_COOKIE_NAME,
   buildSessionPayload,
+  clearSessionCookies,
+  createStockSession,
   isDebugAuthEnabled,
+  setSessionCookie,
 } from "@/lib/auth-server";
 import { canAccessApp, parseAppRole } from "@/lib/roles";
-
-const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 8;
 
 export async function POST(request: NextRequest) {
   if (!isDebugAuthEnabled()) {
@@ -28,17 +28,16 @@ export async function POST(request: NextRequest) {
       { error: "Usuario nao autorizado para acessar o RaroStock." },
       { status: 403 }
     );
-    response.cookies.delete(AUTH_COOKIE_NAME);
+    clearSessionCookies(response);
     return response;
   }
 
-  const response = NextResponse.json(buildSessionPayload(role));
-  response.cookies.set(AUTH_COOKIE_NAME, role, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: COOKIE_MAX_AGE_SECONDS,
+  const session = createStockSession(role, {
+    id: `debug-${role}`,
+    nome: role,
+    email: `${role}@debug.local`,
   });
+  const response = NextResponse.json(buildSessionPayload(role, session));
+  setSessionCookie(response, session);
   return response;
 }
