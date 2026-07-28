@@ -27,7 +27,11 @@ interface StockIssueHistoryRow {
   balanceAfter: number;
 }
 
-export function BaixaTab() {
+interface BaixaTabProps {
+  canManageStock: boolean;
+}
+
+export function BaixaTab({ canManageStock }: BaixaTabProps) {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -43,7 +47,7 @@ export function BaixaTab() {
 
   const [issues, setIssues] = useState<StockIssueHistoryRow[]>([]);
   const [loadingIssues, setLoadingIssues] = useState(true);
-  const [showHistory, setShowHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(!canManageStock);
   const [historyStartDate, setHistoryStartDate] = useState("");
   const [historyEndDate, setHistoryEndDate] = useState("");
   const [historyPage, setHistoryPage] = useState(1);
@@ -196,10 +200,13 @@ export function BaixaTab() {
       <div className="text-center lg:text-left">
         <h2 className="text-2xl font-bold text-white">Baixa de Estoque</h2>
         <p className="text-slate-400 text-sm mt-1">
-          Registre saídas de itens do estoque
+          {canManageStock
+            ? "Registre saídas de itens do estoque"
+            : "Consulte o historico de baixas do estoque"}
         </p>
       </div>
 
+      {canManageStock ? (
       <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-6">
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-1">
@@ -444,6 +451,11 @@ export function BaixaTab() {
           </>
         )}
       </div>
+      ) : (
+        <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-4 text-sm text-slate-400">
+          Seu perfil permite visualizar o historico de baixas, mas nao registrar novas saidas.
+        </div>
+      )}
 
       <div>
         <button

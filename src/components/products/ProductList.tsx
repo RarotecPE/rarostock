@@ -22,9 +22,10 @@ type SortDir = "asc" | "desc";
 
 interface ProductListProps {
   refreshKey?: number;
+  canManageStock: boolean;
 }
 
-export function ProductList({ refreshKey = 0 }: ProductListProps) {
+export function ProductList({ refreshKey = 0, canManageStock }: ProductListProps) {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -158,6 +159,17 @@ export function ProductList({ refreshKey = 0 }: ProductListProps) {
     setStatusFilter("");
   };
 
+  const handleExport = () => {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (typeFilter) params.set("type", typeFilter);
+    if (categoryFilter) params.set("category", categoryFilter);
+    if (statusFilter) params.set("status", statusFilter);
+
+    const query = params.toString();
+    window.location.href = `/api/export${query ? `?${query}` : ""}`;
+  };
+
   return (
     <div className="space-y-6">
       <div className="text-center lg:text-left">
@@ -165,7 +177,9 @@ export function ProductList({ refreshKey = 0 }: ProductListProps) {
           Produtos cadastrados
         </h3>
         <p className="text-slate-400 text-sm mt-1">
-          Consulte, filtre e edite os produtos do estoque
+          {canManageStock
+            ? "Consulte, filtre e edite os produtos do estoque"
+            : "Consulte e filtre os produtos do estoque"}
         </p>
       </div>
 
@@ -198,6 +212,15 @@ export function ProductList({ refreshKey = 0 }: ProductListProps) {
               {activeFiltersCount}
             </span>
           )}
+        </button>
+        <button
+          onClick={handleExport}
+          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors border bg-slate-900/90 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m4 5H5a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2z" />
+          </svg>
+          Exportar CSV
         </button>
       </div>
 
@@ -363,6 +386,7 @@ export function ProductList({ refreshKey = 0 }: ProductListProps) {
             fetchItems();
             setSelectedItem(null);
           }}
+          canManageStock={canManageStock}
         />
       )}
     </div>

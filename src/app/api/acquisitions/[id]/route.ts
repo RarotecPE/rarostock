@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { acquisitions, acquisitionItems, items } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { hasAuthError, requirePermission } from "@/lib/auth-server";
+import { canView } from "@/lib/roles";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = requirePermission(req, canView);
+  if (hasAuthError(auth)) return auth.response;
+
   const { id } = await params;
   const acqId = parseInt(id);
 

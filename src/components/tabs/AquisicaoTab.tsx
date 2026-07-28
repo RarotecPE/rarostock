@@ -35,11 +35,15 @@ function formatLiveDateTime(d: Date) {
   });
 }
 
-export function AquisicaoTab() {
+interface AquisicaoTabProps {
+  canManageStock: boolean;
+}
+
+export function AquisicaoTab({ canManageStock }: AquisicaoTabProps) {
   // History state
   const [acquisitions, setAcquisitions] = useState<Acquisition[]>([]);
   const [loadingAcq, setLoadingAcq] = useState(true);
-  const [showHistory, setShowHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(!canManageStock);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -223,11 +227,14 @@ export function AquisicaoTab() {
       <div className="text-center lg:text-left">
         <h2 className="text-2xl font-bold text-white">Aquisição</h2>
         <p className="text-slate-400 text-sm mt-1">
-          Registre entradas de itens no estoque
+          {canManageStock
+            ? "Registre entradas de itens no estoque"
+            : "Consulte o historico de entradas do estoque"}
         </p>
       </div>
 
       {/* New Acquisition Form */}
+      {canManageStock ? (
       <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-6">
         <h3 className="text-lg font-semibold text-white">Nova Aquisição</h3>
         
@@ -458,6 +465,12 @@ export function AquisicaoTab() {
           </div>
         )}
       </div>
+
+      ) : (
+        <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-4 text-sm text-slate-400">
+          Seu perfil permite visualizar o historico de aquisicoes, mas nao registrar novas entradas.
+        </div>
+      )}
 
       {/* History Toggle */}
       <div>

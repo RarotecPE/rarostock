@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { hasAuthError, requirePermission } from "@/lib/auth-server";
+import { canManageStock } from "@/lib/roles";
 
 const signedUrlExpiresIn = 60 * 60 * 24 * 365;
 
@@ -17,6 +19,9 @@ const sanitizeFilename = (filename: string) =>
   filename.replace(/[^a-zA-Z0-9._-]/g, "_");
 
 export async function POST(req: NextRequest) {
+  const auth = requirePermission(req, canManageStock);
+  if (hasAuthError(auth)) return auth.response;
+
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;

@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { ProdutoTab } from "@/components/tabs/ProdutoTab";
 import { AquisicaoTab } from "@/components/tabs/AquisicaoTab";
 import { BaixaTab } from "@/components/tabs/BaixaTab";
 import { DashboardTab } from "@/components/tabs/DashboardTab";
 import { Item, getStockStatus, formatMinimumLimit } from "@/types/stock";
+import { AppRole, canManageStock, roleConfigs } from "@/lib/roles";
 
 type Tab = "produto" | "aquisicao" | "baixa" | "dashboard";
 
@@ -58,10 +60,59 @@ interface AlertItem {
 }
 
 export default function HomePage() {
+  const router = useRouter();
+  const [role, setRole] = useState<AppRole | null>(null);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    fetch("/api/auth/session")
+      .then((res) => res.json())
+      .then((session) => {
+        if (!active) return;
+
+        if (!session.authenticated || !session.role) {
+          router.replace("/login");
+          return;
+        }
+
+        setRole(session.role as AppRole);
+      })
+      .catch(() => {
+        if (active) router.replace("/login");
+      })
+      .finally(() => {
+        if (active) setCheckingSession(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [router]);
+
+  if (checkingSession || !role) {
+    return (
+      <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+        <div className="flex items-center gap-3 text-slate-400">
+          <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          Verificando sessao...
+        </div>
+      </main>
+    );
+  }
+
+  return <StockApp role={role} />;
+}
+
+function StockApp({ role }: { role: AppRole }) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [alertItems, setAlertItems] = useState<AlertItem[]>([]);
+  const canMutateStock = canManageStock(role);
+  const roleInfo = roleConfigs[role];
 
   const fetchAlerts = useCallback(async () => {
     try {
@@ -98,6 +149,11 @@ export default function HomePage() {
   const unavailableCount = alertItems.filter((a) => a.status === "Indisponível").length;
   const belowMinCount = alertItems.filter((a) => a.status === "Abaixo do Mínimo").length;
   const totalAlerts = alertItems.length;
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.replace("/login");
+  };
 
   return (
     <div className="min-h-screen flex">
@@ -162,6 +218,20 @@ export default function HomePage() {
 
           {/* Footer */}
           <div className="px-5 py-4 border-t border-slate-800">
+            <div className="mb-4 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2">
+              <p className="text-[11px] uppercase tracking-wider text-slate-600">Role ativa</p>
+              <p className="text-sm font-medium text-slate-300">{roleInfo.label}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-800 px-3 py-2 text-sm text-slate-400 transition-colors hover:border-slate-700 hover:text-white"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
+              </svg>
+              Sair
+            </button>
             <p className="text-xs text-slate-600 text-center">
               RaroStock v1.0
             </p>
@@ -211,8 +281,13 @@ export default function HomePage() {
               </span>
             </button>
 
-            {/* Notifications */}
-            <div className="relative">
+            <div className="flex items-center gap-2">
+              <div className="hidden sm:block rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-1.5 text-right">
+                <p className="text-[10px] uppercase tracking-wider text-slate-600">Role ativa</p>
+                <p className="text-xs font-medium text-slate-300">{roleInfo.label}</p>
+              </div>
+              {/* Notifications */}
+              <div className="relative">
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
                 className="relative p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
@@ -304,16 +379,30 @@ export default function HomePage() {
                   </div>
                 </>
               )}
+              </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                aria-label="Sair"
+                title="Sair"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
+                </svg>
+              </button>
             </div>
           </div>
         </header>
 
         {/* Main Content */}
         <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-6">
-          {activeTab === "dashboard" && <DashboardTab onNavigate={setActiveTab} />}
-          {activeTab === "produto" && <ProdutoTab />}
-          {activeTab === "aquisicao" && <AquisicaoTab />}
-          {activeTab === "baixa" && <BaixaTab />}
+          {activeTab === "dashboard" && (
+            <DashboardTab onNavigate={setActiveTab} canManageStock={canMutateStock} />
+          )}
+          {activeTab === "produto" && <ProdutoTab canManageStock={canMutateStock} />}
+          {activeTab === "aquisicao" && <AquisicaoTab canManageStock={canMutateStock} />}
+          {activeTab === "baixa" && <BaixaTab canManageStock={canMutateStock} />}
         </main>
 
         {/* Bottom Navigation - Mobile */}
