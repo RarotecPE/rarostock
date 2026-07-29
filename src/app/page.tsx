@@ -183,7 +183,7 @@ function StockApp({ role }: { role: AppRole }) {
             aria-label="Voltar para o Dashboard"
           >
             <img
-              src="/rarostock-logo.svg"
+              src="/rarostock-logo.png"
               alt="RaroStock"
               className="w-11 h-11 rounded-xl bg-white object-contain"
             />
@@ -243,7 +243,7 @@ function StockApp({ role }: { role: AppRole }) {
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Top Header */}
         <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800">
-          <div className="flex items-center justify-between px-4 sm:px-6 h-16">
+          <div className="relative flex items-center justify-between px-4 sm:px-6 h-16">
             {/* Mobile menu button */}
             <button
               onClick={() => setSidebarOpen(true)}
@@ -268,11 +268,11 @@ function StockApp({ role }: { role: AppRole }) {
                 setActiveTab("dashboard");
                 setSidebarOpen(false);
               }}
-              className="lg:hidden flex items-center gap-2 rounded-lg px-2 py-1 transition-colors hover:bg-slate-800"
+              className="absolute left-1/2 -translate-x-1/2 lg:hidden flex items-center gap-2 rounded-lg px-2 py-1 transition-colors hover:bg-slate-800"
               aria-label="Voltar para o Dashboard"
             >
               <img
-                src="/rarostock-logo.svg"
+                src="/rarostock-logo.png"
                 alt="RaroStock"
                 className="w-9 h-9 rounded-lg bg-white object-contain"
               />

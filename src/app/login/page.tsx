@@ -74,7 +74,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center space-y-4">
           <img
-            src="/rarostock-logo.svg"
+            src="/rarostock-logo.png"
             alt="RaroStock"
             className="mx-auto h-16 w-16 rounded-2xl bg-white object-contain"
           />
