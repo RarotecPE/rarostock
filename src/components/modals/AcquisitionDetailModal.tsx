@@ -6,7 +6,7 @@ import { Acquisition, AcquisitionItemWithDetails, pluralizeUnit } from "@/types/
 interface Props {
   acquisitionId: number;
   onClose: () => void;
-  onPreviewInvoice?: (url: string) => void;
+  onPreviewInvoice?: (url: string, filename?: string | null) => void;
   canManageStock: boolean;
   canDeleteInvoice: boolean;
   onInvoiceChanged?: () => void;
@@ -200,7 +200,12 @@ export function AcquisitionDetailModal({
                 {acquisition.invoiceUrl ? (
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                     <button
-                      onClick={() => onPreviewInvoice?.(acquisition.invoiceUrl!)}
+                      onClick={() =>
+                        onPreviewInvoice?.(
+                          acquisition.invoiceUrl!,
+                          acquisition.invoiceFilename
+                        )
+                      }
                       className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm text-slate-300 transition-colors"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -237,7 +242,7 @@ export function AcquisitionDetailModal({
                         <input
                           ref={fileInputRef}
                           type="file"
-                          accept="image/*"
+                          accept="image/*,application/pdf"
                           className="hidden"
                           onChange={handleAttachInvoice}
                         />

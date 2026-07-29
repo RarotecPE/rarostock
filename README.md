@@ -47,16 +47,20 @@ npm install
 # Formato: host:port;banco;usuario;senha
 DATABASE_CONNECTION="HOST:5432;DATABASE;USER;PASSWORD"
 
-# Supabase API / Storage, usado apenas para anexos/notas
-SUPABASE_URL="https://YOUR_PROJECT_REF.supabase.co"
-SUPABASE_SECRET_KEY="YOUR_SUPABASE_SECRET_OR_SERVICE_ROLE_KEY"
-SUPABASE_STORAGE_BUCKET="invoices"
+# Storage publico HTTP escrito via FTP
+FTP_HOST="108.61.158.43"
+FTP_PORT="21"
+FTP_USER="YOUR_FTP_USER"
+FTP_PASSWORD="YOUR_FTP_PASSWORD"
+FTP_BASE_DIR="/assets/rarostock/invoices"
+FTP_SECURE="false"
+PUBLIC_STORAGE_BASE_URL="https://arquivos.rarotec.com/assets/rarostock/invoices"
 ```
 
 Observacoes:
 
-- Nao use prefixo `NEXT_PUBLIC_` para `SUPABASE_SECRET_KEY`.
-- O RaroStock usa `DATABASE_CONNECTION` para o banco e mantem Supabase apenas para storage.
+- O RaroStock usa `DATABASE_CONNECTION` para o banco.
+- `PUBLIC_STORAGE_BASE_URL` deve ser HTTP/HTTPS; nunca use `ftp://` no frontend.
 - `.env.local` e ignorado pelo Git.
 
 3. Crie as tabelas no banco PostgreSQL configurado.
@@ -145,9 +149,10 @@ O Dashboard exibe cards de resumo e graficos analiticos dos ultimos 12 meses:
 
 Os graficos usam a API `GET /api/dashboard/analytics` e a biblioteca `recharts`.
 
-## Supabase Storage
+## Storage de Notas Fiscais
 
-Notas fiscais enviadas no fluxo de aquisicao sao salvas no bucket definido por `SUPABASE_STORAGE_BUCKET`.
+Notas fiscais enviadas no fluxo de aquisicao sao gravadas via FTP no diretorio definido por `FTP_BASE_DIR`.
+Esse diretorio deve ser servido publicamente pela URL configurada em `PUBLIC_STORAGE_BASE_URL`.
 
 O upload acontece em:
 
@@ -155,7 +160,7 @@ O upload acontece em:
 src/app/api/upload/route.ts
 ```
 
-Se o bucket for publico, a API retorna uma URL publica. Se o bucket for privado, a API cria uma URL assinada.
+A API aceita imagens e PDFs, retorna a URL HTTP/HTTPS publica para exibicao e guarda o caminho interno em `invoice_storage_path` para permitir exclusao posterior. O nome salvo em `invoice_filename` e o nome fisico do arquivo sao gerados de forma unica para evitar sobrescrita.
 
 ## Identidade Visual
 

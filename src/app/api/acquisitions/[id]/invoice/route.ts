@@ -4,17 +4,7 @@ import { db } from "@/db";
 import { acquisitions } from "@/db/schema";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canAdmin, canManageStock } from "@/lib/roles";
-import { supabaseAdmin } from "@/lib/supabase/server";
-
-const getStorageBucket = () => {
-  const bucket = process.env.SUPABASE_STORAGE_BUCKET;
-
-  if (!bucket) {
-    throw new Error("SUPABASE_STORAGE_BUCKET is required");
-  }
-
-  return bucket;
-};
+import { deleteInvoiceFromFtp } from "@/lib/ftp-storage";
 
 export async function PUT(
   req: NextRequest,
@@ -123,12 +113,17 @@ export async function DELETE(
   let storageDeleted = false;
 
   if (current.invoiceStoragePath) {
-    const bucket = getStorageBucket();
-    const { error } = await supabaseAdmin.storage
-      .from(bucket)
-      .remove([current.invoiceStoragePath]);
+    try {
+      await deleteInvoiceFromFtp(current.invoiceStoragePath);
+      storageDeleted = true;
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel excluir a nota fiscal do storage.";
 
-    storageDeleted = !error;
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
   }
 
   const [updated] = await db

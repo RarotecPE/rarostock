@@ -47,7 +47,10 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
   const [showHistory, setShowHistory] = useState(!canManageStock);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewInvoice, setPreviewInvoice] = useState<{
+    url: string;
+    filename?: string | null;
+  } | null>(null);
   const [selectedAcqId, setSelectedAcqId] = useState<number | null>(null);
   const [historyPage, setHistoryPage] = useState(1);
   const historyPerPage = 10;
@@ -166,6 +169,16 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
         body: formData,
       });
       const upData = await upRes.json();
+
+      if (!upRes.ok) {
+        setSubmitting(false);
+        setToast({
+          message: upData.error ?? "Nao foi possivel enviar a nota fiscal.",
+          type: "error",
+        });
+        return;
+      }
+
       invoiceUrl = upData.url;
       invoiceFilename = upData.filename;
       invoiceStoragePath = upData.storagePath;
@@ -282,7 +295,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
               <label className="inline-flex items-center justify-center w-11 h-11 bg-slate-800 border border-slate-700 rounded-lg text-slate-300 hover:text-white hover:border-slate-600 cursor-pointer transition-colors">
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,application/pdf"
                   onChange={(e) => setInvoiceFile(e.target.files?.[0] || null)}
                   className="hidden"
                 />
@@ -619,10 +632,11 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
       )}
 
       {/* Invoice Preview Modal */}
-      {previewImage && (
+      {previewInvoice && (
         <InvoicePreviewModal
-          imageUrl={previewImage}
-          onClose={() => setPreviewImage(null)}
+          imageUrl={previewInvoice.url}
+          filename={previewInvoice.filename}
+          onClose={() => setPreviewInvoice(null)}
         />
       )}
 
@@ -631,7 +645,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
         <AcquisitionDetailModal
           acquisitionId={selectedAcqId}
           onClose={() => setSelectedAcqId(null)}
-          onPreviewInvoice={setPreviewImage}
+          onPreviewInvoice={(url, filename) => setPreviewInvoice({ url, filename })}
           canManageStock={canManageStock}
           canDeleteInvoice={canDeleteInvoice}
           onInvoiceChanged={fetchAcquisitions}
