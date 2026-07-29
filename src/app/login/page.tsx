@@ -2,17 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { APP_ROLES, AppRole, roleConfigs } from "@/lib/roles";
-
-const debugAuthEnabled =
-  process.env.NODE_ENV !== "production" ||
-  process.env.NEXT_PUBLIC_ENABLE_DEBUG_AUTH === "true";
-
-const debugRoles: AppRole[] = [...APP_ROLES];
 
 export default function LoginPage() {
   const router = useRouter();
-  const [loadingRole, setLoadingRole] = useState<AppRole | null>(null);
   const [ssoLoading, setSsoLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -49,28 +41,6 @@ export default function LoginPage() {
       stopPopupCheck();
     };
   }, [router]);
-
-  const simulateLogin = async (role: AppRole) => {
-    setLoadingRole(role);
-    setMessage("");
-    setError("");
-
-    const response = await fetch("/api/auth/debug-login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role }),
-    });
-    const data = await response.json().catch(() => ({}));
-
-    setLoadingRole(null);
-
-    if (!response.ok) {
-      setError(data.error || "Nao foi possivel simular o acesso.");
-      return;
-    }
-
-    router.replace("/");
-  };
 
   const startRaroNexusLogin = () => {
     setError("");
@@ -130,36 +100,6 @@ export default function LoginPage() {
             </svg>
             {ssoLoading ? "Aguardando RaroNexus..." : "Entrar com RaroNexus"}
           </button>
-
-          {debugAuthEnabled && (
-            <div className="mt-6 border-t border-slate-800 pt-5">
-              <p className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-500">
-                Simulacao temporaria
-              </p>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {debugRoles.map((role) => (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => simulateLogin(role)}
-                    disabled={loadingRole !== null}
-                    className={`rounded-lg border px-3 py-3 text-left transition-colors disabled:cursor-wait disabled:opacity-60 ${
-                      role === "nao_autorizado"
-                        ? "border-slate-700 bg-slate-900 text-slate-400 hover:border-rose-500/40 hover:text-rose-300"
-                        : "border-slate-700 bg-slate-800/70 text-slate-200 hover:border-blue-500/40 hover:bg-slate-800"
-                    }`}
-                  >
-                    <span className="block text-sm font-semibold">
-                      {loadingRole === role ? "Entrando..." : roleConfigs[role].label}
-                    </span>
-                    <span className="mt-1 block text-xs text-slate-500">
-                      {roleConfigs[role].description}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
           {(message || error) && (
             <p

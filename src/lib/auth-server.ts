@@ -26,13 +26,6 @@ export type StockSession = {
 export type AuthSuccess = { role: AppRole };
 export type AuthResult = AuthSuccess | { response: NextResponse };
 
-export function isDebugAuthEnabled(): boolean {
-  return (
-    process.env.NODE_ENV !== "production" ||
-    process.env.ENABLE_DEBUG_AUTH === "true"
-  );
-}
-
 function getSessionSecret() {
   return process.env.RAROSTOCK_SESSION_SECRET || "rarostock-dev-session-secret";
 }
