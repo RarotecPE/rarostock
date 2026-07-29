@@ -43,13 +43,11 @@ npm install
 2. Configure o arquivo `.env.local` na raiz do projeto:
 
 ```env
-# Supabase Postgres
-DATABASE_URL="postgresql://postgres.YOUR_PROJECT_REF:YOUR_DB_PASSWORD@YOUR_REGION.pooler.supabase.com:6543/postgres"
+# Banco PostgreSQL da aplicacao
+# Formato: host:port;banco;usuario;senha
+DATABASE_CONNECTION="HOST:5432;DATABASE;USER;PASSWORD"
 
-# Usado por Drizzle Kit para push/migrations, preferencialmente session pooler ou direct connection
-DRIZZLE_DATABASE_URL="postgresql://postgres.YOUR_PROJECT_REF:YOUR_DB_PASSWORD@YOUR_REGION.pooler.supabase.com:5432/postgres"
-
-# Supabase API / Storage
+# Supabase API / Storage, usado apenas para anexos/notas
 SUPABASE_URL="https://YOUR_PROJECT_REF.supabase.co"
 SUPABASE_SECRET_KEY="YOUR_SUPABASE_SECRET_OR_SERVICE_ROLE_KEY"
 SUPABASE_STORAGE_BUCKET="invoices"
@@ -58,10 +56,10 @@ SUPABASE_STORAGE_BUCKET="invoices"
 Observacoes:
 
 - Nao use prefixo `NEXT_PUBLIC_` para `SUPABASE_SECRET_KEY`.
-- Se a senha do banco tiver caracteres especiais, use URL encoding na senha.
+- O RaroStock usa `DATABASE_CONNECTION` para o banco e mantem Supabase apenas para storage.
 - `.env.local` e ignorado pelo Git.
 
-3. Crie as tabelas no Supabase.
+3. Crie as tabelas no banco PostgreSQL configurado.
 
 Execute as migrations em ordem crescente no SQL Editor do Supabase:
 
