@@ -37,10 +37,11 @@ export async function POST(req: NextRequest) {
   if (hasAuthError(auth)) return auth.response;
 
   const body = await req.json();
-  const { date, invoiceUrl, invoiceFilename, cartItems } = body as {
+  const { date, invoiceUrl, invoiceFilename, invoiceStoragePath, cartItems } = body as {
     date: string;
     invoiceUrl?: string;
     invoiceFilename?: string;
+    invoiceStoragePath?: string;
     cartItems: Array<{
       itemId: number;
       quantity: number;
@@ -63,6 +64,7 @@ export async function POST(req: NextRequest) {
       totalValue: totalValue.toFixed(2),
       invoiceUrl: invoiceUrl || null,
       invoiceFilename: invoiceFilename || null,
+      invoiceStoragePath: invoiceStoragePath || null,
     })
     .returning();
 

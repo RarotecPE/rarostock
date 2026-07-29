@@ -24,6 +24,7 @@ export interface Acquisition {
   totalValue: string;
   invoiceUrl: string | null;
   invoiceFilename: string | null;
+  invoiceStoragePath: string | null;
   createdAt: Date;
 }
 

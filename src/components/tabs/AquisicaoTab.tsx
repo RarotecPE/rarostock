@@ -37,9 +37,10 @@ function formatLiveDateTime(d: Date) {
 
 interface AquisicaoTabProps {
   canManageStock: boolean;
+  canDeleteInvoice: boolean;
 }
 
-export function AquisicaoTab({ canManageStock }: AquisicaoTabProps) {
+export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabProps) {
   // History state
   const [acquisitions, setAcquisitions] = useState<Acquisition[]>([]);
   const [loadingAcq, setLoadingAcq] = useState(true);
@@ -155,6 +156,7 @@ export function AquisicaoTab({ canManageStock }: AquisicaoTabProps) {
 
     let invoiceUrl = "";
     let invoiceFilename = "";
+    let invoiceStoragePath = "";
 
     if (invoiceFile) {
       const formData = new FormData();
@@ -166,6 +168,7 @@ export function AquisicaoTab({ canManageStock }: AquisicaoTabProps) {
       const upData = await upRes.json();
       invoiceUrl = upData.url;
       invoiceFilename = upData.filename;
+      invoiceStoragePath = upData.storagePath;
     }
 
     const effectiveAcqDate = useManualAcqDate
@@ -179,6 +182,7 @@ export function AquisicaoTab({ canManageStock }: AquisicaoTabProps) {
         date: effectiveAcqDate,
         invoiceUrl: invoiceUrl || undefined,
         invoiceFilename: invoiceFilename || undefined,
+        invoiceStoragePath: invoiceStoragePath || undefined,
         cartItems: cart.map((c) => ({
           itemId: c.itemId,
           quantity: c.quantity,
@@ -628,6 +632,10 @@ export function AquisicaoTab({ canManageStock }: AquisicaoTabProps) {
           acquisitionId={selectedAcqId}
           onClose={() => setSelectedAcqId(null)}
           onPreviewInvoice={setPreviewImage}
+          canManageStock={canManageStock}
+          canDeleteInvoice={canDeleteInvoice}
+          onInvoiceChanged={fetchAcquisitions}
+          onToast={setToast}
         />
       )}
     </div>

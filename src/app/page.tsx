@@ -7,7 +7,7 @@ import { AquisicaoTab } from "@/components/tabs/AquisicaoTab";
 import { BaixaTab } from "@/components/tabs/BaixaTab";
 import { DashboardTab } from "@/components/tabs/DashboardTab";
 import { Item, getStockStatus, formatMinimumLimit } from "@/types/stock";
-import { AppRole, canManageStock, roleConfigs } from "@/lib/roles";
+import { AppRole, canAdmin, canManageStock, roleConfigs } from "@/lib/roles";
 
 type Tab = "produto" | "aquisicao" | "baixa" | "dashboard";
 
@@ -401,7 +401,12 @@ function StockApp({ role }: { role: AppRole }) {
             <DashboardTab onNavigate={setActiveTab} canManageStock={canMutateStock} />
           )}
           {activeTab === "produto" && <ProdutoTab canManageStock={canMutateStock} />}
-          {activeTab === "aquisicao" && <AquisicaoTab canManageStock={canMutateStock} />}
+          {activeTab === "aquisicao" && (
+            <AquisicaoTab
+              canManageStock={canMutateStock}
+              canDeleteInvoice={canAdmin(role)}
+            />
+          )}
           {activeTab === "baixa" && <BaixaTab canManageStock={canMutateStock} />}
         </main>
 

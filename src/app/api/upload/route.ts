@@ -81,6 +81,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       url,
       filename: file.name,
+      storagePath,
     });
   } catch (error) {
     const message =

@@ -44,6 +44,10 @@ export function canManageStock(role: AppRole | null): boolean {
   return role === "admin" || role === "gestor";
 }
 
+export function canAdmin(role: AppRole | null): boolean {
+  return role === "admin";
+}
+
 export function canExport(role: AppRole | null): boolean {
   return canAccessApp(role);
 }
