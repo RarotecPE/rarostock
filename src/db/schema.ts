@@ -38,6 +38,7 @@ export const acquisitions = pgTable("acquisitions", {
     .default("0"),
   invoiceUrl: text("invoice_url"),
   invoiceFilename: varchar("invoice_filename", { length: 255 }),
+  invoiceStoragePath: text("invoice_storage_path"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

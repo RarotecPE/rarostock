@@ -2,10 +2,15 @@
 
 interface Props {
   imageUrl: string;
+  filename?: string | null;
   onClose: () => void;
 }
 
-export function InvoicePreviewModal({ imageUrl, onClose }: Props) {
+export function InvoicePreviewModal({ imageUrl, filename, onClose }: Props) {
+  const downloadName =
+    filename || decodeURIComponent(imageUrl.split("/").pop()?.split("?")[0] || "nota_fiscal");
+  const isPdf = /\.pdf$/i.test(downloadName) || /\.pdf($|\?)/i.test(imageUrl);
+
   const handleDownload = async () => {
     try {
       const response = await fetch(imageUrl);
@@ -13,7 +18,7 @@ export function InvoicePreviewModal({ imageUrl, onClose }: Props) {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = imageUrl.split("/").pop() || "nota_fiscal";
+      a.download = downloadName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -37,7 +42,7 @@ export function InvoicePreviewModal({ imageUrl, onClose }: Props) {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Baixar Imagem
+              Baixar arquivo
             </button>
             <button
               onClick={onClose}
@@ -49,14 +54,22 @@ export function InvoicePreviewModal({ imageUrl, onClose }: Props) {
             </button>
           </div>
         </div>
-        {/* Image */}
+        {/* Preview */}
         <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={imageUrl}
-            alt="Nota Fiscal"
-            className="max-w-full max-h-full object-contain rounded-lg"
-          />
+          {isPdf ? (
+            <iframe
+              src={imageUrl}
+              title="Nota Fiscal"
+              className="w-full h-[70vh] rounded-lg bg-white"
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={imageUrl}
+              alt="Nota Fiscal"
+              className="max-w-full max-h-full object-contain rounded-lg"
+            />
+          )}
         </div>
       </div>
     </div>

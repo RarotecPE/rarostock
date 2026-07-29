@@ -24,6 +24,7 @@ interface Props {
   item: Item;
   onClose: () => void;
   onUpdate: () => void;
+  canManageStock: boolean;
 }
 
 interface AcqHistoryItem {
@@ -63,7 +64,7 @@ interface BalanceDataPoint {
 
 type ChartMode = "price" | "balance";
 
-export function ItemDetailModal({ item, onClose, onUpdate }: Props) {
+export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Props) {
   const [editing, setEditing] = useState(false);
   const [formName, setFormName] = useState(item.name);
   const [formCategory, setFormCategory] = useState(item.category);
@@ -200,6 +201,8 @@ export function ItemDetailModal({ item, onClose, onUpdate }: Props) {
   }, [filteredBalanceData]);
 
   const handleSave = async () => {
+    if (!canManageStock) return;
+
     setSubmitting(true);
     await fetch("/api/items", {
       method: "PUT",
@@ -245,7 +248,7 @@ export function ItemDetailModal({ item, onClose, onUpdate }: Props) {
         </div>
 
         <div className="p-6 space-y-6">
-          {editing ? (
+          {editing && canManageStock ? (
             /* Edit Form */
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -444,17 +447,19 @@ export function ItemDetailModal({ item, onClose, onUpdate }: Props) {
                   <p className="text-slate-300 mt-1">{item.observations}</p>
                 </div>
               )}
-              <button
-                onClick={() => setEditing(true)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors border border-slate-700"
-              >
-                <span className="flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  Editar
-                </span>
-              </button>
+              {canManageStock && (
+                <button
+                  onClick={() => setEditing(true)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors border border-slate-700"
+                >
+                  <span className="flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Editar
+                  </span>
+                </button>
+              )}
 
               {/* Price History Chart */}
               {loadingDetail ? (

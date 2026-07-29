@@ -2,13 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { items } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { hasAuthError, requirePermission } from "@/lib/auth-server";
+import { canManageStock, canView } from "@/lib/roles";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = requirePermission(req, canView);
+  if (hasAuthError(auth)) return auth.response;
+
   const allItems = await db.select().from(items).orderBy(desc(items.createdAt));
   return NextResponse.json(allItems);
 }
 
 export async function POST(req: NextRequest) {
+  const auth = requirePermission(req, canManageStock);
+  if (hasAuthError(auth)) return auth.response;
+
   const body = await req.json();
 
   // Generate code RST-XXXX
@@ -46,6 +54,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  const auth = requirePermission(req, canManageStock);
+  if (hasAuthError(auth)) return auth.response;
+
   const body = await req.json();
   const { id, ...updates } = body;
 

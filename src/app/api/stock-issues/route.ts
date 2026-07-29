@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { stockIssues, items, acquisitionItems, acquisitions } from "@/db/schema";
 import { eq, sql, gte, lte, and, desc, inArray, asc } from "drizzle-orm";
+import { hasAuthError, requirePermission } from "@/lib/auth-server";
+import { canManageStock, canView } from "@/lib/roles";
 
 export async function GET(req: NextRequest) {
+  const auth = requirePermission(req, canView);
+  if (hasAuthError(auth)) return auth.response;
+
   const url = new URL(req.url);
   const startDate = url.searchParams.get("startDate");
   const endDate = url.searchParams.get("endDate");
@@ -136,6 +141,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = requirePermission(req, canManageStock);
+  if (hasAuthError(auth)) return auth.response;
+
   const body = await req.json();
   const { itemId, quantity, reason } = body as {
     itemId: number;

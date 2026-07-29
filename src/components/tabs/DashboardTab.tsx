@@ -53,6 +53,7 @@ type QuickAccessTab = "produto" | "aquisicao" | "baixa";
 
 type DashboardTabProps = {
   onNavigate: (tab: QuickAccessTab) => void;
+  canManageStock: boolean;
 };
 
 const STATUS_COLORS = ["#34d399", "#f59e0b", "#fb7185"];
@@ -139,7 +140,7 @@ function ChartCard({
   );
 }
 
-export function DashboardTab({ onNavigate }: DashboardTabProps) {
+export function DashboardTab({ onNavigate, canManageStock }: DashboardTabProps) {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
@@ -252,7 +253,13 @@ export function DashboardTab({ onNavigate }: DashboardTabProps) {
                     {item.title}
                   </span>
                   <span className="block text-sm text-slate-400">
-                    {item.description}
+                    {canManageStock
+                      ? item.description
+                      : item.key === "produto"
+                        ? "Consultar produtos e detalhes"
+                        : item.key === "aquisicao"
+                          ? "Consultar entradas registradas"
+                          : "Consultar baixas registradas"}
                   </span>
                 </span>
               </span>

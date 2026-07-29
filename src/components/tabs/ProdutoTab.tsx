@@ -5,7 +5,11 @@ import { CATEGORIES, UNITS } from "@/types/stock";
 import { Toast } from "@/components/ui/Toast";
 import { ProductList } from "@/components/products/ProductList";
 
-export function ProdutoTab() {
+interface ProdutoTabProps {
+  canManageStock: boolean;
+}
+
+export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
   // Form state
   const [formName, setFormName] = useState("");
   const [formCategory, setFormCategory] = useState("");
@@ -98,12 +102,15 @@ export function ProdutoTab() {
       <div className="text-center lg:text-left">
         <h2 className="text-2xl font-bold text-white">Produto</h2>
         <p className="text-slate-400 text-sm mt-1">
-          Cadastre e gerencie os produtos do estoque
+          {canManageStock
+            ? "Cadastre e gerencie os produtos do estoque"
+            : "Consulte os produtos cadastrados no estoque"}
         </p>
       </div>
 
       {/* Form */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6">
+      {canManageStock ? (
+        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Required Fields */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -323,8 +330,13 @@ export function ProdutoTab() {
           </div>
         </form>
       </div>
+      ) : (
+        <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-4 text-sm text-slate-400">
+          Seu perfil permite visualizar produtos, detalhes, historicos e exportacoes.
+        </div>
+      )}
 
-      <ProductList refreshKey={refreshKey} />
+      <ProductList refreshKey={refreshKey} canManageStock={canManageStock} />
 
       {false && (
       /* Help Card */

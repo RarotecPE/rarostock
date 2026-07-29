@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { items } from "@/db/schema";
+import { hasAuthError, requirePermission } from "@/lib/auth-server";
+import { canExport } from "@/lib/roles";
 
 export async function GET(req: NextRequest) {
+  const auth = requirePermission(req, canExport);
+  if (hasAuthError(auth)) return auth.response;
+
   const url = new URL(req.url);
   const typeFilter = url.searchParams.get("type");
   const categoryFilter = url.searchParams.get("category");

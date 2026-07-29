@@ -1,7 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { acquisitions, acquisitionItems, items, stockIssues } from "@/db/schema";
 import { eq, gte } from "drizzle-orm";
+import { hasAuthError, requirePermission } from "@/lib/auth-server";
+import { canView } from "@/lib/roles";
 
 type MonthBucket = {
   key: string;
@@ -61,7 +63,10 @@ const getStockStatus = (quantity: number, minimumLimit: number | null) => {
   return "Em Estoque";
 };
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = requirePermission(req, canView);
+  if (hasAuthError(auth)) return auth.response;
+
   const { start, buckets, byKey } = buildMonthBuckets();
 
   const [allItems, purchaseRows, issueRows, acquisitionTotals] = await Promise.all([

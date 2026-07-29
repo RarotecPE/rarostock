@@ -3,16 +3,16 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "RaroStock - Gestao de Estoque",
+  title: "RaroStock",
   description:
     "Plataforma de controle interno e gestao de processos operacionais de estoque.",
   icons: {
     icon: [
-      { url: "/icon.svg?v=2", type: "image/svg+xml" },
-      { url: "/favicon.ico?v=2", sizes: "any" },
+      { url: "/rarostock-logo.png?v=3", type: "image/png" },
+      { url: "/favicon.ico?v=3", sizes: "any" },
     ],
-    shortcut: "/favicon.ico?v=2",
-    apple: "/rarostock-logo.svg?v=2",
+    shortcut: "/favicon.ico?v=3",
+    apple: "/rarostock-logo.png?v=3",
   },
 };
 

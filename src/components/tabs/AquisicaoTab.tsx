@@ -35,14 +35,22 @@ function formatLiveDateTime(d: Date) {
   });
 }
 
-export function AquisicaoTab() {
+interface AquisicaoTabProps {
+  canManageStock: boolean;
+  canDeleteInvoice: boolean;
+}
+
+export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabProps) {
   // History state
   const [acquisitions, setAcquisitions] = useState<Acquisition[]>([]);
   const [loadingAcq, setLoadingAcq] = useState(true);
-  const [showHistory, setShowHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(!canManageStock);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewInvoice, setPreviewInvoice] = useState<{
+    url: string;
+    filename?: string | null;
+  } | null>(null);
   const [selectedAcqId, setSelectedAcqId] = useState<number | null>(null);
   const [historyPage, setHistoryPage] = useState(1);
   const historyPerPage = 10;
@@ -151,6 +159,7 @@ export function AquisicaoTab() {
 
     let invoiceUrl = "";
     let invoiceFilename = "";
+    let invoiceStoragePath = "";
 
     if (invoiceFile) {
       const formData = new FormData();
@@ -160,8 +169,19 @@ export function AquisicaoTab() {
         body: formData,
       });
       const upData = await upRes.json();
+
+      if (!upRes.ok) {
+        setSubmitting(false);
+        setToast({
+          message: upData.error ?? "Nao foi possivel enviar a nota fiscal.",
+          type: "error",
+        });
+        return;
+      }
+
       invoiceUrl = upData.url;
       invoiceFilename = upData.filename;
+      invoiceStoragePath = upData.storagePath;
     }
 
     const effectiveAcqDate = useManualAcqDate
@@ -175,6 +195,7 @@ export function AquisicaoTab() {
         date: effectiveAcqDate,
         invoiceUrl: invoiceUrl || undefined,
         invoiceFilename: invoiceFilename || undefined,
+        invoiceStoragePath: invoiceStoragePath || undefined,
         cartItems: cart.map((c) => ({
           itemId: c.itemId,
           quantity: c.quantity,
@@ -223,11 +244,14 @@ export function AquisicaoTab() {
       <div className="text-center lg:text-left">
         <h2 className="text-2xl font-bold text-white">Aquisição</h2>
         <p className="text-slate-400 text-sm mt-1">
-          Registre entradas de itens no estoque
+          {canManageStock
+            ? "Registre entradas de itens no estoque"
+            : "Consulte o historico de entradas do estoque"}
         </p>
       </div>
 
       {/* New Acquisition Form */}
+      {canManageStock ? (
       <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-6">
         <h3 className="text-lg font-semibold text-white">Nova Aquisição</h3>
         
@@ -271,7 +295,7 @@ export function AquisicaoTab() {
               <label className="inline-flex items-center justify-center w-11 h-11 bg-slate-800 border border-slate-700 rounded-lg text-slate-300 hover:text-white hover:border-slate-600 cursor-pointer transition-colors">
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,application/pdf"
                   onChange={(e) => setInvoiceFile(e.target.files?.[0] || null)}
                   className="hidden"
                 />
@@ -459,6 +483,12 @@ export function AquisicaoTab() {
         )}
       </div>
 
+      ) : (
+        <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-4 text-sm text-slate-400">
+          Seu perfil permite visualizar o historico de aquisicoes, mas nao registrar novas entradas.
+        </div>
+      )}
+
       {/* History Toggle */}
       <div>
         <button
@@ -602,10 +632,11 @@ export function AquisicaoTab() {
       )}
 
       {/* Invoice Preview Modal */}
-      {previewImage && (
+      {previewInvoice && (
         <InvoicePreviewModal
-          imageUrl={previewImage}
-          onClose={() => setPreviewImage(null)}
+          imageUrl={previewInvoice.url}
+          filename={previewInvoice.filename}
+          onClose={() => setPreviewInvoice(null)}
         />
       )}
 
@@ -614,7 +645,11 @@ export function AquisicaoTab() {
         <AcquisitionDetailModal
           acquisitionId={selectedAcqId}
           onClose={() => setSelectedAcqId(null)}
-          onPreviewInvoice={setPreviewImage}
+          onPreviewInvoice={(url, filename) => setPreviewInvoice({ url, filename })}
+          canManageStock={canManageStock}
+          canDeleteInvoice={canDeleteInvoice}
+          onInvoiceChanged={fetchAcquisitions}
+          onToast={setToast}
         />
       )}
     </div>
