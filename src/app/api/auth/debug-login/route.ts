@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   const role = parseAppRole(body?.role);
 
   if (!role) {
-    return NextResponse.json({ error: "Role invalida." }, { status: 400 });
+    return NextResponse.json({ error: "Perfil de usuario invalido." }, { status: 400 });
   }
 
   if (!canAccessApp(role)) {

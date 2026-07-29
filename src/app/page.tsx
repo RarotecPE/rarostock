@@ -219,7 +219,7 @@ function StockApp({ role }: { role: AppRole }) {
           {/* Footer */}
           <div className="px-5 py-4 border-t border-slate-800">
             <div className="mb-4 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2">
-              <p className="text-[11px] uppercase tracking-wider text-slate-600">Role ativa</p>
+              <p className="text-[11px] uppercase tracking-wider text-slate-600">Perfil do usuario</p>
               <p className="text-sm font-medium text-slate-300">{roleInfo.label}</p>
             </div>
             <button
@@ -283,7 +283,7 @@ function StockApp({ role }: { role: AppRole }) {
 
             <div className="flex items-center gap-2">
               <div className="hidden sm:block rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-1.5 text-right">
-                <p className="text-[10px] uppercase tracking-wider text-slate-600">Role ativa</p>
+                <p className="text-[10px] uppercase tracking-wider text-slate-600">Perfil do usuario</p>
                 <p className="text-xs font-medium text-slate-300">{roleInfo.label}</p>
               </div>
               {/* Notifications */}
