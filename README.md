@@ -55,12 +55,16 @@ FTP_PASSWORD="YOUR_FTP_PASSWORD"
 FTP_BASE_DIR="/assets/rarostock/invoices"
 FTP_SECURE="false"
 PUBLIC_STORAGE_BASE_URL="https://arquivos.rarotec.com/assets/rarostock/invoices"
+
+# Opcional: aviso visual em ambientes nao produtivos
+NEXT_PUBLIC_ENVIRONMENT_LABEL="HOMOLOGAÇÃO"
 ```
 
 Observacoes:
 
 - O RaroStock usa `DATABASE_CONNECTION` para o banco.
 - `PUBLIC_STORAGE_BASE_URL` deve ser HTTP/HTTPS; nunca use `ftp://` no frontend.
+- Remova ou deixe `NEXT_PUBLIC_ENVIRONMENT_LABEL` vazio em producao.
 - `.env.local` e ignorado pelo Git.
 
 3. Crie as tabelas no banco PostgreSQL configurado.
