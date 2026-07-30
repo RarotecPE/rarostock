@@ -6,6 +6,7 @@ import { ProdutoTab } from "@/components/tabs/ProdutoTab";
 import { AquisicaoTab } from "@/components/tabs/AquisicaoTab";
 import { BaixaTab } from "@/components/tabs/BaixaTab";
 import { DashboardTab } from "@/components/tabs/DashboardTab";
+import { InstallPromptCard } from "@/components/pwa/InstallPromptCard";
 import { Item, getStockStatus, formatMinimumLimit } from "@/types/stock";
 import { AppRole, canAdmin, canManageStock, roleConfigs } from "@/lib/roles";
 
@@ -429,6 +430,7 @@ function StockApp({ role }: { role: AppRole }) {
             ))}
           </div>
         </nav>
+        <InstallPromptCard />
       </div>
     </div>
   );
