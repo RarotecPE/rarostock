@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { EnvironmentBanner } from "@/components/layout/EnvironmentBanner";
+import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR">
       <body className="bg-[#0B0F17] text-slate-200 antialiased min-h-screen">
+        <ServiceWorkerRegister />
         <EnvironmentBanner />
         {children}
       </body>
