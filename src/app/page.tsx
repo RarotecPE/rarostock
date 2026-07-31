@@ -12,6 +12,13 @@ import { AppRole, canAdmin, canManageStock, roleConfigs } from "@/lib/roles";
 
 type Tab = "produto" | "aquisicao" | "baixa" | "dashboard";
 
+type SessionUser = {
+  id: string;
+  nome: string;
+  email: string;
+  avatar_url?: string | null;
+};
+
 const tabs: { key: Tab; label: string; icon: ReactNode }[] = [
   {
     key: "dashboard",
@@ -60,9 +67,33 @@ interface AlertItem {
   status: "Indisponível" | "Abaixo do Mínimo";
 }
 
+function UserAvatar({ user }: { user: SessionUser | null }) {
+  const [failed, setFailed] = useState(false);
+  const avatarUrl = user?.avatar_url || "";
+  const showImage = avatarUrl && !failed;
+  const fallback = user?.nome?.trim().charAt(0).toUpperCase() || "U";
+
+  return (
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-700 bg-slate-800 text-sm font-semibold text-slate-300">
+      {showImage ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={avatarUrl}
+          alt=""
+          className="h-full w-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        fallback
+      )}
+    </div>
+  );
+}
+
 export default function HomePage() {
   const router = useRouter();
   const [role, setRole] = useState<AppRole | null>(null);
+  const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
@@ -79,6 +110,7 @@ export default function HomePage() {
         }
 
         setRole(session.role as AppRole);
+        setSessionUser(session.user ?? null);
       })
       .catch(() => {
         if (active) router.replace("/login");
@@ -103,10 +135,10 @@ export default function HomePage() {
     );
   }
 
-  return <StockApp role={role} />;
+  return <StockApp role={role} user={sessionUser} />;
 }
 
-function StockApp({ role }: { role: AppRole }) {
+function StockApp({ role, user }: { role: AppRole; user: SessionUser | null }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -283,9 +315,19 @@ function StockApp({ role }: { role: AppRole }) {
             </button>
 
             <div className="flex items-center gap-2">
-              <div className="hidden sm:block rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-1.5 text-right">
-                <p className="text-[10px] uppercase tracking-wider text-slate-600">Perfil do usuario</p>
-                <p className="text-xs font-medium text-slate-300">{roleInfo.label}</p>
+              <div className="hidden sm:flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-1.5">
+                <UserAvatar user={user} />
+                <div className="min-w-0 text-right">
+                  <p className="max-w-36 truncate text-xs font-medium text-slate-200">
+                    {user?.nome ?? "Usuario"}
+                  </p>
+                  <p className="text-[10px] uppercase tracking-wider text-slate-600">
+                    {roleInfo.label}
+                  </p>
+                </div>
+              </div>
+              <div className="sm:hidden">
+                <UserAvatar user={user} />
               </div>
               {/* Notifications */}
               <div className="relative">

@@ -16,6 +16,7 @@ type NexusTokenResponse = {
       id: string;
       nome: string;
       email: string;
+      avatar_url?: string | null;
     };
     role: {
       chave: string;
