@@ -251,9 +251,16 @@ function StockApp({ role, user }: { role: AppRole; user: SessionUser | null }) {
 
           {/* Footer */}
           <div className="px-5 py-4 border-t border-slate-800">
-            <div className="mb-4 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2">
-              <p className="text-[11px] uppercase tracking-wider text-slate-600">Perfil do usuario</p>
-              <p className="text-sm font-medium text-slate-300">{roleInfo.label}</p>
+            <div className="mb-4 flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2">
+              <UserAvatar user={user} />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-slate-200">
+                  {user?.nome ?? "Usuario"}
+                </p>
+                <p className="text-[11px] uppercase tracking-wider text-slate-600">
+                  {roleInfo.label}
+                </p>
+              </div>
             </div>
             <button
               type="button"
@@ -315,7 +322,7 @@ function StockApp({ role, user }: { role: AppRole; user: SessionUser | null }) {
             </button>
 
             <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-1.5">
+              <div className="hidden items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-1.5 sm:flex">
                 <UserAvatar user={user} />
                 <div className="min-w-0 text-right">
                   <p className="max-w-36 truncate text-xs font-medium text-slate-200">
@@ -325,9 +332,6 @@ function StockApp({ role, user }: { role: AppRole; user: SessionUser | null }) {
                     {roleInfo.label}
                   </p>
                 </div>
-              </div>
-              <div className="sm:hidden">
-                <UserAvatar user={user} />
               </div>
               {/* Notifications */}
               <div className="relative">
