@@ -18,6 +18,7 @@ export type StockSession = {
     id: string;
     nome: string;
     email: string;
+    avatar_url?: string | null;
   };
   issuedAt: number;
   expiresAt: number;
