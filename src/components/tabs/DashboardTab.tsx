@@ -75,6 +75,9 @@ const formatCurrency = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value);
 
+const formatProductChartLabel = (value: string) =>
+  value.length > 22 ? `${value.slice(0, 22)}...` : value;
+
 const quickAccessItems: {
   key: QuickAccessTab;
   title: string;
@@ -386,20 +389,21 @@ export function DashboardTab({ onNavigate, canManageStock }: DashboardTabProps) 
 
             <ChartCard title="Top produtos com mais saida" empty={!hasTopIssued}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={analytics.topIssuedProducts} layout="vertical" margin={{ left: 24 }}>
+                <BarChart data={analytics.topIssuedProducts} layout="vertical" margin={{ left: 12 }}>
                   <CartesianGrid stroke="#1e293b" horizontal={false} />
                   <XAxis type="number" stroke="#94a3b8" tick={{ fontSize: 12 }} />
                   <YAxis
                     type="category"
-                    dataKey="code"
+                    dataKey="name"
                     stroke="#94a3b8"
                     tick={{ fontSize: 12 }}
-                    width={70}
+                    tickFormatter={(value) => formatProductChartLabel(String(value))}
+                    width={150}
                   />
                   <Tooltip
                     formatter={(value, _name, item) => [
                       value,
-                      item.payload.name,
+                      `${item.payload.name} (${item.payload.code})`,
                     ]}
                     contentStyle={{ background: "#0f172a", border: "1px solid #1e293b" }}
                     labelStyle={{ color: "#e2e8f0" }}
@@ -411,20 +415,21 @@ export function DashboardTab({ onNavigate, canManageStock }: DashboardTabProps) 
 
             <ChartCard title="Top produtos mais comprados" empty={!hasTopPurchased}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={analytics.topPurchasedProducts} layout="vertical" margin={{ left: 24 }}>
+                <BarChart data={analytics.topPurchasedProducts} layout="vertical" margin={{ left: 12 }}>
                   <CartesianGrid stroke="#1e293b" horizontal={false} />
                   <XAxis type="number" stroke="#94a3b8" tick={{ fontSize: 12 }} />
                   <YAxis
                     type="category"
-                    dataKey="code"
+                    dataKey="name"
                     stroke="#94a3b8"
                     tick={{ fontSize: 12 }}
-                    width={70}
+                    tickFormatter={(value) => formatProductChartLabel(String(value))}
+                    width={150}
                   />
                   <Tooltip
                     formatter={(value, _name, item) => [
                       value,
-                      item.payload.name,
+                      `${item.payload.name} (${item.payload.code})`,
                     ]}
                     contentStyle={{ background: "#0f172a", border: "1px solid #1e293b" }}
                     labelStyle={{ color: "#e2e8f0" }}
