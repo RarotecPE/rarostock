@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { acquisitions, acquisitionItems, items } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -9,7 +9,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requirePermission(req, canView);
+  const auth = await requirePermission(req, canView);
   if (hasAuthError(auth)) return auth.response;
 
   const { id } = await params;
@@ -23,7 +23,7 @@ export async function GET(
 
   if (acq.length === 0) {
     return NextResponse.json(
-      { error: "Aquisição não encontrada" },
+      { error: "AquisiÃ§Ã£o nÃ£o encontrada" },
       { status: 404 }
     );
   }
@@ -49,3 +49,4 @@ export async function GET(
     items: acqItems,
   });
 }
+

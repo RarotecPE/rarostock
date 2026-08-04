@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { acquisitions } from "@/db/schema";
@@ -10,7 +10,7 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requirePermission(req, canManageStock);
+  const auth = await requirePermission(req, canManageStock);
   if (hasAuthError(auth)) return auth.response;
 
   const { id } = await params;
@@ -83,7 +83,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requirePermission(
+  const auth = await requirePermission(
     req,
     canAdmin,
     "Apenas administradores podem excluir nota fiscal."
@@ -138,3 +138,4 @@ export async function DELETE(
 
   return NextResponse.json({ acquisition: updated, storageDeleted });
 }
+

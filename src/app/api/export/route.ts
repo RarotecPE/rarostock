@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { items } from "@/db/schema";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canExport } from "@/lib/roles";
 
 export async function GET(req: NextRequest) {
-  const auth = requirePermission(req, canExport);
+  const auth = await requirePermission(req, canExport);
   if (hasAuthError(auth)) return auth.response;
 
   const url = new URL(req.url);
@@ -41,9 +41,9 @@ export async function GET(req: NextRequest) {
     allItems = allItems.filter((i) => {
       const st =
         i.quantity === 0
-          ? "Indisponível"
+          ? "IndisponÃ­vel"
           : i.minimumLimit !== null && i.quantity < i.minimumLimit
-            ? "Abaixo do Mínimo"
+            ? "Abaixo do MÃ­nimo"
             : "Em Estoque";
       return st === statusFilter;
     });
@@ -52,24 +52,24 @@ export async function GET(req: NextRequest) {
   // Build CSV with BOM
   const BOM = "\uFEFF";
   const headers = [
-    "Código",
+    "CÃ³digo",
     "Nome",
     "Categoria",
     "Tipo",
     "Unidade",
     "Unidade Adicional",
     "Quantidade",
-    "Limite Mínimo",
+    "Limite MÃ­nimo",
     "Status",
     "Marca",
-    "Observações",
+    "ObservaÃ§Ãµes",
   ];
   const rows = allItems.map((i) => {
     const status =
       i.quantity === 0
-        ? "Indisponível"
+        ? "IndisponÃ­vel"
         : i.minimumLimit !== null && i.quantity < i.minimumLimit
-          ? "Abaixo do Mínimo"
+          ? "Abaixo do MÃ­nimo"
           : "Em Estoque";
     return [
       i.code,
@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
       i.unit,
       `"${i.additionalUnit || ""}"`,
       String(i.quantity),
-      i.minimumLimit === null ? "—" : String(i.minimumLimit),
+      i.minimumLimit === null ? "â€”" : String(i.minimumLimit),
       status,
       `"${i.brand || ""}"`,
       `"${(i.observations || "").replace(/"/g, '""')}"`,
@@ -95,3 +95,4 @@ export async function GET(req: NextRequest) {
     },
   });
 }
+

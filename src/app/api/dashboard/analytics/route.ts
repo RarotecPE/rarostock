@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { acquisitions, acquisitionItems, items, stockIssues } from "@/db/schema";
 import { eq, gte } from "drizzle-orm";
@@ -64,7 +64,7 @@ const getStockStatus = (quantity: number, minimumLimit: number | null) => {
 };
 
 export async function GET(req: NextRequest) {
-  const auth = requirePermission(req, canView);
+  const auth = await requirePermission(req, canView);
   if (hasAuthError(auth)) return auth.response;
 
   const { start, buckets, byKey } = buildMonthBuckets();
@@ -188,3 +188,4 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => b.value - a.value),
   });
 }
+

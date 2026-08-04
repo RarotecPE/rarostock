@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
-import { buildSessionPayload, getSessionFromRequest } from "@/lib/auth-server";
+﻿import { NextRequest, NextResponse } from "next/server";
+import { buildSessionPayload, clearSessionCookies, getSessionFromRequest } from "@/lib/auth-server";
 import { canAccessApp } from "@/lib/roles";
 
 export async function GET(request: NextRequest) {
-  const session = getSessionFromRequest(request);
+  const session = await getSessionFromRequest(request);
   const role = session?.role ?? null;
 
   if (!role || !canAccessApp(role)) {
-    return NextResponse.json({
+    const response = NextResponse.json({
       authenticated: false,
       role: null,
       permissions: {
@@ -17,6 +17,8 @@ export async function GET(request: NextRequest) {
         canExport: false,
       },
     });
+    clearSessionCookies(response);
+    return response;
   }
 
   return NextResponse.json(buildSessionPayload(role, session));

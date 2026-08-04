@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { SSO_STATE_COOKIE_NAME } from "@/lib/auth-server";
 
@@ -19,7 +19,6 @@ export async function GET(request: NextRequest) {
   authorizeUrl.searchParams.set("client_id", clientId);
   authorizeUrl.searchParams.set("redirect_uri", redirectUri);
   authorizeUrl.searchParams.set("state", state);
-  authorizeUrl.searchParams.set("prompt", "login");
 
   const response = NextResponse.redirect(authorizeUrl);
   response.cookies.set(SSO_STATE_COOKIE_NAME, state, {
@@ -31,3 +30,4 @@ export async function GET(request: NextRequest) {
   });
   return response;
 }
+

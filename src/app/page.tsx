@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -146,6 +146,29 @@ function StockApp({ role, user }: { role: AppRole; user: SessionUser | null }) {
   const [alertItems, setAlertItems] = useState<AlertItem[]>([]);
   const canMutateStock = canManageStock(role);
   const roleInfo = roleConfigs[role];
+
+  useEffect(() => {
+    const originalFetch = window.fetch.bind(window);
+    let redirecting = false;
+
+    window.fetch = async (input, init) => {
+      const response = await originalFetch(input, init);
+      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+      const isInternalApi = url.startsWith("/api/") || url.startsWith(window.location.origin + "/api/");
+
+      if (response.status === 401 && isInternalApi && !url.includes("/api/auth/logout") && !redirecting) {
+        redirecting = true;
+        await originalFetch("/api/auth/logout", { method: "POST" }).catch(() => null);
+        router.replace("/login");
+      }
+
+      return response;
+    };
+
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, [router]);
 
   const fetchAlerts = useCallback(async () => {
     try {
@@ -378,13 +401,13 @@ function StockApp({ role, user }: { role: AppRole; user: SessionUser | null }) {
                           {unavailableCount > 0 && (
                             <span className="flex items-center gap-1.5 text-rose-400">
                               <span className="w-2 h-2 bg-rose-500 rounded-full"></span>
-                              {unavailableCount} indisponível
+                              {unavailableCount} Indisponível
                             </span>
                           )}
                           {belowMinCount > 0 && (
                             <span className="flex items-center gap-1.5 text-amber-400">
                               <span className="w-2 h-2 bg-amber-500 rounded-full"></span>
-                              {belowMinCount} abaixo do mínimo
+                              {belowMinCount} Abaixo do Mínimo
                             </span>
                           )}
                         </div>
@@ -481,3 +504,7 @@ function StockApp({ role, user }: { role: AppRole; user: SessionUser | null }) {
     </div>
   );
 }
+
+
+
+

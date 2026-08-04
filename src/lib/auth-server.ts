@@ -1,5 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
-import crypto from "node:crypto";
+﻿import { NextRequest, NextResponse } from "next/server";
 import {
   AppRole,
   getRolePermissions,
@@ -7,96 +6,113 @@ import {
   roleConfigs,
 } from "@/lib/roles";
 
-export const AUTH_COOKIE_NAME = "rarostock_session";
+export const AUTH_COOKIE_NAME = "rarostock_global_session";
 export const SSO_STATE_COOKIE_NAME = "rarostock_sso_state";
+const LEGACY_SESSION_COOKIE_NAME = "rarostock_session";
 const LEGACY_ROLE_COOKIE_NAME = "rarostock_role";
 const PERSISTENT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 365 * 10;
 
-export type StockSession = {
-  role: AppRole;
-  user?: {
-    id: string;
-    nome: string;
-    email: string;
-    avatar_url?: string | null;
-  };
-  issuedAt: number;
-  expiresAt: number;
+export type SessionUser = {
+  id: string;
+  nome: string;
+  email: string;
+  avatar_url?: string | null;
 };
 
-export type AuthSuccess = { role: AppRole };
+export type NexusSession = {
+  role: AppRole;
+  user: SessionUser;
+};
+
+export type AuthSuccess = NexusSession;
 export type AuthResult = AuthSuccess | { response: NextResponse };
 
-function getSessionSecret() {
-  return process.env.RAROSTOCK_SESSION_SECRET || "rarostock-dev-session-secret";
-}
-
-function base64UrlEncode(value: string) {
-  return Buffer.from(value, "utf8").toString("base64url");
-}
-
-function base64UrlDecode(value: string) {
-  return Buffer.from(value, "base64url").toString("utf8");
-}
-
-function sign(value: string) {
-  return crypto.createHmac("sha256", getSessionSecret()).update(value).digest("base64url");
-}
-
-export function encodeSession(session: StockSession) {
-  const payload = base64UrlEncode(JSON.stringify(session));
-  return `${payload}.${sign(payload)}`;
-}
-
-export function decodeSession(value?: string | null): StockSession | null {
-  if (!value) return null;
-  const [payload, signature] = value.split(".");
-  if (!payload || !signature || sign(payload) !== signature) return null;
-
-  try {
-    const session = JSON.parse(base64UrlDecode(payload)) as StockSession;
-    if (!parseAppRole(session.role) || session.expiresAt <= Date.now()) return null;
-    return session;
-  } catch {
-    return null;
-  }
-}
-
-export function createStockSession(role: AppRole, user?: StockSession["user"]): StockSession {
-  const issuedAt = Date.now();
-  return {
-    role,
-    user,
-    issuedAt,
-    expiresAt: issuedAt + PERSISTENT_SESSION_MAX_AGE_SECONDS * 1000,
+type NexusIntrospectionResponse = {
+  success: boolean;
+  message?: string;
+  data?: {
+    active: boolean;
+    user: SessionUser;
+    role: {
+      id: string;
+      nome: string;
+      chave: string;
+    };
   };
+};
+
+function getEnv(name: string, fallback?: string) {
+  const value = process.env[name] || fallback;
+  if (!value) throw new Error(`${name} is required`);
+  return value;
 }
 
-export function setSessionCookie(response: NextResponse, session: StockSession) {
-  response.cookies.set(AUTH_COOKIE_NAME, encodeSession(session), {
+export function setSessionCookie(response: NextResponse, token: string) {
+  response.cookies.set(AUTH_COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: PERSISTENT_SESSION_MAX_AGE_SECONDS,
   });
+  response.cookies.delete(LEGACY_SESSION_COOKIE_NAME);
   response.cookies.delete(LEGACY_ROLE_COOKIE_NAME);
 }
 
 export function clearSessionCookies(response: NextResponse) {
   response.cookies.delete(AUTH_COOKIE_NAME);
+  response.cookies.delete(LEGACY_SESSION_COOKIE_NAME);
   response.cookies.delete(LEGACY_ROLE_COOKIE_NAME);
 }
 
-export function getSessionFromRequest(request: NextRequest): StockSession | null {
-  return decodeSession(request.cookies.get(AUTH_COOKIE_NAME)?.value);
+export function getGlobalSessionToken(request: NextRequest) {
+  return request.cookies.get(AUTH_COOKIE_NAME)?.value ?? null;
 }
 
-export function getRoleFromRequest(request: NextRequest): AppRole | null {
-  return getSessionFromRequest(request)?.role ?? null;
+export async function revokeGlobalSession(token: string) {
+  const nexusBaseUrl = getEnv("RARONEXUS_BASE_URL", "http://localhost:3001");
+  await fetch(new URL("/api/v1/sessions/revoke", nexusBaseUrl), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+    cache: "no-store",
+  }).catch(() => null);
 }
 
-export function buildSessionPayload(role: AppRole, session?: StockSession | null) {
+export async function getSessionFromRequest(request: NextRequest): Promise<NexusSession | null> {
+  const token = getGlobalSessionToken(request);
+  if (!token) return null;
+
+  let response: Response;
+  let payload: NexusIntrospectionResponse | null;
+
+  try {
+    const nexusBaseUrl = getEnv("RARONEXUS_BASE_URL", "http://localhost:3001");
+    const clientId = getEnv("RARONEXUS_CLIENT_ID", "rarostock");
+    response = await fetch(new URL("/api/v1/sessions/introspect", nexusBaseUrl), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, client_id: clientId }),
+      cache: "no-store",
+    });
+    payload = (await response.json().catch(() => null)) as NexusIntrospectionResponse | null;
+  } catch (error) {
+    console.error("raronexus_session_introspection_failed", error);
+    return null;
+  }
+
+  if (!response.ok || !payload?.success || !payload.data?.active) return null;
+
+  const role = parseAppRole(payload.data.role.chave);
+  if (!role) return null;
+
+  return {
+    role,
+    user: payload.data.user,
+  };
+}
+
+export function buildSessionPayload(role: AppRole, session?: NexusSession | null) {
   return {
     authenticated: true,
     role,
@@ -107,20 +123,21 @@ export function buildSessionPayload(role: AppRole, session?: StockSession | null
   };
 }
 
-export function requirePermission(
+export async function requirePermission(
   request: NextRequest,
   predicate: (role: AppRole | null) => boolean,
   forbiddenMessage = "Permissao insuficiente para esta operacao."
-): AuthResult {
-  const role = getRoleFromRequest(request);
+): Promise<AuthResult> {
+  const session = await getSessionFromRequest(request);
+  const role = session?.role ?? null;
 
   if (!role) {
-    return {
-      response: NextResponse.json(
-        { error: "Sessao nao encontrada." },
-        { status: 401 }
-      ),
-    };
+    const response = NextResponse.json(
+      { error: "Sessao nao encontrada." },
+      { status: 401 }
+    );
+    clearSessionCookies(response);
+    return { response };
   }
 
   if (!predicate(role)) {
@@ -129,9 +146,11 @@ export function requirePermission(
     };
   }
 
-  return { role };
+  return session!;
 }
 
 export function hasAuthError(result: AuthResult): result is { response: NextResponse } {
   return "response" in result;
 }
+
+

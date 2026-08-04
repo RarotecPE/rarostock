@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canManageStock } from "@/lib/roles";
 import { uploadInvoiceToFtp } from "@/lib/ftp-storage";
 
 export async function POST(req: NextRequest) {
-  const auth = requirePermission(req, canManageStock);
+  const auth = await requirePermission(req, canManageStock);
   if (hasAuthError(auth)) return auth.response;
 
   try {
@@ -30,3 +30,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message }, { status });
   }
 }
+

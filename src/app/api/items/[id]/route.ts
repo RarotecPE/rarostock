@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { items, acquisitionItems, acquisitions, stockIssues } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
@@ -9,7 +9,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requirePermission(req, canView);
+  const auth = await requirePermission(req, canView);
   if (hasAuthError(auth)) return auth.response;
 
   const { id } = await params;
@@ -17,7 +17,7 @@ export async function GET(
 
   const item = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
   if (item.length === 0) {
-    return NextResponse.json({ error: "Item não encontrado" }, { status: 404 });
+    return NextResponse.json({ error: "Item nÃ£o encontrado" }, { status: 404 });
   }
 
   // Get acquisition history ordered for visual display
@@ -122,3 +122,4 @@ export async function GET(
     issueHistory: issuesWithBalance,
   });
 }
+

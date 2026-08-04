@@ -3,7 +3,6 @@ import {
   SSO_STATE_COOKIE_NAME,
   buildSessionPayload,
   clearSessionCookies,
-  createStockSession,
   setSessionCookie,
 } from "@/lib/auth-server";
 import { canAccessApp, parseAppRole } from "@/lib/roles";
@@ -12,6 +11,7 @@ type NexusTokenResponse = {
   success: boolean;
   message?: string;
   data?: {
+    global_session_token: string;
     user: {
       id: string;
       nome: string;
@@ -32,6 +32,7 @@ function getEnv(name: string, fallback?: string) {
 }
 
 function popupResponse(status: "success" | "error", message: string) {
+  const redirectTo = status === "success" ? "/" : "/login";
   const html = `<!doctype html>
 <html lang="pt-BR">
 <head><meta charset="utf-8"><title>RaroNexus</title></head>
@@ -40,8 +41,10 @@ function popupResponse(status: "success" | "error", message: string) {
   <script>
     if (window.opener) {
       window.opener.postMessage({ type: "raronexus:sso", status: "${status}", message: ${JSON.stringify(message)} }, window.location.origin);
+      window.close();
+    } else {
+      window.location.replace(${JSON.stringify(redirectTo)});
     }
-    window.close();
   </script>
 </body>
 </html>`;
@@ -117,9 +120,9 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
-  const session = createStockSession(role, payload.data.user);
+  const session = { role, user: payload.data.user };
   const response = popupResponse("success", "Login concluido.");
-  setSessionCookie(response, session);
+  setSessionCookie(response, payload.data.global_session_token);
   response.cookies.delete(SSO_STATE_COOKIE_NAME);
   response.headers.set("X-RaroStock-Session", JSON.stringify(buildSessionPayload(role, session)));
   return response;

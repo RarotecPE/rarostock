@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { acquisitions, acquisitionItems, items } from "@/db/schema";
 import { eq, desc, gte, lte, and, sql } from "drizzle-orm";
@@ -6,7 +6,7 @@ import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canManageStock, canView } from "@/lib/roles";
 
 export async function GET(req: NextRequest) {
-  const auth = requirePermission(req, canView);
+  const auth = await requirePermission(req, canView);
   if (hasAuthError(auth)) return auth.response;
 
   const url = new URL(req.url);
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = requirePermission(req, canManageStock);
+  const auth = await requirePermission(req, canManageStock);
   if (hasAuthError(auth)) return auth.response;
 
   const body = await req.json();
@@ -91,3 +91,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json(acq, { status: 201 });
 }
+
