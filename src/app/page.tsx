@@ -8,6 +8,7 @@ import { BaixaTab } from "@/components/tabs/BaixaTab";
 import { DashboardTab } from "@/components/tabs/DashboardTab";
 import { StockCatalogAdmin } from "@/components/settings/StockCatalogAdmin";
 import { InstallPromptCard } from "@/components/pwa/InstallPromptCard";
+import { applyColorTheme, getStoredColorTheme, storeColorTheme, type ColorTheme } from "@/components/theme/ThemeBootstrap";
 import { Item, getStockStatus, formatMinimumLimit } from "@/types/stock";
 import { AppRole, canAdmin, canManageStock, roleConfigs } from "@/lib/roles";
 
@@ -144,6 +145,7 @@ function StockApp({ role, user }: { role: AppRole; user: SessionUser | null }) {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [theme, setTheme] = useState<ColorTheme>(() => getStoredColorTheme());
   const [alertItems, setAlertItems] = useState<AlertItem[]>([]);
   const canMutateStock = canManageStock(role);
   const roleInfo = roleConfigs[role];
@@ -208,6 +210,16 @@ function StockApp({ role, user }: { role: AppRole; user: SessionUser | null }) {
   const unavailableCount = alertItems.filter((a) => a.status === "Indisponível").length;
   const belowMinCount = alertItems.filter((a) => a.status === "Abaixo do Mínimo").length;
   const totalAlerts = alertItems.length;
+
+  useEffect(() => {
+    applyColorTheme(theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    const nextTheme: ColorTheme = theme === "light" ? "dark" : "light";
+    setTheme(nextTheme);
+    storeColorTheme(nextTheme);
+  };
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -275,6 +287,24 @@ function StockApp({ role, user }: { role: AppRole; user: SessionUser | null }) {
             ))}
           </nav>
 
+          {canAdmin(role) && (
+            <div className="px-3 pb-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("catalog");
+                  setSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === "catalog" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:text-white hover:bg-slate-800/50"}`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.607 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Configurações
+              </button>
+            </div>
+          )}
           {/* Footer */}
           <div className="px-5 py-4 border-t border-slate-800">
             <div className="mb-4 flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2">
@@ -311,14 +341,17 @@ function StockApp({ role, user }: { role: AppRole; user: SessionUser | null }) {
         <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800">
           <div className="relative flex items-center justify-between px-4 sm:px-6 h-16">
             {/* Mobile menu button */}
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 -ml-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-1 lg:hidden">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="p-2 -ml-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg"
+                aria-label="Abrir menu"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            </div>
 
             {/* Page title - desktop only */}
             <div className="hidden lg:block">
@@ -359,23 +392,6 @@ function StockApp({ role, user }: { role: AppRole; user: SessionUser | null }) {
                   </p>
                 </div>
               </div>
-              {canAdmin(role) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab("catalog");
-                    setShowNotifications(false);
-                  }}
-                  className={`p-2 rounded-lg transition-colors ${activeTab === "catalog" ? "bg-blue-600/20 text-blue-400" : "text-slate-400 hover:text-white hover:bg-slate-800"}`}
-                  aria-label="Configurações"
-                  title="Configurações"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.607 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </button>
-              )}
               {/* Notifications */}
               <div className="relative">
               <button
@@ -470,6 +486,23 @@ function StockApp({ role, user }: { role: AppRole; user: SessionUser | null }) {
                 </>
               )}
               </div>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                aria-label={theme === "light" ? "Ativar modo escuro" : "Ativar modo claro"}
+                title={theme === "light" ? "Modo escuro" : "Modo claro"}
+              >
+                {theme === "light" ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21.752 15.002A9.718 9.718 0 0118 15.75a9.75 9.75 0 01-9.75-9.75c0-1.33.266-2.598.748-3.752A9.753 9.753 0 003 11.25 9.75 9.75 0 0012.75 21a9.753 9.753 0 009.002-5.998z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364-6.364l-1.414 1.414M7.05 16.95l-1.414 1.414m12.728 0l-1.414-1.414M7.05 7.05L5.636 5.636M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                )}
+              </button>
               <button
                 type="button"
                 onClick={handleLogout}
