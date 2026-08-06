@@ -1,3 +1,6 @@
+export { pluralizeUnit } from "@/lib/stock-catalog";
+export type { StockCatalog, StockCategoryOption, StockUnitOption } from "@/lib/stock-catalog";
+
 export type ItemType = "Equipamento" | "Item de Consumo";
 
 export type StockStatus = "Em Estoque" | "Abaixo do Mínimo" | "Indisponível";
@@ -85,44 +88,3 @@ export function normalizeSearch(text: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 }
-
-const PLURAL_MAP: Record<string, string> = {
-  "Unidade": "Unidades",
-  "Pacote": "Pacotes",
-  "Caixa": "Caixas",
-  "Litro": "Litros",
-  "Resma": "Resmas",
-  "Rolo": "Rolos",
-  "Galão": "Galões",
-  "Fardo": "Fardos",
-};
-
-export function pluralizeUnit(unit: string, quantity: number): string {
-  if (quantity === 1 || quantity === -1) return unit;
-  return PLURAL_MAP[unit] ?? unit;
-}
-
-export const CATEGORIES = [
-  "Computador",
-  "Monitor",
-  "Periféricos",
-  "Infraestrutura",
-  "Mobiliário",
-  "Suprimento Geral",
-  "Suprimento de TI",
-  "Outro",
-] as const;
-
-export const UNITS = [
-  "Unidade",
-  "Pacote",
-  "Caixa",
-  "Litro",
-  "Kg",
-  "Resma",
-  "Rolo",
-  "Galão",
-  "Fardo",
-] as const;
-
-

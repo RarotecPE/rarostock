@@ -41,9 +41,9 @@ export async function GET(req: NextRequest) {
     allItems = allItems.filter((i) => {
       const st =
         i.quantity === 0
-          ? "IndisponÃ­vel"
+          ? "Indisponível"
           : i.minimumLimit !== null && i.quantity < i.minimumLimit
-            ? "Abaixo do MÃ­nimo"
+            ? "Abaixo do Mínimo"
             : "Em Estoque";
       return st === statusFilter;
     });
@@ -52,24 +52,24 @@ export async function GET(req: NextRequest) {
   // Build CSV with BOM
   const BOM = "\uFEFF";
   const headers = [
-    "CÃ³digo",
+    "Código",
     "Nome",
     "Categoria",
     "Tipo",
     "Unidade",
     "Unidade Adicional",
     "Quantidade",
-    "Limite MÃ­nimo",
+    "Limite Mínimo",
     "Status",
     "Marca",
-    "ObservaÃ§Ãµes",
+    "Observações",
   ];
   const rows = allItems.map((i) => {
     const status =
       i.quantity === 0
-        ? "IndisponÃ­vel"
+        ? "Indisponível"
         : i.minimumLimit !== null && i.quantity < i.minimumLimit
-          ? "Abaixo do MÃ­nimo"
+          ? "Abaixo do Mínimo"
           : "Em Estoque";
     return [
       i.code,
@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
       i.unit,
       `"${i.additionalUnit || ""}"`,
       String(i.quantity),
-      i.minimumLimit === null ? "â€”" : String(i.minimumLimit),
+      i.minimumLimit === null ? "?" : String(i.minimumLimit),
       status,
       `"${i.brand || ""}"`,
       `"${(i.observations || "").replace(/"/g, '""')}"`,

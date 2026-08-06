@@ -23,7 +23,7 @@ export async function GET(
 
   if (acq.length === 0) {
     return NextResponse.json(
-      { error: "AquisiÃ§Ã£o nÃ£o encontrada" },
+      { error: "Aquisição não encontrada" },
       { status: 404 }
     );
   }

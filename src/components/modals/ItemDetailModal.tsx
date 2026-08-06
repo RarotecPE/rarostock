@@ -3,11 +3,11 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   Item,
-  CATEGORIES,
-  UNITS,
   pluralizeUnit,
   formatMinimumLimit,
 } from "@/types/stock";
+import { includeCurrentCategory, includeCurrentUnit } from "@/lib/stock-catalog";
+import { useStockCatalog } from "@/lib/use-stock-catalog";
 import { StatusBadge, TypeBadge } from "@/components/ui/Badge";
 import {
   LineChart,
@@ -87,6 +87,7 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Pro
   // Chart filters
   const [chartStartDate, setChartStartDate] = useState("");
   const [chartEndDate, setChartEndDate] = useState("");
+  const { catalog } = useStockCatalog();
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -200,6 +201,19 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Pro
     return { min, max, avg };
   }, [filteredBalanceData]);
 
+  const categoryOptions = useMemo(
+    () => includeCurrentCategory(catalog.categories, formCategory),
+    [catalog.categories, formCategory]
+  );
+  const unitOptions = useMemo(
+    () => includeCurrentUnit(catalog.units, formUnit),
+    [catalog.units, formUnit]
+  );
+  const additionalUnitOptions = useMemo(
+    () => includeCurrentUnit(catalog.units, formAdditionalUnit),
+    [catalog.units, formAdditionalUnit]
+  );
+
   const handleSave = async () => {
     if (!canManageStock) return;
 
@@ -271,9 +285,9 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Pro
                     onChange={(e) => setFormCategory(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none"
                   >
-                    {CATEGORIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
+                    {categoryOptions.map((category) => (
+                      <option key={`${category.id}-${category.name}`} value={category.name}>
+                        {category.name}
                       </option>
                     ))}
                   </select>
@@ -287,9 +301,9 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Pro
                     onChange={(e) => setFormUnit(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none"
                   >
-                    {UNITS.map((u) => (
-                      <option key={u} value={u}>
-                        {u}
+                    {unitOptions.map((unit) => (
+                      <option key={`${unit.id}-${unit.name}`} value={unit.name}>
+                        {unit.name}
                       </option>
                     ))}
                   </select>
@@ -304,9 +318,9 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Pro
                     className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none"
                   >
                     <option value="">Nenhuma</option>
-                    {UNITS.map((u) => (
-                      <option key={u} value={u}>
-                        {u}
+                    {additionalUnitOptions.map((unit) => (
+                      <option key={`${unit.id}-${unit.name}`} value={unit.name}>
+                        {unit.name}
                       </option>
                     ))}
                   </select>
@@ -407,7 +421,7 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Pro
                     Saldo
                   </p>
                   <p className="text-white text-lg font-semibold">
-                    {item.quantity} {pluralizeUnit(item.unit, item.quantity)}
+                    {item.quantity} {pluralizeUnit(item.unit, item.quantity, catalog.units)}
                   </p>
                 </div>
                 <div>

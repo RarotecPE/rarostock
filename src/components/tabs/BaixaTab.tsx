@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { Item, normalizeSearch, pluralizeUnit } from "@/types/stock";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Toast } from "@/components/ui/Toast";
+import { useStockCatalog } from "@/lib/use-stock-catalog";
 
 type BaixaMode = "unidade" | "saldo";
 
@@ -44,6 +45,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
 
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const { catalog } = useStockCatalog();
 
   const [issues, setIssues] = useState<StockIssueHistoryRow[]>([]);
   const [loadingIssues, setLoadingIssues] = useState(true);
@@ -296,7 +298,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
                   <p className="text-lg font-bold text-white">
                     {selectedItem.quantity}{" "}
                     <span className="text-sm text-slate-400 font-normal">
-                      {pluralizeUnit(selectedItem.unit, selectedItem.quantity)}
+                      {pluralizeUnit(selectedItem.unit, selectedItem.quantity, catalog.units)}
                     </span>
                   </p>
                 </div>
@@ -387,7 +389,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
                     <p className="text-xs text-slate-400 mt-1">
                       Será registrada baixa de{" "}
                       <span className="text-white font-medium">{calculatedQuantity}</span>{" "}
-                      {pluralizeUnit(selectedItem.unit, calculatedQuantity)}
+                      {pluralizeUnit(selectedItem.unit, calculatedQuantity, catalog.units)}
                     </p>
                   )}
                 </div>
@@ -400,7 +402,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
                   <span className="font-medium">Resumo:</span> Será registrada baixa de{" "}
                   <span className="font-bold">
                     {calculatedQuantity}{" "}
-                    {pluralizeUnit(selectedItem.unit, calculatedQuantity)}
+                    {pluralizeUnit(selectedItem.unit, calculatedQuantity, catalog.units)}
                   </span>
                   .
                   {mode === "saldo" ? (
@@ -567,7 +569,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
                         </span>
                       </span>
                       <span className="text-rose-400 font-semibold text-sm">
-                        -{issue.quantity} {pluralizeUnit(issue.itemUnit, issue.quantity)}
+                        -{issue.quantity} {pluralizeUnit(issue.itemUnit, issue.quantity, catalog.units)}
                       </span>
                     </div>
                   </div>
@@ -581,7 +583,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
                     disabled={historyPage === 1}
                     className="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 disabled:opacity-40"
                   >
-                    ‹
+                    ?
                   </button>
                   <span className="px-2 text-slate-500">
                     {historyPage} / {totalHistoryPages}
@@ -593,7 +595,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
                     disabled={historyPage === totalHistoryPages}
                     className="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 disabled:opacity-40"
                   >
-                    ›
+                    ?
                   </button>
                 </div>
               )}

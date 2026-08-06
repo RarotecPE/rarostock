@@ -5,6 +5,7 @@ import { Item, CartItem, normalizeSearch, Acquisition, pluralizeUnit } from "@/t
 import { InvoicePreviewModal } from "@/components/modals/InvoicePreviewModal";
 import { AcquisitionDetailModal } from "@/components/modals/AcquisitionDetailModal";
 import { Toast } from "@/components/ui/Toast";
+import { useStockCatalog } from "@/lib/use-stock-catalog";
 
 function nowDateTimeLocal() {
   const d = new Date();
@@ -73,6 +74,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
   
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const { catalog } = useStockCatalog();
 
   const fetchAcquisitions = useCallback(async () => {
     setLoadingAcq(true);
@@ -445,7 +447,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
                   </div>
                   <div className="flex items-center gap-4">
                     <span className="text-sm text-slate-300">
-                      {c.quantity} {pluralizeUnit(c.itemUnit, c.quantity)} × R$ {c.unitPrice.toFixed(2)}
+                      {c.quantity} {pluralizeUnit(c.itemUnit, c.quantity, catalog.units)} ? R$ {c.unitPrice.toFixed(2)}
                     </span>
                     <span className="text-sm text-white font-medium">
                       R$ {(c.quantity * c.unitPrice).toFixed(2)}
@@ -610,7 +612,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
                     disabled={historyPage === 1}
                     className="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 disabled:opacity-40"
                   >
-                    ‹
+                    ?
                   </button>
                   <span className="px-2 text-slate-500">
                     {historyPage} / {totalHistoryPages}
@@ -622,7 +624,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
                     disabled={historyPage === totalHistoryPages}
                     className="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 disabled:opacity-40"
                   >
-                    ›
+                    ?
                   </button>
                 </div>
               )}
@@ -648,6 +650,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
           onPreviewInvoice={(url, filename) => setPreviewInvoice({ url, filename })}
           canManageStock={canManageStock}
           canDeleteInvoice={canDeleteInvoice}
+          units={catalog.units}
           onInvoiceChanged={fetchAcquisitions}
           onToast={setToast}
         />

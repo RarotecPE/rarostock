@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, useEffect, useRef, useState } from "react";
-import { Acquisition, AcquisitionItemWithDetails, pluralizeUnit } from "@/types/stock";
+import { Acquisition, AcquisitionItemWithDetails, pluralizeUnit, type StockUnitOption } from "@/types/stock";
 
 interface Props {
   acquisitionId: number;
@@ -11,6 +11,7 @@ interface Props {
   canDeleteInvoice: boolean;
   onInvoiceChanged?: () => void;
   onToast?: (toast: { message: string; type: "success" | "error" }) => void;
+  units?: StockUnitOption[];
 }
 
 export function AcquisitionDetailModal({
@@ -21,6 +22,7 @@ export function AcquisitionDetailModal({
   canDeleteInvoice,
   onInvoiceChanged,
   onToast,
+  units = [],
 }: Props) {
   const [acquisition, setAcquisition] = useState<Acquisition | null>(null);
   const [acqItems, setAcqItems] = useState<AcquisitionItemWithDetails[]>([]);
@@ -285,7 +287,7 @@ export function AcquisitionDetailModal({
                       </div>
                       <div className="text-right">
                         <p className="text-sm text-slate-300">
-                          {ai.quantity} {pluralizeUnit(ai.itemUnit, ai.quantity)} × R${" "}
+                          {ai.quantity} {pluralizeUnit(ai.itemUnit, ai.quantity, units)} ? R${" "}
                           {parseFloat(ai.unitPrice).toFixed(2)}
                         </p>
                         <p className="text-sm text-white font-medium">

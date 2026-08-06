@@ -17,7 +17,7 @@ export async function GET(
 
   const item = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
   if (item.length === 0) {
-    return NextResponse.json({ error: "Item nÃ£o encontrado" }, { status: 404 });
+    return NextResponse.json({ error: "Item não encontrado" }, { status: 404 });
   }
 
   // Get acquisition history ordered for visual display

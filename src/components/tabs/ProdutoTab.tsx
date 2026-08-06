@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CATEGORIES, UNITS } from "@/types/stock";
+import { useStockCatalog } from "@/lib/use-stock-catalog";
 import { Toast } from "@/components/ui/Toast";
 import { ProductList } from "@/components/products/ProductList";
 
@@ -29,6 +29,7 @@ export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; subMessage?: string } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const { catalog, loading: loadingCatalog, error: catalogError } = useStockCatalog();
 
   const addBrand = () => {
     const trimmed = brandInput.trim();
@@ -112,6 +113,12 @@ export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
       {canManageStock ? (
         <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {catalogError ? (
+            <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+              {catalogError}
+            </p>
+          ) : null}
+
           {/* Required Fields */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
@@ -137,9 +144,9 @@ export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
                 className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               >
                 <option value="">Selecione...</option>
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
+                {catalog.categories.map((category) => (
+                  <option key={category.id} value={category.name}>
+                    {category.name}
                   </option>
                 ))}
               </select>
@@ -155,9 +162,9 @@ export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
                 className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               >
                 <option value="">Selecione...</option>
-                {UNITS.map((u) => (
-                  <option key={u} value={u}>
-                    {u}
+                {catalog.units.map((unit) => (
+                  <option key={unit.id} value={unit.name}>
+                    {unit.name}
                   </option>
                 ))}
               </select>
@@ -296,9 +303,9 @@ export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
                   className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 >
                   <option value="">Nenhuma</option>
-                  {UNITS.map((u) => (
-                    <option key={u} value={u}>
-                      {u}
+                  {catalog.units.map((unit) => (
+                    <option key={unit.id} value={unit.name}>
+                      {unit.name}
                     </option>
                   ))}
                 </select>
@@ -310,7 +317,7 @@ export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
           <div className="flex justify-center lg:justify-end pt-4 border-t border-slate-800">
             <button
               type="submit"
-              disabled={submitting || !formType}
+              disabled={submitting || loadingCatalog || !formType}
               className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
             >
               {submitting ? (
@@ -341,7 +348,7 @@ export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
       {false && (
       /* Help Card */
       <div className="bg-slate-900/50 border border-slate-800/50 rounded-xl p-4 text-center lg:text-left">
-        <h3 className="text-sm font-medium text-slate-400 mb-2">💡 Dica</h3>
+        <h3 className="text-sm font-medium text-slate-400 mb-2">Dica</h3>
         <p className="text-xs text-slate-500">
           O código do item (RST-XXXX) é gerado automaticamente. Após cadastrar, você pode visualizar 
           e gerenciar todos os produtos na lista abaixo.

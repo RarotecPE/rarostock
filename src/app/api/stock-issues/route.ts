@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
 
   const item = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
   if (item.length === 0) {
-    return NextResponse.json({ error: "Item nÃ£o encontrado" }, { status: 404 });
+    return NextResponse.json({ error: "Item não encontrado" }, { status: 404 });
   }
 
   if (quantity > item[0].quantity) {

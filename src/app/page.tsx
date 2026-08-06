@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -6,11 +6,12 @@ import { ProdutoTab } from "@/components/tabs/ProdutoTab";
 import { AquisicaoTab } from "@/components/tabs/AquisicaoTab";
 import { BaixaTab } from "@/components/tabs/BaixaTab";
 import { DashboardTab } from "@/components/tabs/DashboardTab";
+import { StockCatalogAdmin } from "@/components/settings/StockCatalogAdmin";
 import { InstallPromptCard } from "@/components/pwa/InstallPromptCard";
 import { Item, getStockStatus, formatMinimumLimit } from "@/types/stock";
 import { AppRole, canAdmin, canManageStock, roleConfigs } from "@/lib/roles";
 
-type Tab = "produto" | "aquisicao" | "baixa" | "dashboard";
+type Tab = "produto" | "aquisicao" | "baixa" | "dashboard" | "catalog";
 
 type SessionUser = {
   id: string;
@@ -129,7 +130,7 @@ export default function HomePage() {
       <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
         <div className="flex items-center gap-3 text-slate-400">
           <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          Verificando sessao...
+          Verificando sessão...
         </div>
       </main>
     );
@@ -146,6 +147,8 @@ function StockApp({ role, user }: { role: AppRole; user: SessionUser | null }) {
   const [alertItems, setAlertItems] = useState<AlertItem[]>([]);
   const canMutateStock = canManageStock(role);
   const roleInfo = roleConfigs[role];
+  const visibleTabs = tabs;
+  const currentTabLabel = activeTab === "catalog" ? "Configurações" : visibleTabs.find((t) => t.key === activeTab)?.label ?? "Dashboard";
 
   useEffect(() => {
     const originalFetch = window.fetch.bind(window);
@@ -253,7 +256,7 @@ function StockApp({ role, user }: { role: AppRole; user: SessionUser | null }) {
 
           {/* Navigation */}
           <nav className="flex-1 px-3 py-4 space-y-1">
-            {tabs.map((tab) => (
+            {visibleTabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => {
@@ -278,7 +281,7 @@ function StockApp({ role, user }: { role: AppRole; user: SessionUser | null }) {
               <UserAvatar user={user} />
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-slate-200">
-                  {user?.nome ?? "Usuario"}
+                  {user?.nome ?? "Usuário"}
                 </p>
                 <p className="text-[11px] uppercase tracking-wider text-slate-600">
                   {roleInfo.label}
@@ -320,7 +323,7 @@ function StockApp({ role, user }: { role: AppRole; user: SessionUser | null }) {
             {/* Page title - desktop only */}
             <div className="hidden lg:block">
               <h2 className="text-lg font-semibold text-white">
-                {tabs.find((t) => t.key === activeTab)?.label}
+                {currentTabLabel}
               </h2>
             </div>
 
@@ -349,13 +352,30 @@ function StockApp({ role, user }: { role: AppRole; user: SessionUser | null }) {
                 <UserAvatar user={user} />
                 <div className="min-w-0 text-right">
                   <p className="max-w-36 truncate text-xs font-medium text-slate-200">
-                    {user?.nome ?? "Usuario"}
+                    {user?.nome ?? "Usuário"}
                   </p>
                   <p className="text-[10px] uppercase tracking-wider text-slate-600">
                     {roleInfo.label}
                   </p>
                 </div>
               </div>
+              {canAdmin(role) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab("catalog");
+                    setShowNotifications(false);
+                  }}
+                  className={`p-2 rounded-lg transition-colors ${activeTab === "catalog" ? "bg-blue-600/20 text-blue-400" : "text-slate-400 hover:text-white hover:bg-slate-800"}`}
+                  aria-label="Configurações"
+                  title="Configurações"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.607 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </button>
+              )}
               {/* Notifications */}
               <div className="relative">
               <button
@@ -478,12 +498,13 @@ function StockApp({ role, user }: { role: AppRole; user: SessionUser | null }) {
             />
           )}
           {activeTab === "baixa" && <BaixaTab canManageStock={canMutateStock} />}
+          {activeTab === "catalog" && canAdmin(role) && <StockCatalogAdmin />}
         </main>
 
         {/* Bottom Navigation - Mobile */}
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur border-t border-slate-800">
           <div className="flex items-center justify-around h-16">
-            {tabs.map((tab) => (
+            {visibleTabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
