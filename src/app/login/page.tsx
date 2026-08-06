@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 export default function LoginPage() {
   const router = useRouter();
   const [ssoLoading, setSsoLoading] = useState(false);
+  const [checkingNexusSession, setCheckingNexusSession] = useState(true);
+  const [silentSsoUrl, setSilentSsoUrl] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const popupRef = useRef<Window | null>(null);
@@ -24,18 +26,37 @@ export default function LoginPage() {
       if (event.data?.type !== "raronexus:sso") return;
 
       stopPopupCheck();
-      setSsoLoading(false);
-      popupRef.current = null;
+      if (event.data.mode !== "silent") {
+        setSsoLoading(false);
+        popupRef.current = null;
+      }
+      setCheckingNexusSession(false);
 
       if (event.data.status === "success") {
         router.replace("/");
         return;
       }
 
-      setError(event.data.message || "Nao foi possivel entrar com RaroNexus.");
+      if (event.data.mode !== "silent") {
+        setError(event.data.message || "Nao foi possivel entrar com RaroNexus.");
+      }
+    }
+
+    async function tryExistingSessions() {
+      const response = await fetch("/api/auth/session").catch(() => null);
+      const session = response?.ok ? await response.json().catch(() => null) : null;
+
+      if (session?.authenticated && session.role) {
+        router.replace("/");
+        return;
+      }
+
+      setSilentSsoUrl(`/api/auth/raronexus/start?mode=silent&attempt=${Date.now()}`);
+      window.setTimeout(() => setCheckingNexusSession(false), 4500);
     }
 
     window.addEventListener("message", handleMessage);
+    void tryExistingSessions();
     return () => {
       window.removeEventListener("message", handleMessage);
       stopPopupCheck();
@@ -92,14 +113,16 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={startRaroNexusLogin}
-            disabled={ssoLoading}
+            disabled={ssoLoading || checkingNexusSession}
             className="flex w-full items-center justify-center gap-3 rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-blue-500"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4v-3.586l5.257-5.257A6 6 0 1121 9z" />
             </svg>
-            {ssoLoading ? "Aguardando RaroNexus..." : "Entrar com RaroNexus"}
+            {ssoLoading ? "Aguardando RaroNexus..." : checkingNexusSession ? "Verificando RaroNexus..." : "Entrar com RaroNexus"}
           </button>
+
+          {silentSsoUrl ? <iframe title="Verificacao RaroNexus" src={silentSsoUrl} className="hidden" /> : null}
 
           {(message || error) && (
             <p
