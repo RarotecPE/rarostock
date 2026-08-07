@@ -36,6 +36,12 @@ function formatLiveDateTime(d: Date) {
   });
 }
 
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+
 interface AquisicaoTabProps {
   canManageStock: boolean;
   canDeleteInvoice: boolean;
@@ -447,10 +453,10 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
                   </div>
                   <div className="flex items-center gap-4">
                     <span className="text-sm text-slate-300">
-                      {c.quantity} {pluralizeUnit(c.itemUnit, c.quantity, catalog.units)} ? R$ {c.unitPrice.toFixed(2)}
+                      {c.quantity} {pluralizeUnit(c.itemUnit, c.quantity, catalog.units)} x {formatCurrency(c.unitPrice)}
                     </span>
                     <span className="text-sm text-white font-medium">
-                      R$ {(c.quantity * c.unitPrice).toFixed(2)}
+                      {formatCurrency(c.quantity * c.unitPrice)}
                     </span>
                     <button
                       onClick={() => removeFromCart(idx)}
@@ -467,7 +473,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-700">
               <span className="text-lg font-semibold text-white">Total:</span>
               <span className="text-lg font-bold text-emerald-400">
-                R$ {cartTotal.toFixed(2)}
+                {formatCurrency(cartTotal)}
               </span>
             </div>
             <div className="flex justify-center lg:justify-end mt-4">
@@ -597,7 +603,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
                         </span>
                       )}
                       <span className="text-emerald-400 font-semibold text-sm">
-                        R$ {parseFloat(acq.totalValue).toFixed(2)}
+                        {formatCurrency(parseFloat(acq.totalValue))}
                       </span>
                     </div>
                   </button>

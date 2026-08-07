@@ -32,7 +32,7 @@ function getEnv(name: string, fallback?: string) {
 }
 
 function popupResponse(status: "success" | "error", message: string, mode: "interactive" | "silent" = "interactive") {
-  const redirectTo = status === "success" ? "/" : "/login";
+  const redirectTo = status === "success" ? "/dashboard" : "/login";
   const html = `<!doctype html>
 <html lang="pt-BR">
 <head><meta charset="utf-8"><title>RaroNexus</title></head>

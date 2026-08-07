@@ -49,10 +49,10 @@ type DashboardAnalytics = {
   categoryDistribution: DistributionPoint[];
 };
 
-type QuickAccessTab = "produto" | "aquisicao" | "baixa";
+type QuickAccessPath = "/produtos" | "/aquisicoes" | "/baixas";
 
 type DashboardTabProps = {
-  onNavigate: (tab: QuickAccessTab) => void;
+  onNavigate: (path: QuickAccessPath) => void;
   canManageStock: boolean;
 };
 
@@ -79,14 +79,14 @@ const formatProductChartLabel = (value: string) =>
   value.length > 22 ? `${value.slice(0, 22)}...` : value;
 
 const quickAccessItems: {
-  key: QuickAccessTab;
+  key: QuickAccessPath;
   title: string;
   description: string;
   icon: React.ReactNode;
   accent: string;
 }[] = [
   {
-    key: "produto",
+    key: "/produtos",
     title: "Produto",
     description: "Cadastrar e gerenciar produtos",
     accent: "text-blue-400 bg-blue-500/15 border-blue-500/30 group-hover:border-blue-400/50",
@@ -97,7 +97,7 @@ const quickAccessItems: {
     ),
   },
   {
-    key: "aquisicao",
+    key: "/aquisicoes",
     title: "Aquisição",
     description: "Registrar entradas no estoque",
     accent: "text-emerald-400 bg-emerald-500/15 border-emerald-500/30 group-hover:border-emerald-400/50",
@@ -108,7 +108,7 @@ const quickAccessItems: {
     ),
   },
   {
-    key: "baixa",
+    key: "/baixas",
     title: "Baixa",
     description: "Registrar saídas de itens",
     accent: "text-rose-400 bg-rose-500/15 border-rose-500/30 group-hover:border-rose-400/50",
@@ -258,9 +258,9 @@ export function DashboardTab({ onNavigate, canManageStock }: DashboardTabProps) 
                   <span className="block text-sm text-slate-400">
                     {canManageStock
                       ? item.description
-                      : item.key === "produto"
+                      : item.key === "/produtos"
                         ? "Consultar produtos e detalhes"
-                        : item.key === "aquisicao"
+                        : item.key === "/aquisicoes"
                           ? "Consultar entradas registradas"
                           : "Consultar baixas registradas"}
                   </span>
