@@ -1,7 +1,25 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
+import {
+  applyColorTheme,
+  getStoredColorTheme,
+  storeColorTheme,
+  type ColorTheme,
+} from "@/components/theme/ThemeBootstrap";
+
+const THEME_CHANGE_EVENT = "rarostock-theme-change";
+
+function subscribeToThemeChanges(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener(THEME_CHANGE_EVENT, onStoreChange);
+
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener(THEME_CHANGE_EVENT, onStoreChange);
+  };
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -10,6 +28,7 @@ export default function LoginPage() {
   const [silentSsoUrl, setSilentSsoUrl] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const theme = useSyncExternalStore(subscribeToThemeChanges, getStoredColorTheme, () => "dark");
   const popupRef = useRef<Window | null>(null);
   const popupCheckRef = useRef<number | null>(null);
 
@@ -18,6 +37,13 @@ export default function LoginPage() {
       window.clearInterval(popupCheckRef.current);
       popupCheckRef.current = null;
     }
+  };
+
+  const toggleTheme = () => {
+    const nextTheme: ColorTheme = theme === "light" ? "dark" : "light";
+    storeColorTheme(nextTheme);
+    applyColorTheme(nextTheme);
+    window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
   };
 
   useEffect(() => {
@@ -33,7 +59,7 @@ export default function LoginPage() {
       setCheckingNexusSession(false);
 
       if (event.data.status === "success") {
-        router.replace("/");
+        router.replace("/dashboard");
         return;
       }
 
@@ -47,7 +73,7 @@ export default function LoginPage() {
       const session = response?.ok ? await response.json().catch(() => null) : null;
 
       if (session?.authenticated && session.role) {
-        router.replace("/");
+        router.replace("/dashboard");
         return;
       }
 
@@ -91,7 +117,24 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center px-4 py-10">
+    <main className="relative min-h-screen bg-slate-950 text-white flex items-center justify-center px-4 py-10">
+      <button
+        type="button"
+        onClick={toggleTheme}
+        className="absolute right-4 top-4 rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+        aria-label={theme === "light" ? "Ativar modo escuro" : "Ativar modo claro"}
+        title={theme === "light" ? "Modo escuro" : "Modo claro"}
+      >
+        {theme === "light" ? (
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21.752 15.002A9.718 9.718 0 0118 15.75a9.75 9.75 0 01-9.75-9.75c0-1.33.266-2.598.748-3.752A9.753 9.753 0 003 11.25 9.75 9.75 0 0012.75 21a9.753 9.753 0 009.002-5.998z" />
+          </svg>
+        ) : (
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364-6.364l-1.414 1.414M7.05 16.95l-1.414 1.414m12.728 0l-1.414-1.414M7.05 7.05L5.636 5.636M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        )}
+      </button>
       <div className="w-full max-w-md space-y-8">
         <div className="text-center space-y-4">
           <img
