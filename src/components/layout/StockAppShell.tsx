@@ -434,23 +434,6 @@ export function StockAppShell({ children }: { children: ReactNode }) {
                 <h2 className="text-lg font-semibold text-white">{currentRoute.label}</h2>
               </div>
 
-              <Link
-                href="/dashboard"
-                className="absolute left-1/2 -translate-x-1/2 lg:hidden flex items-center gap-2 rounded-lg px-2 py-1 transition-colors hover:bg-slate-800"
-                aria-label="Voltar para o Dashboard"
-              >
-                <Image
-                  src="/rarostock-logo.png"
-                  alt="RaroStock"
-                  width={36}
-                  height={36}
-                  className="w-9 h-9 rounded-lg bg-white object-contain"
-                />
-                <span className="text-lg font-bold text-white">
-                  Raro<span className="text-blue-400">Stock</span>
-                </span>
-              </Link>
-
               <StockHeaderActions
                 user={sessionUser}
                 roleLabel={roleInfo.label}
