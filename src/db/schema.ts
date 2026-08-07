@@ -23,6 +23,7 @@ export const items = pgTable("items", {
   unit: varchar("unit", { length: 50 }).notNull(),
   type: itemTypeEnum("type").notNull(),
   minimumLimit: integer("minimum_limit"),
+  desiredLimit: integer("desired_limit"),
   brand: varchar("brand", { length: 100 }),
   additionalUnit: varchar("additional_unit", { length: 50 }),
   observations: text("observations"),

@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import {
   Item,
   pluralizeUnit,
-  formatMinimumLimit,
+  formatLimit,
 } from "@/types/stock";
 import { includeCurrentCategory, includeCurrentUnit } from "@/lib/stock-catalog";
 import { useStockCatalog } from "@/lib/use-stock-catalog";
@@ -69,13 +69,18 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Pro
   const [formName, setFormName] = useState(item.name);
   const [formCategory, setFormCategory] = useState(item.category);
   const [formUnit, setFormUnit] = useState(item.unit);
+  const [formType, setFormType] = useState(item.type);
   const [formMinLimit, setFormMinLimit] = useState<number | "">(
     item.minimumLimit ?? ""
+  );
+  const [formDesiredLimit, setFormDesiredLimit] = useState<number | "">(
+    item.desiredLimit ?? ""
   );
   const [formBrand, setFormBrand] = useState(item.brand || "");
   const [formAdditionalUnit, setFormAdditionalUnit] = useState(item.additionalUnit || "");
   const [formObs, setFormObs] = useState(item.observations || "");
   const [submitting, setSubmitting] = useState(false);
+  const [editError, setEditError] = useState("");
 
   const [acqHistory, setAcqHistory] = useState<AcqHistoryItem[]>([]);
   const [issueHistory, setIssueHistory] = useState<IssueHistoryItem[]>([]);
@@ -216,9 +221,19 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Pro
 
   const handleSave = async () => {
     if (!canManageStock) return;
+    if (
+      formType === "Item de Consumo" &&
+      (formMinLimit === "" ||
+        formDesiredLimit === "" ||
+        Number(formDesiredLimit) < Number(formMinLimit))
+    ) {
+      setEditError("O limite desejável deve ser maior ou igual ao limite mínimo.");
+      return;
+    }
 
+    setEditError("");
     setSubmitting(true);
-    await fetch("/api/items", {
+    const response = await fetch("/api/items", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -226,15 +241,26 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Pro
         name: formName,
         category: formCategory,
         unit: formUnit,
+        type: formType,
         minimumLimit:
-          item.type === "Item de Consumo"
+          formType === "Item de Consumo"
             ? (formMinLimit === "" ? 0 : formMinLimit)
+            : null,
+        desiredLimit:
+          formType === "Item de Consumo"
+            ? (formDesiredLimit === "" ? 0 : formDesiredLimit)
             : null,
         brand: formBrand || null,
         additionalUnit: formAdditionalUnit || null,
         observations: formObs || null,
       }),
     });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      setEditError(payload?.error ?? "Não foi possível salvar o item.");
+      setSubmitting(false);
+      return;
+    }
     setSubmitting(false);
     setEditing(false);
     onUpdate();
@@ -265,6 +291,11 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Pro
           {editing && canManageStock ? (
             /* Edit Form */
             <div className="space-y-4">
+              {editError ? (
+                <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+                  {editError}
+                </p>
+              ) : null}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-1">
@@ -329,16 +360,16 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Pro
                   <label className="block text-sm font-medium text-slate-300 mb-1">
                     Tipo do Item
                   </label>
-                  <input
-                    value={item.type}
-                    disabled
-                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-500 cursor-not-allowed"
-                  />
-                  <p className="text-xs text-slate-500 mt-1">
-                    O tipo não pode ser alterado
-                  </p>
+                  <select
+                    value={formType}
+                    onChange={(e) => setFormType(e.target.value as "Equipamento" | "Item de Consumo")}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="Item de Consumo">Item de Consumo</option>
+                    <option value="Equipamento">Equipamento</option>
+                  </select>
                 </div>
-                {item.type === "Item de Consumo" && (
+                {formType === "Item de Consumo" && (
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1">
                       Limite Mínimo
@@ -349,6 +380,22 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Pro
                       value={formMinLimit}
                       onChange={(e) =>
                         setFormMinLimit(parseInt(e.target.value) || 0)
+                      }
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                )}
+                {formType === "Item de Consumo" && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
+                      Limite Desejável
+                    </label>
+                    <input
+                      type="number"
+                      min={formMinLimit === "" ? 0 : formMinLimit}
+                      value={formDesiredLimit}
+                      onChange={(e) =>
+                        setFormDesiredLimit(parseInt(e.target.value) || 0)
                       }
                       className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none"
                     />
@@ -413,6 +460,7 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Pro
                     <StatusBadge
                       quantity={item.quantity}
                       minimumLimit={item.minimumLimit}
+                      desiredLimit={item.desiredLimit}
                     />
                   </div>
                 </div>
@@ -434,7 +482,13 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Pro
                   <p className="text-xs text-slate-500 uppercase tracking-wider">
                     Limite Mínimo
                   </p>
-                  <p className="text-slate-300">{formatMinimumLimit(item.minimumLimit)}</p>
+                  <p className="text-slate-300">{formatLimit(item.minimumLimit)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider">
+                    Limite Desejável
+                  </p>
+                  <p className="text-slate-300">{formatLimit(item.desiredLimit)}</p>
                 </div>
                 {item.brand && (
                   <div>

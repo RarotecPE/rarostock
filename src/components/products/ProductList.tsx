@@ -5,7 +5,7 @@ import {
   Item,
   normalizeSearch,
   getStockStatus,
-  formatMinimumLimit,
+  formatLimit,
 } from "@/types/stock";
 import { StatusBadge, TypeBadge } from "@/components/ui/Badge";
 import { ItemDetailModal } from "@/components/modals/ItemDetailModal";
@@ -17,6 +17,7 @@ type SortField =
   | "type"
   | "quantity"
   | "minimumLimit"
+  | "desiredLimit"
   | "status";
 type SortDir = "asc" | "desc";
 
@@ -104,7 +105,7 @@ export function ProductList({ refreshKey = 0, canManageStock }: ProductListProps
     if (categoryFilter) result = result.filter((i) => i.category === categoryFilter);
     if (statusFilter) {
       result = result.filter(
-        (i) => getStockStatus(i.quantity, i.minimumLimit) === statusFilter
+        (i) => getStockStatus(i.quantity, i.minimumLimit, i.desiredLimit) === statusFilter
       );
     }
 
@@ -132,9 +133,15 @@ export function ProductList({ refreshKey = 0, canManageStock }: ProductListProps
           cmp = aValue - bValue;
           break;
         }
+        case "desiredLimit": {
+          const aValue = a.desiredLimit ?? Number.POSITIVE_INFINITY;
+          const bValue = b.desiredLimit ?? Number.POSITIVE_INFINITY;
+          cmp = aValue - bValue;
+          break;
+        }
         case "status":
-          cmp = getStockStatus(a.quantity, a.minimumLimit).localeCompare(
-            getStockStatus(b.quantity, b.minimumLimit)
+          cmp = getStockStatus(a.quantity, a.minimumLimit, a.desiredLimit).localeCompare(
+            getStockStatus(b.quantity, b.minimumLimit, b.desiredLimit)
           );
           break;
       }
@@ -266,7 +273,8 @@ export function ProductList({ refreshKey = 0, canManageStock }: ProductListProps
             >
               <option value="">Todos os Status</option>
               <option value="Em Estoque">Em Estoque</option>
-              <option value={"Abaixo do M\u00EDnimo"}>Abaixo do Minimo</option>
+              <option value="Abaixo do Desejável">Abaixo do Desejável</option>
+              <option value={"Abaixo do M\u00EDnimo"}>Abaixo do Mínimo</option>
               <option value={"Indispon\u00EDvel"}>Indisponivel</option>
             </select>
           </div>
@@ -298,12 +306,13 @@ export function ProductList({ refreshKey = 0, canManageStock }: ProductListProps
                     ["type", "Tipo"],
                     ["quantity", "Saldo"],
                     ["minimumLimit", "Lim. Min."],
+                    ["desiredLimit", "Lim. Des."],
                     ["status", "Status"],
                   ].map(([field, label]) => (
                     <th
                       key={field}
                       className={
-                        field === "quantity" || field === "minimumLimit" || field === "status"
+                        field === "quantity" || field === "minimumLimit" || field === "desiredLimit" || field === "status"
                           ? "text-center px-4 py-3"
                           : "text-left px-4 py-3"
                       }
@@ -311,7 +320,7 @@ export function ProductList({ refreshKey = 0, canManageStock }: ProductListProps
                       <button
                         onClick={() => handleSort(field as SortField)}
                         className={`flex items-center gap-1.5 text-xs text-slate-500 uppercase tracking-wider font-medium hover:text-slate-300 transition-colors ${
-                          field === "quantity" || field === "minimumLimit" || field === "status"
+                          field === "quantity" || field === "minimumLimit" || field === "desiredLimit" || field === "status"
                             ? "mx-auto"
                             : ""
                         }`}
@@ -338,10 +347,13 @@ export function ProductList({ refreshKey = 0, canManageStock }: ProductListProps
                     </td>
                     <td className="px-4 py-3 text-center text-white">{item.quantity}</td>
                     <td className="px-4 py-3 text-center text-slate-400">
-                      {formatMinimumLimit(item.minimumLimit)}
+                      {formatLimit(item.minimumLimit)}
+                    </td>
+                    <td className="px-4 py-3 text-center text-slate-400">
+                      {formatLimit(item.desiredLimit)}
                     </td>
                     <td className="px-4 py-3 text-center min-w-40">
-                      <StatusBadge quantity={item.quantity} minimumLimit={item.minimumLimit} />
+                      <StatusBadge quantity={item.quantity} minimumLimit={item.minimumLimit} desiredLimit={item.desiredLimit} />
                     </td>
                   </tr>
                 ))}
@@ -361,14 +373,14 @@ export function ProductList({ refreshKey = 0, canManageStock }: ProductListProps
                     <p className="text-xs text-blue-400 font-mono">{item.code}</p>
                     <h3 className="text-white font-semibold mt-0.5">{item.name}</h3>
                   </div>
-                  <StatusBadge quantity={item.quantity} minimumLimit={item.minimumLimit} />
+                  <StatusBadge quantity={item.quantity} minimumLimit={item.minimumLimit} desiredLimit={item.desiredLimit} />
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <TypeBadge type={item.type} />
                   <span className="text-xs text-slate-400">{item.category}</span>
                   <span className="text-xs text-slate-500">-</span>
                   <span className="text-xs text-slate-400">
-                    Saldo: {item.quantity} | Min: {formatMinimumLimit(item.minimumLimit)}
+                    Saldo: {item.quantity} | Min: {formatLimit(item.minimumLimit)} | Desej: {formatLimit(item.desiredLimit)}
                   </span>
                 </div>
               </button>

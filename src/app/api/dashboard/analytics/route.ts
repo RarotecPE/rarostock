@@ -57,9 +57,10 @@ const buildMonthBuckets = () => {
   };
 };
 
-const getStockStatus = (quantity: number, minimumLimit: number | null) => {
+const getStockStatus = (quantity: number, minimumLimit: number | null, desiredLimit: number | null) => {
   if (quantity === 0) return "Indisponivel";
   if (minimumLimit !== null && quantity < minimumLimit) return "Abaixo do Minimo";
+  if (desiredLimit !== null && quantity < desiredLimit) return "Abaixo do Desejavel";
   return "Em Estoque";
 };
 
@@ -154,7 +155,7 @@ export async function GET(req: NextRequest) {
   const categoryCounts = new Map<string, number>();
 
   for (const item of allItems) {
-    const status = getStockStatus(item.quantity, item.minimumLimit);
+    const status = getStockStatus(item.quantity, item.minimumLimit, item.desiredLimit);
     statusCounts.set(status, (statusCounts.get(status) ?? 0) + 1);
     categoryCounts.set(item.category, (categoryCounts.get(item.category) ?? 0) + 1);
   }
@@ -180,6 +181,7 @@ export async function GET(req: NextRequest) {
     topPurchasedProducts: topItems(purchasedByItem),
     stockStatus: [
       { name: "Em Estoque", value: statusCounts.get("Em Estoque") ?? 0 },
+      { name: "Abaixo do Desejavel", value: statusCounts.get("Abaixo do Desejavel") ?? 0 },
       { name: "Abaixo do Minimo", value: statusCounts.get("Abaixo do Minimo") ?? 0 },
       { name: "Indisponivel", value: statusCounts.get("Indisponivel") ?? 0 },
     ],

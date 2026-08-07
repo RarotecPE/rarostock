@@ -273,6 +273,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
                             <StatusBadge
                               quantity={item.quantity}
                               minimumLimit={item.minimumLimit}
+                              desiredLimit={item.desiredLimit}
                             />
                           </div>
                         </div>
