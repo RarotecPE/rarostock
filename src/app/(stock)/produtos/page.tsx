@@ -4,7 +4,7 @@ import { ProdutoTab } from "@/components/tabs/ProdutoTab";
 import { useStockSession } from "@/components/layout/StockAppShell";
 
 export default function ProdutosPage() {
-  const { canMutateStock } = useStockSession();
+  const { canMutateStock, isAdmin } = useStockSession();
 
-  return <ProdutoTab canManageStock={canMutateStock} />;
+  return <ProdutoTab canManageStock={canMutateStock} isAdmin={isAdmin} />;
 }

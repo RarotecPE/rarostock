@@ -29,6 +29,60 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
+.btn-primary {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(34, 211, 238, 0.42);
+  background: #0ea5e9;
+  padding: 10px 16px;
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 650;
+  transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+.btn-primary:hover {
+  background: #0284c7;
+  border-color: rgba(125, 211, 252, 0.7);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.76);
+  padding: 10px 16px;
+  color: #dbeafe;
+  font-size: 14px;
+  font-weight: 650;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.btn-secondary:hover {
+  background: rgba(30, 41, 59, 0.92);
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
+.stock-nav-active {
+  border-color: rgba(59, 130, 246, 0.5);
+  background: rgba(37, 99, 235, 0.18);
+  color: #93c5fd;
+}
+
+.panel {
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.82);
+}
+
 
 body.theme-light {
   background: #f5f7fb;
@@ -222,6 +276,41 @@ body.theme-light .bg-black\/70 {
 
 body.theme-light .bg-black\/60 {
   background-color: rgba(15, 23, 42, 0.28) !important;
+}
+
+body.theme-light .btn-primary {
+  border-color: rgba(3, 105, 161, 0.45);
+  background: #0077b6;
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(0, 119, 182, 0.18);
+}
+
+body.theme-light .btn-primary:hover {
+  border-color: rgba(7, 89, 133, 0.7);
+  background: #005f99;
+}
+
+body.theme-light .btn-secondary {
+  border-color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.82);
+  color: #0f172a;
+}
+
+body.theme-light .btn-secondary:hover {
+  border-color: rgba(8, 145, 178, 0.48);
+  background: #e8f7fc;
+  color: #006d9c;
+}
+
+body.theme-light .stock-nav-active {
+  border-color: #93c5fd;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+body.theme-light .panel {
+  border-color: rgba(14, 116, 144, 0.18);
+  background: rgba(255, 255, 255, 0.88);
 }
 
 body.theme-light .bg-white {

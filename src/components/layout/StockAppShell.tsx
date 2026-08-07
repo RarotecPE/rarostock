@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -234,10 +234,11 @@ export function StockAppShell({ children }: { children: ReactNode }) {
       const items: Item[] = await res.json();
       setAlertItems(
         items
-          .filter((item) => {
-            const status = getStockStatus(item.quantity, item.minimumLimit);
-            return status === "Indisponível" || status === "Abaixo do Mínimo";
-          })
+          .filter(
+            (item) =>
+              item.quantity === 0 ||
+              (item.minimumLimit !== null && item.quantity < item.minimumLimit)
+          )
           .map((item) => ({
             id: item.id,
             code: item.code,
@@ -302,7 +303,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
 
   return (
     <StockSessionContext.Provider value={sessionValue}>
-      <div className="min-h-screen flex">
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#0f3b68_0,#020617_36%,#020617_100%)] text-slate-100">
         {sidebarOpen && (
           <div
             className="fixed inset-0 z-40 bg-black/60 lg:hidden"
@@ -311,7 +312,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
         )}
 
         <aside
-          className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-900/95 backdrop-blur border-r border-slate-800 transform transition-transform duration-200 lg:translate-x-0 lg:static lg:z-auto ${
+          className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-900/95 backdrop-blur border-r border-slate-800 transform transition-transform duration-200 lg:hidden ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
@@ -411,8 +412,182 @@ export function StockAppShell({ children }: { children: ReactNode }) {
           </div>
         </aside>
 
-        <div className="flex-1 flex flex-col min-h-screen">
-          <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800">
+        <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-0 sm:px-6 lg:px-8 lg:py-5">
+          <header className="mb-6 hidden grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-cyan-400/15 pb-5 lg:grid">
+            <Link href="/dashboard" className="flex items-center gap-3">
+              <Image
+                src="/rarostock-logo.png"
+                alt="RaroStock"
+                width={44}
+                height={44}
+                className="h-11 w-11 rounded-xl bg-white object-contain"
+                priority
+              />
+              <div>
+                <h1 className="text-xl font-bold tracking-tight text-white">
+                  Raro<span className="text-blue-400">Stock</span>
+                </h1>
+                <p className="text-sm font-medium text-slate-300">
+                  {currentRoute.label}
+                </p>
+              </div>
+            </Link>
+
+            <nav className="flex min-w-0 items-center justify-center gap-2">
+              {[navigationItems[0], navigationItems[1], navigationItems[3], navigationItems[2]].map((item) => {
+                const active = isActivePath(pathname, item.href);
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`btn-secondary ${active ? "stock-nav-active" : ""}`}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <div className="flex items-center justify-end gap-2">
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="btn-secondary min-h-11 px-3"
+                  aria-label="Notificações"
+                  title="Notificações"
+                >
+                  <span className="relative inline-flex">
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    {totalAlerts > 0 && (
+                      <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white">
+                        {totalAlerts > 9 ? "9+" : totalAlerts}
+                      </span>
+                    )}
+                  </span>
+                </button>
+
+                {showNotifications && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setShowNotifications(false)}
+                    />
+                    <div className="absolute right-0 top-full z-50 mt-2 w-96 overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-2xl">
+                      <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+                        <h3 className="font-semibold text-white">Notificações</h3>
+                        <span className="text-xs text-slate-500">
+                          {totalAlerts} alerta{totalAlerts !== 1 ? "s" : ""}
+                        </span>
+                      </div>
+
+                      {alertItems.length === 0 ? (
+                        <div className="px-4 py-8 text-center text-slate-500">
+                          <svg className="mx-auto mb-2 h-10 w-10 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <p className="text-sm">Nenhum alerta no momento</p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-4 bg-slate-800/30 px-4 py-3 text-xs">
+                            {unavailableCount > 0 && (
+                              <span className="flex items-center gap-1.5 text-rose-400">
+                                <span className="h-2 w-2 rounded-full bg-rose-500" />
+                                {unavailableCount} Indisponível
+                              </span>
+                            )}
+                            {belowMinCount > 0 && (
+                              <span className="flex items-center gap-1.5 text-amber-400">
+                                <span className="h-2 w-2 rounded-full bg-amber-500" />
+                                {belowMinCount} Abaixo do Mínimo
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="max-h-80 overflow-y-auto">
+                            {alertItems.map((item) => (
+                              <div
+                                key={item.id}
+                                className="border-b border-slate-800/50 px-4 py-3 transition-colors hover:bg-slate-800/30"
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="font-mono text-xs text-blue-400">
+                                      {item.code}
+                                    </p>
+                                    <p className="truncate text-sm text-white">
+                                      {item.name}
+                                    </p>
+                                    <p className="mt-0.5 text-xs text-slate-400">
+                                      Estoque: {item.quantity} | Mín:{" "}
+                                      {formatMinimumLimit(item.minimumLimit)}
+                                    </p>
+                                  </div>
+                                  <span
+                                    className={`flex-shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium ${
+                                      item.quantity === 0
+                                        ? "border-rose-500/30 bg-rose-500/15 text-rose-300"
+                                        : "border-amber-500/30 bg-amber-500/15 text-amber-300"
+                                    }`}
+                                  >
+                                    {item.status}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="btn-secondary min-h-11 px-3"
+                aria-label={theme === "light" ? "Ativar modo escuro" : "Ativar modo claro"}
+                title={theme === "light" ? "Modo escuro" : "Modo claro"}
+              >
+                {theme === "light" ? (
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21.752 15.002A9.718 9.718 0 0118 15.75a9.75 9.75 0 01-9.75-9.75c0-1.33.266-2.598.748-3.752A9.753 9.753 0 003 11.25 9.75 9.75 0 0012.75 21a9.753 9.753 0 009.002-5.998z" />
+                  </svg>
+                ) : (
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364-6.364l-1.414 1.414M7.05 16.95l-1.414 1.414m12.728 0l-1.414-1.414M7.05 7.05L5.636 5.636M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                )}
+              </button>
+
+              <div
+                className="flex h-11 w-11 items-center justify-center"
+                title={[sessionUser?.nome, roleInfo?.label].filter(Boolean).join(" - ") || "Usuário"}
+                aria-label={[sessionUser?.nome, roleInfo?.label].filter(Boolean).join(" - ") || "Usuário"}
+              >
+                <UserAvatar user={sessionUser} />
+              </div>
+
+              <button
+                className="btn-secondary min-h-11 px-3"
+                type="button"
+                onClick={handleLogout}
+                aria-label="Sair"
+                title="Sair"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
+                </svg>
+              </button>
+            </div>
+          </header>
+          <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 lg:hidden">
             <div className="relative flex items-center justify-between px-4 sm:px-6 h-16">
               <div className="flex items-center gap-1 lg:hidden">
                 <button
@@ -589,7 +764,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
             </div>
           </header>
 
-          <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-6">
+          <main className="flex-1 px-0 py-6 pb-24 lg:pb-6">
             {children}
           </main>
 
