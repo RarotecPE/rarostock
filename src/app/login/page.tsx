@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import {
   applyColorTheme,
@@ -9,6 +9,18 @@ import {
   type ColorTheme,
 } from "@/components/theme/ThemeBootstrap";
 
+const THEME_CHANGE_EVENT = "rarostock-theme-change";
+
+function subscribeToThemeChanges(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener(THEME_CHANGE_EVENT, onStoreChange);
+
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener(THEME_CHANGE_EVENT, onStoreChange);
+  };
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [ssoLoading, setSsoLoading] = useState(false);
@@ -16,7 +28,7 @@ export default function LoginPage() {
   const [silentSsoUrl, setSilentSsoUrl] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [theme, setTheme] = useState<ColorTheme>(() => getStoredColorTheme());
+  const theme = useSyncExternalStore(subscribeToThemeChanges, getStoredColorTheme, () => "dark");
   const popupRef = useRef<Window | null>(null);
   const popupCheckRef = useRef<number | null>(null);
 
@@ -27,14 +39,11 @@ export default function LoginPage() {
     }
   };
 
-  useEffect(() => {
-    applyColorTheme(theme);
-  }, [theme]);
-
   const toggleTheme = () => {
     const nextTheme: ColorTheme = theme === "light" ? "dark" : "light";
-    setTheme(nextTheme);
     storeColorTheme(nextTheme);
+    applyColorTheme(nextTheme);
+    window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
   };
 
   useEffect(() => {
