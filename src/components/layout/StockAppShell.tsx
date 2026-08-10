@@ -21,7 +21,7 @@ import {
   type ColorTheme,
 } from "@/components/theme/ThemeBootstrap";
 import { AppRole, canAdmin, canManageStock, roleConfigs } from "@/lib/roles";
-import { Item } from "@/types/stock";
+import { getStockStatus, Item, StockStatus } from "@/types/stock";
 
 type SessionUser = {
   id: string;
@@ -51,7 +51,8 @@ type AlertItem = {
   name: string;
   quantity: number;
   minimumLimit: number | null;
-  status: "Indisponível" | "Abaixo do Mínimo";
+  desiredLimit: number | null;
+  status: StockStatus;
 };
 
 const StockSessionContext = createContext<StockSessionContextValue | null>(null);
@@ -163,10 +164,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
     navigationItems[0];
   const unavailableCount = alertItems.filter((item) => item.quantity === 0).length;
   const belowMinCount = alertItems.filter(
-    (item) =>
-      item.quantity > 0 &&
-      item.minimumLimit !== null &&
-      item.quantity < item.minimumLimit
+    (item) => item.status === "Abaixo do Mínimo"
   ).length;
 
   useEffect(() => {
@@ -241,7 +239,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
           .filter(
             (item) =>
               item.quantity === 0 ||
-              (item.minimumLimit !== null && item.quantity < item.minimumLimit)
+              getStockStatus(item.quantity, item.minimumLimit, item.desiredLimit) === "Abaixo do Mínimo"
           )
           .map((item) => ({
             id: item.id,
@@ -249,7 +247,8 @@ export function StockAppShell({ children }: { children: ReactNode }) {
             name: item.name,
             quantity: item.quantity,
             minimumLimit: item.minimumLimit,
-            status: item.quantity === 0 ? "Indisponível" : "Abaixo do Mínimo",
+            desiredLimit: item.desiredLimit,
+            status: getStockStatus(item.quantity, item.minimumLimit, item.desiredLimit),
           }))
       );
     } catch {

@@ -18,6 +18,7 @@ export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
     ""
   );
   const [formMinLimit, setFormMinLimit] = useState<number | "">("");
+  const [formDesiredLimit, setFormDesiredLimit] = useState<number | "">("");
   const [formObs, setFormObs] = useState("");
   
   // Optional fields
@@ -27,7 +28,7 @@ export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
   const [formAdditionalUnit, setFormAdditionalUnit] = useState("");
   
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; subMessage?: string } | null>(null);
+  const [toast, setToast] = useState<{ message: string; subMessage?: string; type?: "success" | "error" | "warning" } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const { catalog, loading: loadingCatalog, error: catalogError } = useStockCatalog();
 
@@ -49,6 +50,7 @@ export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
     setFormUnit("");
     setFormType("");
     setFormMinLimit("");
+    setFormDesiredLimit("");
     setFormBrands([]);
     setBrandInput("");
     setFormAdditionalUnit("");
@@ -58,6 +60,19 @@ export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formType) return;
+    if (
+      formType === "Item de Consumo" &&
+      (formMinLimit === "" ||
+        formDesiredLimit === "" ||
+        Number(formDesiredLimit) < Number(formMinLimit))
+    ) {
+      setToast({
+        message: "Verifique os limites do item.",
+        subMessage: "O limite desejável deve ser maior ou igual ao limite mínimo.",
+        type: "warning",
+      });
+      return;
+    }
     setSubmitting(true);
     
     const res = await fetch("/api/items", {
@@ -69,7 +84,9 @@ export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
         unit: formUnit,
         type: formType,
         minimumLimit:
-          formType === "Item de Consumo" ? (formMinLimit || 0) : null,
+          formType === "Item de Consumo" ? formMinLimit : null,
+        desiredLimit:
+          formType === "Item de Consumo" ? formDesiredLimit : null,
         brand: formBrands.length > 0 ? formBrands.join(", ") : null,
         additionalUnit: formAdditionalUnit || null,
         observations: formObs || null,
@@ -77,6 +94,15 @@ export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
     });
     
     const data = await res.json();
+    if (!res.ok) {
+      setToast({
+        message: "Não foi possível cadastrar o produto.",
+        subMessage: data?.error ?? "Verifique os dados informados.",
+        type: "error",
+      });
+      setSubmitting(false);
+      return;
+    }
     setToast({
       message: "Produto cadastrado com sucesso!",
       subMessage: `Código: ${data.code}`,
@@ -94,7 +120,7 @@ export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
         <Toast
           message={toast.message}
           subMessage={toast.subMessage}
-          type="success"
+          type={toast.type ?? "success"}
           onClose={() => setToast(null)}
         />
       )}
@@ -199,6 +225,22 @@ export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
                   onChange={(e) => setFormMinLimit(e.target.value ? parseInt(e.target.value) : "")}
                   className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   placeholder="Quantidade mínima"
+                />
+              </div>
+            )}
+            {formType === "Item de Consumo" && (
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">
+                  Limite Desejável *
+                </label>
+                <input
+                  type="number"
+                  required
+                  min={formMinLimit === "" ? 0 : formMinLimit}
+                  value={formDesiredLimit}
+                  onChange={(e) => setFormDesiredLimit(e.target.value ? parseInt(e.target.value) : "")}
+                  className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  placeholder="Quantidade desejável"
                 />
               </div>
             )}

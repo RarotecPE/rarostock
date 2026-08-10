@@ -3,7 +3,11 @@ export type { StockCatalog, StockCategoryOption, StockUnitOption } from "@/lib/s
 
 export type ItemType = "Equipamento" | "Item de Consumo";
 
-export type StockStatus = "Em Estoque" | "Abaixo do Mínimo" | "Indisponível";
+export type StockStatus =
+  | "Em Estoque"
+  | "Abaixo do Desejável"
+  | "Abaixo do Mínimo"
+  | "Indisponível";
 
 export interface Item {
   id: number;
@@ -13,6 +17,7 @@ export interface Item {
   unit: string;
   type: ItemType;
   minimumLimit: number | null;
+  desiredLimit: number | null;
   brand: string | null;
   additionalUnit: string | null;
   observations: string | null;
@@ -71,16 +76,20 @@ export interface PriceHistoryPoint {
 
 export function getStockStatus(
   quantity: number,
-  minimumLimit: number | null
+  minimumLimit: number | null,
+  desiredLimit: number | null = null,
 ): StockStatus {
   if (quantity === 0) return "Indisponível";
   if (minimumLimit !== null && quantity < minimumLimit) return "Abaixo do Mínimo";
+  if (desiredLimit !== null && quantity < desiredLimit) return "Abaixo do Desejável";
   return "Em Estoque";
 }
 
-export function formatMinimumLimit(minimumLimit: number | null): string {
-  return minimumLimit === null ? "—" : String(minimumLimit);
+export function formatLimit(limit: number | null): string {
+  return limit === null ? "—" : String(limit);
 }
+
+export const formatMinimumLimit = formatLimit;
 
 export function normalizeSearch(text: string): string {
   return text

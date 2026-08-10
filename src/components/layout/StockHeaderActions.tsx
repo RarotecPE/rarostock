@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import { HeaderDropdown, HeaderIconButton } from "@/components/layout/HeaderDropdown";
 import { type ColorTheme } from "@/components/theme/ThemeBootstrap";
-import { formatMinimumLimit } from "@/types/stock";
+import { formatLimit } from "@/types/stock";
 
 type SessionUser = {
   id: string;
@@ -18,6 +18,7 @@ type AlertItem = {
   name: string;
   quantity: number;
   minimumLimit: number | null;
+  desiredLimit: number | null;
   status: string;
 };
 
@@ -239,7 +240,7 @@ export function StockHeaderActions({
                         <p className="font-mono text-xs text-blue-400">{item.code}</p>
                         <p className="truncate text-sm text-white">{item.name}</p>
                         <p className="mt-0.5 text-xs text-slate-400">
-                          Estoque: {item.quantity} | Mín: {formatMinimumLimit(item.minimumLimit)}
+                          Estoque: {item.quantity} | Mín: {formatLimit(item.minimumLimit)}
                         </p>
                       </div>
                       <span

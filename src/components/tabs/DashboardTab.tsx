@@ -16,7 +16,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Item } from "@/types/stock";
+import { getStockStatus, Item } from "@/types/stock";
 
 type MonthlyFlowPoint = {
   month: string;
@@ -56,7 +56,7 @@ type DashboardTabProps = {
   canManageStock: boolean;
 };
 
-const STATUS_COLORS = ["#34d399", "#f59e0b", "#fb7185"];
+const STATUS_COLORS = ["#34d399", "#22d3ee", "#f59e0b", "#fb7185"];
 const CATEGORY_COLORS = [
   "#60a5fa",
   "#22d3ee",
@@ -198,14 +198,14 @@ export function DashboardTab({ onNavigate, canManageStock }: DashboardTabProps) 
   const totalItems = items.length;
   const unavailable = items.filter((item) => item.quantity === 0).length;
   const belowMin = items.filter(
-    (item) =>
-      item.quantity > 0 &&
-      item.minimumLimit !== null &&
-      item.quantity < item.minimumLimit
+    (item) => getStockStatus(item.quantity, item.minimumLimit, item.desiredLimit) === "Abaixo do Mínimo"
   ).length;
-  const inStock = totalItems - belowMin - unavailable;
+  const belowDesired = items.filter(
+    (item) => getStockStatus(item.quantity, item.minimumLimit, item.desiredLimit) === "Abaixo do Desejável"
+  ).length;
+  const inStock = totalItems - belowMin - belowDesired - unavailable;
   const totalUnits = items.reduce((sum, item) => sum + item.quantity, 0);
-  const alertCount = belowMin + unavailable;
+  const alertCount = belowMin + belowDesired + unavailable;
 
   const hasMonthlyFlow =
     analytics?.monthlyFlow.some((point) => point.entradas > 0 || point.baixas > 0) ??
@@ -312,7 +312,11 @@ export function DashboardTab({ onNavigate, canManageStock }: DashboardTabProps) 
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5">
+              <p className="text-sm text-slate-400">Abaixo do desejável</p>
+              <p className="text-4xl font-bold text-cyan-400 mt-2">{belowDesired}</p>
+            </div>
             <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5">
               <p className="text-sm text-slate-400">Abaixo do minimo</p>
               <p className="text-4xl font-bold text-amber-400 mt-2">{belowMin}</p>

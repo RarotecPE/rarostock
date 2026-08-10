@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { items } from "@/db/schema";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canExport } from "@/lib/roles";
+import { getStockStatus, formatLimit } from "@/types/stock";
 
 export async function GET(req: NextRequest) {
   const auth = await requirePermission(req, canExport);
@@ -39,12 +40,7 @@ export async function GET(req: NextRequest) {
   }
   if (statusFilter) {
     allItems = allItems.filter((i) => {
-      const st =
-        i.quantity === 0
-          ? "Indisponível"
-          : i.minimumLimit !== null && i.quantity < i.minimumLimit
-            ? "Abaixo do Mínimo"
-            : "Em Estoque";
+      const st = getStockStatus(i.quantity, i.minimumLimit, i.desiredLimit);
       return st === statusFilter;
     });
   }
@@ -60,17 +56,13 @@ export async function GET(req: NextRequest) {
     "Unidade Adicional",
     "Quantidade",
     "Limite Mínimo",
+    "Limite Desejável",
     "Status",
     "Marca",
     "Observações",
   ];
   const rows = allItems.map((i) => {
-    const status =
-      i.quantity === 0
-        ? "Indisponível"
-        : i.minimumLimit !== null && i.quantity < i.minimumLimit
-          ? "Abaixo do Mínimo"
-          : "Em Estoque";
+    const status = getStockStatus(i.quantity, i.minimumLimit, i.desiredLimit);
     return [
       i.code,
       `"${i.name}"`,
@@ -79,7 +71,8 @@ export async function GET(req: NextRequest) {
       i.unit,
       `"${i.additionalUnit || ""}"`,
       String(i.quantity),
-      i.minimumLimit === null ? "?" : String(i.minimumLimit),
+      formatLimit(i.minimumLimit),
+      formatLimit(i.desiredLimit),
       status,
       `"${i.brand || ""}"`,
       `"${(i.observations || "").replace(/"/g, '""')}"`,
