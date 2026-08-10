@@ -1,24 +1,10 @@
-"use client";
+﻿"use client";
 
-import { useState, useEffect, useMemo } from "react";
-import {
-  Item,
-  pluralizeUnit,
-  formatLimit,
-} from "@/types/stock";
+import { useEffect, useMemo, useState } from "react";
+import { Item, pluralizeUnit, formatLimit } from "@/types/stock";
 import { includeCurrentCategory, includeCurrentUnit } from "@/lib/stock-catalog";
 import { useStockCatalog } from "@/lib/use-stock-catalog";
-import { StatusBadge, TypeBadge } from "@/components/ui/Badge";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
-} from "recharts";
+import { StatusBadge } from "@/components/ui/Badge";
 
 interface Props {
   item: Item;
@@ -27,833 +13,97 @@ interface Props {
   canManageStock: boolean;
 }
 
-interface AcqHistoryItem {
-  quantity: number;
-  unitPrice: string;
-  totalPrice: string;
-  date: string;
-  createdAt: string;
-  balanceAfter: number;
-}
-
-interface IssueHistoryItem {
-  id: number;
-  quantity: number;
-  date: string;
-  createdAt: string;
-  reason: string | null;
-  balanceAfter: number;
-}
-
-interface PriceDataPoint {
-  id: number;
-  date: string;
-  dateRaw: Date;
-  unitPrice: number;
-  dateTime: string;
-}
-
-interface BalanceDataPoint {
-  id: number;
-  date: string;
-  dateRaw: Date;
-  balance: number;
-  type: "acquisition" | "issue";
-  quantity: number;
-}
-
-type ChartMode = "price" | "balance";
+type AcqHistoryItem = { quantity: number; unitPrice: string; totalPrice: string; date: string; balanceAfter: number };
+type IssueHistoryItem = { id: number; quantity: number; date: string; reason: string | null; balanceAfter: number };
 
 export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Props) {
   const [editing, setEditing] = useState(false);
   const [formName, setFormName] = useState(item.name);
   const [formCategory, setFormCategory] = useState(item.category);
   const [formUnit, setFormUnit] = useState(item.unit);
-  const [formType, setFormType] = useState(item.type);
-  const [formMinLimit, setFormMinLimit] = useState<number | "">(
-    item.minimumLimit ?? ""
-  );
-  const [formDesiredLimit, setFormDesiredLimit] = useState<number | "">(
-    item.desiredLimit ?? ""
-  );
+  const [formMinLimit, setFormMinLimit] = useState<number | "">(item.minimumLimit);
+  const [formDesiredLimit, setFormDesiredLimit] = useState<number | "">(item.desiredLimit);
   const [formBrand, setFormBrand] = useState(item.brand || "");
   const [formAdditionalUnit, setFormAdditionalUnit] = useState(item.additionalUnit || "");
   const [formObs, setFormObs] = useState(item.observations || "");
   const [submitting, setSubmitting] = useState(false);
   const [editError, setEditError] = useState("");
-
   const [acqHistory, setAcqHistory] = useState<AcqHistoryItem[]>([]);
   const [issueHistory, setIssueHistory] = useState<IssueHistoryItem[]>([]);
-  const [priceData, setPriceData] = useState<PriceDataPoint[]>([]);
-  const [balanceData, setBalanceData] = useState<BalanceDataPoint[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(true);
-  const [chartMode, setChartMode] = useState<ChartMode>("price");
-
-  // Chart filters
-  const [chartStartDate, setChartStartDate] = useState("");
-  const [chartEndDate, setChartEndDate] = useState("");
   const { catalog } = useStockCatalog();
 
+  const categoryOptions = useMemo(() => includeCurrentCategory(catalog.categories, formCategory), [catalog.categories, formCategory]);
+  const unitOptions = useMemo(() => includeCurrentUnit(catalog.units, formUnit), [catalog.units, formUnit]);
+  const additionalUnitOptions = useMemo(() => includeCurrentUnit(catalog.units, formAdditionalUnit), [catalog.units, formAdditionalUnit]);
+
   useEffect(() => {
-    const fetchDetail = async () => {
+    let active = true;
+    const timer = setTimeout(() => {
       setLoadingDetail(true);
-      const res = await fetch(`/api/items/${item.id}`);
-      const data = await res.json();
-      setAcqHistory(data.acquisitionHistory || []);
-      setIssueHistory(data.issueHistory || []);
-
-      // Build price chart data - each entry gets unique id for same-day differentiation
-      // Exclude items with price 0 (promotional items like "buy 2 get 3")
-      const prices: PriceDataPoint[] = (data.acquisitionHistory || [])
-        .filter((a: AcqHistoryItem) => parseFloat(a.unitPrice) > 0)
-        .map((a: AcqHistoryItem, idx: number) => {
-          const d = new Date(a.date);
-          return {
-            id: idx,
-            date: d.toLocaleDateString("pt-BR"),
-            dateRaw: d,
-            unitPrice: parseFloat(a.unitPrice),
-            dateTime: d.toLocaleString("pt-BR"),
-          };
-        })
-        .reverse();
-      setPriceData(prices);
-
-      // Build balance history from both acq and issue histories
-      // Both come from API sorted desc; we need chronological asc
-      const acqAsc = [...(data.acquisitionHistory || [])].reverse() as AcqHistoryItem[];
-      const issAsc = [...(data.issueHistory || [])].reverse() as IssueHistoryItem[];
-
-      const balPoints: BalanceDataPoint[] = [];
-      let bIdx = 0;
-      for (const a of acqAsc) {
-        balPoints.push({
-          id: bIdx++,
-          date: new Date(a.date).toLocaleDateString("pt-BR"),
-          dateRaw: new Date(a.date),
-          balance: a.balanceAfter,
-          type: "acquisition",
-          quantity: a.quantity,
-        });
-      }
-      for (const s of issAsc) {
-        balPoints.push({
-          id: bIdx++,
-          date: new Date(s.createdAt).toLocaleDateString("pt-BR"),
-          dateRaw: new Date(s.createdAt),
-          balance: s.balanceAfter,
-          type: "issue",
-          quantity: s.quantity,
-        });
-      }
-      balPoints.sort((a, b) => a.dateRaw.getTime() - b.dateRaw.getTime());
-      // Re-index after sort
-      balPoints.forEach((p, i) => { p.id = i; });
-      setBalanceData(balPoints);
-
-      setLoadingDetail(false);
-    };
-    fetchDetail();
+      fetch(`/api/items/${item.id}`).then((res) => res.json()).then((data) => {
+        if (!active) return;
+        setAcqHistory(data.acquisitionHistory || []);
+        setIssueHistory(data.issueHistory || []);
+        setLoadingDetail(false);
+      });
+    }, 0);
+    return () => { active = false; clearTimeout(timer); };
   }, [item.id]);
-
-  // Filtered price data for chart
-  const filteredPriceData = useMemo(() => {
-    let data = priceData;
-    if (chartStartDate) {
-      const start = new Date(chartStartDate);
-      data = data.filter((d) => d.dateRaw >= start);
-    }
-    if (chartEndDate) {
-      const end = new Date(chartEndDate);
-      end.setHours(23, 59, 59, 999);
-      data = data.filter((d) => d.dateRaw <= end);
-    }
-    return data;
-  }, [priceData, chartStartDate, chartEndDate]);
-
-  // Price statistics
-  const priceStats = useMemo(() => {
-    if (filteredPriceData.length === 0) return null;
-    const prices = filteredPriceData.map((d) => d.unitPrice);
-    const min = Math.min(...prices);
-    const max = Math.max(...prices);
-    const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
-    return { min, max, avg };
-  }, [filteredPriceData]);
-
-  // Filtered balance data
-  const filteredBalanceData = useMemo(() => {
-    let data = balanceData;
-    if (chartStartDate) {
-      const start = new Date(chartStartDate);
-      data = data.filter((d) => d.dateRaw >= start);
-    }
-    if (chartEndDate) {
-      const end = new Date(chartEndDate);
-      end.setHours(23, 59, 59, 999);
-      data = data.filter((d) => d.dateRaw <= end);
-    }
-    return data;
-  }, [balanceData, chartStartDate, chartEndDate]);
-
-  // Balance statistics
-  const balanceStats = useMemo(() => {
-    if (filteredBalanceData.length === 0) return null;
-    const vals = filteredBalanceData.map((d) => d.balance);
-    const min = Math.min(...vals);
-    const max = Math.max(...vals);
-    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
-    return { min, max, avg };
-  }, [filteredBalanceData]);
-
-  const categoryOptions = useMemo(
-    () => includeCurrentCategory(catalog.categories, formCategory),
-    [catalog.categories, formCategory]
-  );
-  const unitOptions = useMemo(
-    () => includeCurrentUnit(catalog.units, formUnit),
-    [catalog.units, formUnit]
-  );
-  const additionalUnitOptions = useMemo(
-    () => includeCurrentUnit(catalog.units, formAdditionalUnit),
-    [catalog.units, formAdditionalUnit]
-  );
 
   const handleSave = async () => {
     if (!canManageStock) return;
-    if (
-      formType === "Item de Consumo" &&
-      (formMinLimit === "" ||
-        formDesiredLimit === "" ||
-        Number(formDesiredLimit) < Number(formMinLimit))
-    ) {
+    if (formMinLimit === "" || formDesiredLimit === "" || Number(formDesiredLimit) < Number(formMinLimit)) {
       setEditError("O limite desejável deve ser maior ou igual ao limite mínimo.");
       return;
     }
-
     setEditError("");
     setSubmitting(true);
-    const response = await fetch("/api/items", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: item.id,
-        name: formName,
-        category: formCategory,
-        unit: formUnit,
-        type: formType,
-        minimumLimit:
-          formType === "Item de Consumo"
-            ? (formMinLimit === "" ? 0 : formMinLimit)
-            : null,
-        desiredLimit:
-          formType === "Item de Consumo"
-            ? (formDesiredLimit === "" ? 0 : formDesiredLimit)
-            : null,
-        brand: formBrand || null,
-        additionalUnit: formAdditionalUnit || null,
-        observations: formObs || null,
-      }),
-    });
+    const response = await fetch("/api/items", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: item.id, name: formName, category: formCategory, unit: formUnit, minimumLimit: formMinLimit, desiredLimit: formDesiredLimit, brand: formBrand || null, additionalUnit: formAdditionalUnit || null, observations: formObs || null }) });
     const payload = await response.json().catch(() => null);
-    if (!response.ok) {
-      setEditError(payload?.error ?? "Não foi possível salvar o item.");
-      setSubmitting(false);
-      return;
-    }
     setSubmitting(false);
+    if (!response.ok) { setEditError(payload?.error ?? "Não foi possível salvar o produto."); return; }
     setEditing(false);
     onUpdate();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-slate-900 border-b border-slate-800 p-6 flex items-center justify-between z-10">
-          <div>
-            <p className="text-sm text-blue-400 font-mono">{item.code}</p>
-            <h2 className="text-xl font-bold text-white">
-              {editing ? "Editar Item" : item.name}
-            </h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-800 bg-slate-900 p-6">
+          <div><p className="font-mono text-sm text-blue-400">{item.code}</p><h2 className="text-xl font-bold text-white">{editing ? "Editar produto" : item.name}</h2></div>
+          <button onClick={onClose} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">×</button>
         </div>
-
-        <div className="p-6 space-y-6">
+        <div className="space-y-6 p-6">
           {editing && canManageStock ? (
-            /* Edit Form */
             <div className="space-y-4">
-              {editError ? (
-                <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
-                  {editError}
-                </p>
-              ) : null}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    Nome
-                  </label>
-                  <input
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    Categoria
-                  </label>
-                  <select
-                    value={formCategory}
-                    onChange={(e) => setFormCategory(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    {categoryOptions.map((category) => (
-                      <option key={`${category.id}-${category.name}`} value={category.name}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    Unidade de Medida
-                  </label>
-                  <select
-                    value={formUnit}
-                    onChange={(e) => setFormUnit(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    {unitOptions.map((unit) => (
-                      <option key={`${unit.id}-${unit.name}`} value={unit.name}>
-                        {unit.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    Unidade de Medida Adicional
-                  </label>
-                  <select
-                    value={formAdditionalUnit}
-                    onChange={(e) => setFormAdditionalUnit(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    <option value="">Nenhuma</option>
-                    {additionalUnitOptions.map((unit) => (
-                      <option key={`${unit.id}-${unit.name}`} value={unit.name}>
-                        {unit.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    Tipo do Item
-                  </label>
-                  <select
-                    value={formType}
-                    onChange={(e) => setFormType(e.target.value as "Equipamento" | "Item de Consumo")}
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    <option value="Item de Consumo">Item de Consumo</option>
-                    <option value="Equipamento">Equipamento</option>
-                  </select>
-                </div>
-                {formType === "Item de Consumo" && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Limite Mínimo
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={formMinLimit}
-                      onChange={(e) =>
-                        setFormMinLimit(parseInt(e.target.value) || 0)
-                      }
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                  </div>
-                )}
-                {formType === "Item de Consumo" && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Limite Desejável
-                    </label>
-                    <input
-                      type="number"
-                      min={formMinLimit === "" ? 0 : formMinLimit}
-                      value={formDesiredLimit}
-                      onChange={(e) =>
-                        setFormDesiredLimit(parseInt(e.target.value) || 0)
-                      }
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                  </div>
-                )}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    Marca
-                  </label>
-                  <input
-                    value={formBrand}
-                    onChange={(e) => setFormBrand(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="Ex: Dell, HP, Samsung..."
-                  />
-                </div>
+              {editError ? <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">{editError}</p> : null}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <Field label="Nome"><input value={formName} onChange={(e) => setFormName(e.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white placeholder-slate-500 outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500" /></Field>
+                <Field label="Categoria"><select value={formCategory} onChange={(e) => setFormCategory(e.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white placeholder-slate-500 outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500">{categoryOptions.map((category) => <option key={`${category.id}-${category.name}`} value={category.name}>{category.name}</option>)}</select></Field>
+                <Field label="Unidade de Medida"><select value={formUnit} onChange={(e) => setFormUnit(e.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white placeholder-slate-500 outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500">{unitOptions.map((unit) => <option key={`${unit.id}-${unit.name}`} value={unit.name}>{unit.name}</option>)}</select></Field>
+                <Field label="Unidade Adicional"><select value={formAdditionalUnit} onChange={(e) => setFormAdditionalUnit(e.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white placeholder-slate-500 outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500"><option value="">Nenhuma</option>{additionalUnitOptions.map((unit) => <option key={`${unit.id}-${unit.name}`} value={unit.name}>{unit.name}</option>)}</select></Field>
+                <Field label="Limite Mínimo"><input type="number" min={0} value={formMinLimit} onChange={(e) => setFormMinLimit(e.target.value ? parseInt(e.target.value, 10) : "")} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white placeholder-slate-500 outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500" /></Field>
+                <Field label="Limite Desejável"><input type="number" min={formMinLimit === "" ? 0 : formMinLimit} value={formDesiredLimit} onChange={(e) => setFormDesiredLimit(e.target.value ? parseInt(e.target.value, 10) : "")} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white placeholder-slate-500 outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500" /></Field>
+                <Field label="Marca"><input value={formBrand} onChange={(e) => setFormBrand(e.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white placeholder-slate-500 outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500" /></Field>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">
-                  Observações
-                </label>
-                <textarea
-                  value={formObs}
-                  onChange={(e) => setFormObs(e.target.value)}
-                  rows={2}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                />
-              </div>
-              <div className="flex gap-3 justify-end">
-                <button
-                  onClick={() => setEditing(false)}
-                  className="px-4 py-2 text-slate-300 hover:text-white"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={submitting}
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium disabled:opacity-50"
-                >
-                  {submitting ? "Salvando..." : "Salvar Alterações"}
-                </button>
-              </div>
+              <Field label="Observações"><textarea value={formObs} onChange={(e) => setFormObs(e.target.value)} rows={3} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white placeholder-slate-500 outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 resize-none" /></Field>
+              <div className="flex justify-end gap-3"><button onClick={() => setEditing(false)} className="rounded-lg border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:border-slate-600 hover:bg-slate-800 hover:text-white">Cancelar</button><button onClick={handleSave} disabled={submitting} className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-50 disabled:opacity-50">{submitting ? "Salvando..." : "Salvar alterações"}</button></div>
             </div>
           ) : (
             <>
-              {/* Item Details */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider">
-                    Tipo
-                  </p>
-                  <div className="mt-1">
-                    <TypeBadge type={item.type} />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider">
-                    Status
-                  </p>
-                  <div className="mt-1">
-                    <StatusBadge
-                      quantity={item.quantity}
-                      minimumLimit={item.minimumLimit}
-                      desiredLimit={item.desiredLimit}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider">
-                    Saldo
-                  </p>
-                  <p className="text-white text-lg font-semibold">
-                    {item.quantity} {pluralizeUnit(item.unit, item.quantity, catalog.units)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider">
-                    Categoria
-                  </p>
-                  <p className="text-slate-300">{item.category}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider">
-                    Limite Mínimo
-                  </p>
-                  <p className="text-slate-300">{formatLimit(item.minimumLimit)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider">
-                    Limite Desejável
-                  </p>
-                  <p className="text-slate-300">{formatLimit(item.desiredLimit)}</p>
-                </div>
-                {item.brand && (
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wider">
-                      Marca
-                    </p>
-                    <p className="text-slate-300">{item.brand}</p>
-                  </div>
-                )}
-                {item.additionalUnit && (
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wider">
-                      Unidade Adicional
-                    </p>
-                    <p className="text-slate-300">{item.additionalUnit}</p>
-                  </div>
-                )}
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                <Info label="Status"><StatusBadge quantity={item.quantity} minimumLimit={item.minimumLimit} desiredLimit={item.desiredLimit} /></Info>
+                <Info label="Saldo"><span className="text-lg font-semibold text-white">{item.quantity} {pluralizeUnit(item.unit, item.quantity, catalog.units)}</span></Info>
+                <Info label="Categoria">{item.category}</Info>
+                <Info label="Limite Mínimo">{formatLimit(item.minimumLimit)}</Info>
+                <Info label="Limite Desejável">{formatLimit(item.desiredLimit)}</Info>
+                {item.brand ? <Info label="Marca">{item.brand}</Info> : null}
+                {item.additionalUnit ? <Info label="Unidade Adicional">{item.additionalUnit}</Info> : null}
               </div>
-              {item.observations && (
-                <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider">
-                    Observações
-                  </p>
-                  <p className="text-slate-300 mt-1">{item.observations}</p>
-                </div>
-              )}
-              {canManageStock && (
-                <button
-                  onClick={() => setEditing(true)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors border border-slate-700"
-                >
-                  <span className="flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    Editar
-                  </span>
-                </button>
-              )}
-
-              {/* Price History Chart */}
-              {loadingDetail ? (
-                <div className="flex justify-center py-8">
-                  <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                </div>
-              ) : (
-                <>
-                  {(priceData.length > 0 || balanceData.length > 0) && (
-                    <div>
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
-                        <h3 className="text-sm font-medium text-slate-300">
-                          {chartMode === "price"
-                            ? "Histórico de Preços (Valor Unitário)"
-                            : "Histórico de Saldo (Item)"}
-                        </h3>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => setChartMode(chartMode === "price" ? "balance" : "price")}
-                            className={`p-1.5 rounded border transition-colors ${
-                              chartMode === "balance"
-                                ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
-                                : chartMode === "price"
-                                  ? "bg-blue-500/15 border-blue-500/30 text-blue-400"
-                                  : "bg-slate-800 border-slate-700 text-slate-400 hover:text-white"
-                            }`}
-                            title={chartMode === "price" ? "Trocar para Histórico de Saldo" : "Trocar para Histórico de Preços"}
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h11m0 0l-3-3m3 3l-3 3M20 17H9m0 0l3-3m-3 3l3 3" />
-                            </svg>
-                          </button>
-                          <input
-                            type="date"
-                            value={chartStartDate}
-                            onChange={(e) => setChartStartDate(e.target.value)}
-                            className="px-2 py-1 text-xs bg-slate-800 border border-slate-700 rounded text-white"
-                          />
-                          <span className="text-slate-500 text-xs">até</span>
-                          <input
-                            type="date"
-                            value={chartEndDate}
-                            onChange={(e) => setChartEndDate(e.target.value)}
-                            className="px-2 py-1 text-xs bg-slate-800 border border-slate-700 rounded text-white"
-                          />
-                          {(chartStartDate || chartEndDate) && (
-                            <button
-                              onClick={() => {
-                                setChartStartDate("");
-                                setChartEndDate("");
-                              }}
-                              className="text-xs text-slate-400 hover:text-white"
-                            >
-                              Limpar
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {chartMode === "price" ? (
-                        <>
-                          {/* Price Stats */}
-                          {priceStats && (
-                            <div className="grid grid-cols-3 gap-3 mb-3">
-                              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 text-center">
-                                <p className="text-xs text-emerald-400">Mínimo</p>
-                                <p className="text-sm font-semibold text-emerald-300">
-                                  R$ {priceStats.min.toFixed(2)}
-                                </p>
-                              </div>
-                              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2 text-center">
-                                <p className="text-xs text-blue-400">Médio</p>
-                                <p className="text-sm font-semibold text-blue-300">
-                                  R$ {priceStats.avg.toFixed(2)}
-                                </p>
-                              </div>
-                              <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg px-3 py-2 text-center">
-                                <p className="text-xs text-rose-400">Máximo</p>
-                                <p className="text-sm font-semibold text-rose-300">
-                                  R$ {priceStats.max.toFixed(2)}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
-                          {filteredPriceData.length > 0 ? (
-                            <div className="bg-slate-800/50 rounded-lg p-4 h-56">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={filteredPriceData}>
-                                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                                  <XAxis
-                                    dataKey="id"
-                                    stroke="#64748b"
-                                    fontSize={11}
-                                    tickFormatter={(_, index) => filteredPriceData[index]?.date || ""}
-                                  />
-                                  <YAxis stroke="#64748b" fontSize={11} />
-                                  <Tooltip
-                                    contentStyle={{
-                                      backgroundColor: "#1e293b",
-                                      border: "1px solid #334155",
-                                      borderRadius: "8px",
-                                      color: "#e2e8f0",
-                                    }}
-                                    formatter={(value) => [
-                                      `R$ ${Number(value).toFixed(2)}`,
-                                      "Valor Unitário",
-                                    ]}
-                                    labelFormatter={(_, payload) => {
-                                      if (payload && payload[0]) {
-                                        const point = payload[0].payload as PriceDataPoint;
-                                        return `Data: ${point.date}`;
-                                      }
-                                      return "";
-                                    }}
-                                  />
-                                  {priceStats && (
-                                    <ReferenceLine
-                                      y={priceStats.avg}
-                                      stroke="#3b82f6"
-                                      strokeDasharray="5 5"
-                                      label={{
-                                        value: "Média",
-                                        fill: "#60a5fa",
-                                        fontSize: 10,
-                                      }}
-                                    />
-                                  )}
-                                  <Line
-                                    type="monotone"
-                                    dataKey="unitPrice"
-                                    stroke="#3b82f6"
-                                    strokeWidth={2}
-                                    dot={{ fill: "#3b82f6", r: 4 }}
-                                    activeDot={{ r: 6, fill: "#60a5fa" }}
-                                  />
-                                </LineChart>
-                              </ResponsiveContainer>
-                            </div>
-                          ) : (
-                            <p className="text-center text-slate-500 py-4 text-sm">
-                              Sem dados de preço no período
-                            </p>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          {/* Balance Stats */}
-                          {balanceStats && (
-                            <div className="grid grid-cols-3 gap-3 mb-3">
-                              <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg px-3 py-2 text-center">
-                                <p className="text-xs text-rose-400">Mínimo</p>
-                                <p className="text-sm font-semibold text-rose-300">
-                                  {balanceStats.min}
-                                </p>
-                              </div>
-                              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2 text-center">
-                                <p className="text-xs text-blue-400">Médio</p>
-                                <p className="text-sm font-semibold text-blue-300">
-                                  {Math.round(balanceStats.avg)}
-                                </p>
-                              </div>
-                              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 text-center">
-                                <p className="text-xs text-emerald-400">Máximo</p>
-                                <p className="text-sm font-semibold text-emerald-300">
-                                  {balanceStats.max}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
-                          {filteredBalanceData.length > 0 ? (
-                            <div className="bg-slate-800/50 rounded-lg p-4 h-56">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={filteredBalanceData}>
-                                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                                  <XAxis
-                                    dataKey="id"
-                                    stroke="#64748b"
-                                    fontSize={11}
-                                    tickFormatter={(_, index) => filteredBalanceData[index]?.date || ""}
-                                  />
-                                  <YAxis stroke="#64748b" fontSize={11} />
-                                  <Tooltip
-                                    contentStyle={{
-                                      backgroundColor: "#1e293b",
-                                      border: "1px solid #334155",
-                                      borderRadius: "8px",
-                                      color: "#e2e8f0",
-                                    }}
-                                    formatter={(value, _, entry) => {
-                                      const pt = entry.payload as BalanceDataPoint;
-                                      const sign = pt.type === "acquisition" ? "+" : "-";
-                                      const label = pt.type === "acquisition" ? "Aquisição" : "Baixa";
-                                      return [
-                                        `${Number(value)} (${label}: ${sign}${pt.quantity})`,
-                                        "Saldo",
-                                      ];
-                                    }}
-                                    labelFormatter={(_, payload) => {
-                                      if (payload && payload[0]) {
-                                        const point = payload[0].payload as BalanceDataPoint;
-                                        return `Data: ${point.date}`;
-                                      }
-                                      return "";
-                                    }}
-                                  />
-                                  {balanceStats && (
-                                    <ReferenceLine
-                                      y={balanceStats.avg}
-                                      stroke="#10b981"
-                                      strokeDasharray="5 5"
-                                      label={{
-                                        value: "Média",
-                                        fill: "#34d399",
-                                        fontSize: 10,
-                                      }}
-                                    />
-                                  )}
-                                  <Line
-                                    type="monotone"
-                                    dataKey="balance"
-                                    stroke="#10b981"
-                                    strokeWidth={2}
-                                    dot={{ fill: "#10b981", r: 4 }}
-                                    activeDot={{ r: 6, fill: "#34d399" }}
-                                  />
-                                </LineChart>
-                              </ResponsiveContainer>
-                            </div>
-                          ) : (
-                            <p className="text-center text-slate-500 py-4 text-sm">
-                              Sem dados de saldo no período
-                            </p>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Acquisition History */}
-                  {acqHistory.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-medium text-slate-300 mb-3">
-                        Histórico de Aquisições
-                      </h3>
-                      <div className="space-y-2">
-                        {acqHistory.map((a, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center justify-between bg-slate-800/50 rounded-lg px-4 py-2.5"
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="text-emerald-400 text-sm font-medium w-10">
-                                +{a.quantity}
-                              </span>
-                              <div className="flex items-center gap-2 text-xs">
-                                <span className="text-slate-400">
-                                  {new Date(a.date).toLocaleDateString("pt-BR")}
-                                </span>
-                                <span className="text-slate-600">
-                                  {new Date(a.date).toLocaleTimeString("pt-BR", {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-4">
-                              <span className="text-sm text-white">
-                                R$ {parseFloat(a.unitPrice).toFixed(2)} /un
-                              </span>
-                              <span className="text-xs text-slate-500">
-                                Saldo: <span className="text-slate-300">{a.balanceAfter}</span>
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Issue History */}
-                  {issueHistory.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-medium text-slate-300 mb-3">
-                        Histórico de Baixas
-                      </h3>
-                      <div className="space-y-2">
-                        {issueHistory.map((s) => (
-                          <div
-                            key={s.id}
-                            className="flex items-center justify-between bg-slate-800/50 rounded-lg px-4 py-2.5"
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="text-rose-400 text-sm font-medium w-10">
-                                -{s.quantity}
-                              </span>
-                              <div className="flex items-center gap-2 text-xs">
-                                <span className="text-slate-400">
-                                  {new Date(s.createdAt).toLocaleDateString("pt-BR")}
-                                </span>
-                                <span className="text-slate-600">
-                                  {new Date(s.createdAt).toLocaleTimeString("pt-BR", {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
-                                </span>
-                              </div>
-                            </div>
-                            <span className="text-xs text-slate-500">
-                              Saldo: <span className="text-slate-300">{s.balanceAfter}</span>
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {acqHistory.length === 0 && issueHistory.length === 0 && (
-                    <p className="text-center text-slate-500 py-4">
-                      Nenhuma movimentação registrada
-                    </p>
-                  )}
-                </>
-              )}
+              {item.observations ? <Info label="Observações">{item.observations}</Info> : null}
+              {canManageStock ? <button onClick={() => setEditing(true)} className="rounded-lg border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:border-slate-600 hover:bg-slate-800 hover:text-white">Editar</button> : null}
+              {loadingDetail ? <div className="flex justify-center py-8"><div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" /></div> : <div className="grid grid-cols-1 gap-4 md:grid-cols-2"><History title="Histórico de Aquisições" rows={acqHistory.map((a) => ({ left: `+${a.quantity}`, middle: new Date(a.date).toLocaleDateString("pt-BR"), right: `R$ ${Number(a.unitPrice).toFixed(2)} | Saldo: ${a.balanceAfter}` }))} /><History title="Histórico de Baixas" rows={issueHistory.map((s) => ({ left: `-${s.quantity}`, middle: new Date(s.date).toLocaleDateString("pt-BR"), right: `Saldo: ${s.balanceAfter}${s.reason ? ` | ${s.reason}` : ""}` }))} /></div>}
             </>
           )}
         </div>
@@ -861,3 +111,9 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Pro
     </div>
   );
 }
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="block text-sm font-medium text-slate-300"><span className="mb-1 block">{label}</span>{children}</label>; }
+function Info({ label, children }: { label: string; children: React.ReactNode }) { return <div><p className="text-xs uppercase tracking-wider text-slate-500">{label}</p><div className="mt-1 text-slate-300">{children}</div></div>; }
+function History({ title, rows }: { title: string; rows: Array<{ left: string; middle: string; right: string }> }) { return <div><h3 className="mb-3 text-sm font-medium text-slate-300">{title}</h3>{rows.length ? <div className="space-y-2">{rows.map((row, index) => <div key={index} className="rounded-lg bg-slate-800/50 px-3 py-2 text-sm"><div className="flex items-center justify-between gap-3"><span className="font-medium text-blue-300">{row.left}</span><span className="text-slate-400">{row.middle}</span></div><p className="mt-1 text-xs text-slate-500">{row.right}</p></div>)}</div> : <p className="text-sm text-slate-500">Nenhum registro.</p>}</div>; }
+
+

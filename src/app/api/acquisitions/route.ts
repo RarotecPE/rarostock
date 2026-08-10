@@ -1,7 +1,7 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { acquisitions, acquisitionItems, items } from "@/db/schema";
-import { eq, desc, gte, lte, and, sql } from "drizzle-orm";
+import { acquisitions, acquisitionItems, products } from "@/db/schema";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canManageStock, canView } from "@/lib/roles";
 
@@ -12,23 +12,11 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const startDate = url.searchParams.get("startDate");
   const endDate = url.searchParams.get("endDate");
-
   const conditions = [];
-  if (startDate) {
-    conditions.push(sql`DATE(${acquisitions.date}) >= ${startDate}::date`);
-  }
-  if (endDate) {
-    conditions.push(sql`DATE(${acquisitions.date}) <= ${endDate}::date`);
-  }
+  if (startDate) conditions.push(sql`DATE(${acquisitions.date}) >= ${startDate}::date`);
+  if (endDate) conditions.push(sql`DATE(${acquisitions.date}) <= ${endDate}::date`);
 
-  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-
-  const allAcquisitions = await db
-    .select()
-    .from(acquisitions)
-    .where(whereClause)
-    .orderBy(desc(acquisitions.date));
-
+  const allAcquisitions = await db.select().from(acquisitions).where(conditions.length ? and(...conditions) : undefined).orderBy(desc(acquisitions.date));
   return NextResponse.json(allAcquisitions);
 }
 
@@ -42,53 +30,43 @@ export async function POST(req: NextRequest) {
     invoiceUrl?: string;
     invoiceFilename?: string;
     invoiceStoragePath?: string;
-    cartItems: Array<{
-      itemId: number;
-      quantity: number;
-      unitPrice: number;
-    }>;
+    cartItems: Array<{ itemId: number; quantity: number; unitPrice: number }>;
   };
 
-  // Do NOT merge duplicates - keep as separate instances
-  // Calculate total
-  const totalValue = cartItems.reduce(
-    (sum, ci) => sum + ci.quantity * ci.unitPrice,
-    0
-  );
+  if (!Array.isArray(cartItems) || cartItems.length === 0) {
+    return NextResponse.json({ error: "Informe ao menos um produto." }, { status: 400 });
+  }
 
-  // Insert acquisition
-  const [acq] = await db
-    .insert(acquisitions)
-    .values({
-      date: new Date(date),
-      totalValue: totalValue.toFixed(2),
-      invoiceUrl: invoiceUrl || null,
-      invoiceFilename: invoiceFilename || null,
-      invoiceStoragePath: invoiceStoragePath || null,
-    })
-    .returning();
+  const productIds = cartItems.map((item) => item.itemId);
+  const validProducts = await db.select({ id: products.id }).from(products);
+  const validIds = new Set(validProducts.map((item) => item.id));
+  if (productIds.some((id) => !validIds.has(id))) {
+    return NextResponse.json({ error: "A aquisição só pode conter produtos cadastrados." }, { status: 400 });
+  }
 
-  // Insert acquisition items and update stock
+  const totalValue = cartItems.reduce((sum, ci) => sum + ci.quantity * ci.unitPrice, 0);
+  const [acq] = await db.insert(acquisitions).values({
+    date: new Date(date),
+    totalValue: totalValue.toFixed(2),
+    invoiceUrl: invoiceUrl || null,
+    invoiceFilename: invoiceFilename || null,
+    invoiceStoragePath: invoiceStoragePath || null,
+  }).returning();
+
   for (const ci of cartItems) {
     const lineTotal = ci.quantity * ci.unitPrice;
     await db.insert(acquisitionItems).values({
       acquisitionId: acq.id,
-      itemId: ci.itemId,
+      productId: ci.itemId,
       quantity: ci.quantity,
       unitPrice: ci.unitPrice.toFixed(2),
       totalPrice: lineTotal.toFixed(2),
     });
-
-    // Update item quantity
-    await db
-      .update(items)
-      .set({
-        quantity: sql`${items.quantity} + ${ci.quantity}`,
-        updatedAt: new Date(),
-      })
-      .where(eq(items.id, ci.itemId));
+    await db.update(products).set({
+      quantity: sql`${products.quantity} + ${ci.quantity}`,
+      updatedAt: new Date(),
+    }).where(eq(products.id, ci.itemId));
   }
 
   return NextResponse.json(acq, { status: 201 });
 }
-

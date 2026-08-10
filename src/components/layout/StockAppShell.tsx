@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -21,7 +21,7 @@ import {
   type ColorTheme,
 } from "@/components/theme/ThemeBootstrap";
 import { AppRole, canAdmin, canManageStock, roleConfigs } from "@/lib/roles";
-import { getStockStatus, Item, StockStatus } from "@/types/stock";
+import { EquipmentRequest, getStockStatus, Item, StockStatus } from "@/types/stock";
 
 type SessionUser = {
   id: string;
@@ -95,6 +95,23 @@ const navigationItems: NavItem[] = [
     ),
   },
   {
+    href: "/equipamentos",
+    label: "Equipamentos",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17a2 2 0 104 0m-7-3h10l1-9H5l1 9zm0 0l-1 4h12l-1-4" />
+      </svg>
+    ),
+  },
+  {
+    href: "/pessoal",
+    label: "Pessoal",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A7 7 0 0112 15a7 7 0 016.879 2.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+  },  {
     href: "/configuracoes/catalogo",
     label: "Configurações",
     adminOnly: true,
@@ -128,6 +145,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [theme, setTheme] = useState<ColorTheme>(() => getStoredColorTheme());
   const [alertItems, setAlertItems] = useState<AlertItem[]>([]);
+  const [requestAlerts, setRequestAlerts] = useState<EquipmentRequest[]>([]);
 
   const isAdmin = canAdmin(role);
   const canMutateStock = canManageStock(role);
@@ -208,26 +226,36 @@ export function StockAppShell({ children }: { children: ReactNode }) {
 
   const fetchAlerts = useCallback(async () => {
     try {
-      const res = await fetch("/api/items");
-      if (!res.ok) return;
-      const items: Item[] = await res.json();
-      setAlertItems(
-        items
-          .filter(
-            (item) =>
-              item.quantity === 0 ||
-              getStockStatus(item.quantity, item.minimumLimit, item.desiredLimit) === "Abaixo do Mínimo"
-          )
-          .map((item) => ({
-            id: item.id,
-            code: item.code,
-            name: item.name,
-            quantity: item.quantity,
-            minimumLimit: item.minimumLimit,
-            desiredLimit: item.desiredLimit,
-            status: getStockStatus(item.quantity, item.minimumLimit, item.desiredLimit),
-          }))
-      );
+      const [itemsRes, requestsRes] = await Promise.all([
+        fetch("/api/items"),
+        fetch("/api/equipment-requests?scope=notifications&status=pending"),
+      ]);
+
+      if (itemsRes.ok) {
+        const items: Item[] = await itemsRes.json();
+        setAlertItems(
+          items
+            .filter(
+              (item) =>
+                item.quantity === 0 ||
+                getStockStatus(item.quantity, item.minimumLimit, item.desiredLimit) === "Abaixo do Mínimo"
+            )
+            .map((item) => ({
+              id: item.id,
+              code: item.code,
+              name: item.name,
+              quantity: item.quantity,
+              minimumLimit: item.minimumLimit,
+              desiredLimit: item.desiredLimit,
+              status: getStockStatus(item.quantity, item.minimumLimit, item.desiredLimit),
+            }))
+        );
+      }
+
+      if (requestsRes.ok) {
+        const requests: EquipmentRequest[] = await requestsRes.json();
+        setRequestAlerts(Array.isArray(requests) ? requests : []);
+      }
     } catch {
       // ignore
     }
@@ -391,6 +419,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
                 roleLabel={roleInfo.label}
                 theme={theme}
                 alerts={alertItems}
+                requestAlerts={requestAlerts}
                 unavailableCount={unavailableCount}
                 belowMinCount={belowMinCount}
                 onToggleTheme={toggleTheme}
@@ -432,3 +461,5 @@ export function StockAppShell({ children }: { children: ReactNode }) {
     </StockSessionContext.Provider>
   );
 }
+
+

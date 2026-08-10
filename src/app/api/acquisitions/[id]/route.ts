@@ -1,6 +1,6 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { acquisitions, acquisitionItems, items } from "@/db/schema";
+import { acquisitions, acquisitionItems, products } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canView } from "@/lib/roles";
@@ -32,16 +32,16 @@ export async function GET(
     .select({
       id: acquisitionItems.id,
       acquisitionId: acquisitionItems.acquisitionId,
-      itemId: acquisitionItems.itemId,
+      itemId: acquisitionItems.productId,
       quantity: acquisitionItems.quantity,
       unitPrice: acquisitionItems.unitPrice,
       totalPrice: acquisitionItems.totalPrice,
-      itemName: items.name,
-      itemCode: items.code,
-      itemUnit: items.unit,
+      itemName: products.name,
+      itemCode: products.code,
+      itemUnit: products.unit,
     })
     .from(acquisitionItems)
-    .innerJoin(items, eq(items.id, acquisitionItems.itemId))
+    .innerJoin(products, eq(products.id, acquisitionItems.productId))
     .where(eq(acquisitionItems.acquisitionId, acqId));
 
   return NextResponse.json({
@@ -49,4 +49,5 @@ export async function GET(
     items: acqItems,
   });
 }
+
 

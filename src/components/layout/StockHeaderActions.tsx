@@ -1,9 +1,10 @@
-﻿"use client";
+"use client";
 
+import Link from "next/link";
 import { useCallback, useState } from "react";
 import { HeaderDropdown, HeaderIconButton } from "@/components/layout/HeaderDropdown";
 import { type ColorTheme } from "@/components/theme/ThemeBootstrap";
-import { formatLimit } from "@/types/stock";
+import { EquipmentRequest, formatLimit } from "@/types/stock";
 
 type SessionUser = {
   id: string;
@@ -40,6 +41,7 @@ type StockHeaderActionsProps = {
   roleLabel: string;
   theme: ColorTheme;
   alerts: AlertItem[];
+  requestAlerts: EquipmentRequest[];
   unavailableCount: number;
   belowMinCount: number;
   onToggleTheme: () => void;
@@ -133,6 +135,7 @@ export function StockHeaderActions({
   roleLabel,
   theme,
   alerts,
+  requestAlerts,
   unavailableCount,
   belowMinCount,
   onToggleTheme,
@@ -144,7 +147,7 @@ export function StockHeaderActions({
   const [appsLoading, setAppsLoading] = useState(false);
   const [appsError, setAppsError] = useState("");
   const displayName = user?.nome || "Usuário";
-  const totalAlerts = alerts.length;
+  const totalAlerts = alerts.length + requestAlerts.length;
 
   const closeMenu = useCallback(() => setOpenMenu(null), []);
 
@@ -201,20 +204,42 @@ export function StockHeaderActions({
           <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
             <h3 className="font-semibold text-white">Notificações</h3>
             <span className="text-xs text-slate-500">
-              {totalAlerts} alerta{totalAlerts !== 1 ? "s" : ""}
+              {totalAlerts} notificação{totalAlerts !== 1 ? "s" : ""}
             </span>
           </div>
 
-          {alerts.length === 0 ? (
+          {totalAlerts === 0 ? (
             <div className="px-4 py-8 text-center text-slate-500">
               <svg className="mx-auto mb-2 h-10 w-10 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <p className="text-sm">Nenhum alerta no momento</p>
+              <p className="text-sm">Nenhuma notificação no momento</p>
             </div>
           ) : (
             <>
-              <div className="flex items-center gap-4 bg-slate-800/30 px-4 py-3 text-xs">
+              <div className="max-h-80 overflow-y-auto">
+                {requestAlerts.map((request) => (
+                  <Link
+                    key={`request-${request.id}`}
+                    href="/pessoal"
+                    onClick={closeMenu}
+                    className="block border-b border-slate-800/50 px-4 py-3 transition-colors hover:bg-slate-800/30"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-blue-500/30 bg-blue-500/15 text-blue-300">
+                        <BellIcon />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium text-white">Solicitação de equipamento</span>
+                        <span className="mt-0.5 block truncate text-xs text-slate-400">{request.equipmentName} {request.equipmentCode ? `(${request.equipmentCode})` : ""}</span>
+                        <span className="mt-1 block text-xs text-slate-500">Solicitação por {request.requesterName}</span>
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              {(unavailableCount > 0 || belowMinCount > 0) ? <div className="flex items-center gap-4 bg-slate-800/30 px-4 py-3 text-xs">
                 {unavailableCount > 0 && (
                   <span className="flex items-center gap-1.5 text-rose-400">
                     <span className="h-2 w-2 rounded-full bg-rose-500" />
@@ -227,7 +252,7 @@ export function StockHeaderActions({
                     {belowMinCount} Abaixo do Mínimo
                   </span>
                 )}
-              </div>
+              </div> : null}
 
               <div className="max-h-80 overflow-y-auto">
                 {alerts.map((item) => (
