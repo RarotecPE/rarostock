@@ -107,29 +107,6 @@ const navigationItems: NavItem[] = [
   },
 ];
 
-function UserAvatar({ user }: { user: SessionUser | null }) {
-  const [failed, setFailed] = useState(false);
-  const avatarUrl = user?.avatar_url || "";
-  const showImage = avatarUrl && !failed;
-  const fallback = user?.nome?.trim().charAt(0).toUpperCase() || "U";
-
-  return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-700 bg-slate-800 text-sm font-semibold text-slate-300">
-      {showImage ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={avatarUrl}
-          alt=""
-          className="h-full w-full object-cover"
-          onError={() => setFailed(true)}
-        />
-      ) : (
-        fallback
-      )}
-    </div>
-  );
-}
-
 function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -313,7 +290,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
         )}
 
         <aside
-          className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-900/95 backdrop-blur border-r border-slate-800 transform transition-transform duration-200 lg:translate-x-0 lg:static lg:z-auto ${
+          className={`fixed inset-y-0 left-0 z-50 h-screen w-64 bg-slate-900/95 backdrop-blur border-r border-slate-800 transform transition-transform duration-200 lg:translate-x-0 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
@@ -339,7 +316,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
               </div>
             </Link>
 
-            <nav className="flex-1 px-3 py-4 space-y-1">
+            <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
               {visibleNavigationItems
                 .filter((item) => !item.adminOnly)
                 .map((item) => {
@@ -369,7 +346,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
                 const active = isActivePath(pathname, item.href);
 
                 return (
-                  <div key={item.href} className="px-3 pb-4">
+                  <div key={item.href} className="mt-auto border-t border-slate-800 px-3 py-4">
                     <Link
                       href={item.href}
                       onClick={() => setSidebarOpen(false)}
@@ -386,34 +363,10 @@ export function StockAppShell({ children }: { children: ReactNode }) {
                 );
               })}
 
-            <div className="px-5 py-4 border-t border-slate-800">
-              <div className="mb-4 flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2">
-                <UserAvatar user={sessionUser} />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-slate-200">
-                    {sessionUser?.nome ?? "Usuário"}
-                  </p>
-                  <p className="text-[11px] uppercase tracking-wider text-slate-600">
-                    {roleInfo.label}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-800 px-3 py-2 text-sm text-slate-400 transition-colors hover:border-slate-700 hover:text-white"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
-                </svg>
-                Sair
-              </button>
-              <p className="text-xs text-slate-600 text-center">RaroStock v1.0</p>
-            </div>
           </div>
         </aside>
 
-        <div className="flex-1 flex flex-col min-h-screen">
+        <div className="flex-1 flex flex-col min-h-screen lg:ml-64">
           <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800">
             <div className="relative flex items-center justify-between px-4 sm:px-6 h-16">
               <div className="flex items-center gap-1 lg:hidden">
