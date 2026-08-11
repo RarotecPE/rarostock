@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { products, acquisitionItems, acquisitions, stockIssues } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
-import { canView } from "@/lib/roles";
+import { canAdmin, canView } from "@/lib/roles";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requirePermission(req, canView);
@@ -48,4 +48,33 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     acquisitionHistory: [...acqItems].reverse().map((a) => ({ ...a, balanceAfter: balanceMap.get(`acquisition-${a.id}`) ?? 0 })),
     issueHistory: [...issues].reverse().map((i) => ({ ...i, itemId: i.productId, balanceAfter: balanceMap.get(`issue-${i.id}`) ?? 0 })),
   });
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requirePermission(req, canAdmin);
+  if (hasAuthError(auth)) return auth.response;
+
+  const { id } = await params;
+  const productId = Number(id);
+  if (!Number.isInteger(productId)) {
+    return NextResponse.json({ error: "Produto inválido." }, { status: 400 });
+  }
+
+  const [product] = await db.select({ id: products.id }).from(products).where(eq(products.id, productId)).limit(1);
+  if (!product) {
+    return NextResponse.json({ error: "Produto não encontrado." }, { status: 404 });
+  }
+
+  const [acquisitionUsage] = await db.select({ id: acquisitionItems.id }).from(acquisitionItems).where(eq(acquisitionItems.productId, productId)).limit(1);
+  const [issueUsage] = await db.select({ id: stockIssues.id }).from(stockIssues).where(eq(stockIssues.productId, productId)).limit(1);
+
+  if (acquisitionUsage || issueUsage) {
+    return NextResponse.json(
+      { error: "Este produto possui histórico de aquisição ou baixa e não pode ser excluído." },
+      { status: 409 },
+    );
+  }
+
+  await db.delete(products).where(eq(products.id, productId));
+  return NextResponse.json({ ok: true });
 }

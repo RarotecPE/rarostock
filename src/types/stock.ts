@@ -93,6 +93,9 @@ export interface Equipment {
   brand: string | null;
   category: string;
   price: string | null;
+  invoiceUrl: string | null;
+  invoiceFilename: string | null;
+  invoiceStoragePath: string | null;
   observations: string | null;
   holderType: EquipmentHolderType;
   holderUserId: string | null;

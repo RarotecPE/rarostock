@@ -20,6 +20,7 @@ interface Props {
   onClose: () => void;
   onUpdate: () => void;
   canManageStock: boolean;
+  isAdmin?: boolean;
 }
 
 type AcqHistoryItem = { quantity: number; unitPrice: string; totalPrice: string; date: string; balanceAfter: number };
@@ -34,7 +35,7 @@ type ProductChartPoint = {
   balanceAfter?: number;
 };
 
-export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Props) {
+export function ItemDetailModal({ item, onClose, onUpdate, canManageStock, isAdmin = false }: Props) {
   const [editing, setEditing] = useState(false);
   const [formName, setFormName] = useState(item.name);
   const [formCategory, setFormCategory] = useState(item.category);
@@ -127,6 +128,22 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Pro
     onUpdate();
   };
 
+  const handleDelete = async () => {
+    if (!isAdmin) return;
+    const confirmed = window.confirm(`Excluir o produto "${item.name}"? Esta ação não pode ser desfeita.`);
+    if (!confirmed) return;
+
+    const response = await fetch(`/api/items/${item.id}`, { method: "DELETE" });
+    const payload = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      window.alert(payload?.error ?? "Não foi possível excluir o produto.");
+      return;
+    }
+
+    onUpdate();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4">
       <div className="max-h-[94dvh] w-full max-w-3xl overflow-y-auto rounded-t-2xl border border-slate-800 bg-slate-900 sm:max-h-[90vh] sm:rounded-2xl">
@@ -146,6 +163,19 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Pro
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.5 7.125L16.875 4.5" />
+                  </svg>
+                </button>
+              ) : null}
+              {!editing && isAdmin ? (
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  aria-label="Excluir produto"
+                  title="Excluir produto"
+                  className="rounded-lg border border-slate-700 p-2 text-slate-400 transition-colors hover:border-rose-500/50 hover:bg-rose-500/10 hover:text-rose-300"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673A2.25 2.25 0 0115.916 21.75H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                   </svg>
                 </button>
               ) : null}

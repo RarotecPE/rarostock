@@ -230,8 +230,8 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
       </div>
 
       {canManageStock && modalOpen ? (
-      <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-0 backdrop-blur-sm sm:p-4">
-      <div className="min-h-dvh w-full max-w-4xl overflow-visible border border-slate-800 bg-slate-900 p-4 pb-12 space-y-6 sm:pb-6 sm:my-4 sm:min-h-0 sm:rounded-2xl sm:p-6">
+      <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-3 backdrop-blur-sm sm:p-4">
+      <div className="max-h-[82dvh] w-full max-w-[min(92vw,32rem)] space-y-5 overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl sm:my-4 sm:max-h-[90vh] sm:max-w-4xl sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold text-white">Nova baixa</h3>

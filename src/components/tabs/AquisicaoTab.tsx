@@ -281,8 +281,8 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
 
       {/* New Acquisition Modal */}
       {canManageStock && modalOpen ? (
-      <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:items-start">
-      <div className="max-h-[86dvh] w-full max-w-5xl space-y-5 overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 pb-8 sm:my-4 sm:max-h-none sm:overflow-visible sm:p-6">
+      <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-3 backdrop-blur-sm sm:p-4">
+      <div className="max-h-[86dvh] w-full max-w-5xl space-y-5 overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold text-white">Nova Aquisição</h3>

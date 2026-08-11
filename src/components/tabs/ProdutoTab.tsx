@@ -12,7 +12,7 @@ interface ProdutoTabProps {
   isAdmin?: boolean;
 }
 
-export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
+export function ProdutoTab({ canManageStock, isAdmin = false }: ProdutoTabProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [formName, setFormName] = useState("");
   const [formCategory, setFormCategory] = useState("");
@@ -108,7 +108,7 @@ export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
         </div>
       </div>
 
-      <ProductList refreshKey={refreshKey} canManageStock={canManageStock} />
+      <ProductList refreshKey={refreshKey} canManageStock={canManageStock} isAdmin={isAdmin} />
 
       {modalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm">

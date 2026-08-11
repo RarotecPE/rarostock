@@ -10,12 +10,14 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
+    const contextValue = formData.get("context");
+    const context = contextValue === "equipment" ? "equipment" : "product";
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const upload = await uploadInvoiceToFtp(file);
+    const upload = await uploadInvoiceToFtp(file, context);
 
     return NextResponse.json({
       url: upload.url,

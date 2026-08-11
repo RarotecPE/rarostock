@@ -164,6 +164,7 @@ function EquipmentFormModal({ equipment, categories, onClose, onDone }: { equipm
   }));
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const isEditing = Boolean(equipment);
 
   const save = async () => {
@@ -173,10 +174,36 @@ function EquipmentFormModal({ equipment, categories, onClose, onDone }: { equipm
       return;
     }
     setSaving(true);
+    let invoicePayload = {};
+
+    if (invoiceFile) {
+      const formData = new FormData();
+      formData.append("file", invoiceFile);
+      formData.append("context", "equipment");
+
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const uploadData = await uploadRes.json().catch(() => null);
+
+      if (!uploadRes.ok) {
+        setSaving(false);
+        setError(uploadData?.error ?? "Não foi possível enviar a nota fiscal.");
+        return;
+      }
+
+      invoicePayload = {
+        invoiceUrl: uploadData.url,
+        invoiceFilename: uploadData.filename,
+        invoiceStoragePath: uploadData.storagePath,
+      };
+    }
+
     const res = await fetch("/api/equipments", {
       method: isEditing ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(isEditing ? { ...draft, id: equipment?.id } : draft),
+      body: JSON.stringify(isEditing ? { ...draft, ...invoicePayload, id: equipment?.id } : { ...draft, ...invoicePayload }),
     });
     const payload = await res.json().catch(() => null);
     setSaving(false);
@@ -207,6 +234,43 @@ function EquipmentFormModal({ equipment, categories, onClose, onDone }: { equipm
           {isEditing ? <label className="flex items-center gap-2 self-end rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2.5 text-sm font-medium text-slate-300"><input type="checkbox" checked={draft.active} onChange={(event) => setDraft({ ...draft, active: event.target.checked })} className="h-4 w-4 rounded border-slate-700 bg-slate-800" />Equipamento ativo</label> : null}
         </div>
         <label className="mt-4 block text-sm font-medium text-slate-300"><span className="mb-1 block">Observações</span><textarea value={draft.observations} onChange={(event) => setDraft({ ...draft, observations: event.target.value })} rows={3} className="w-full resize-none rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white" /></label>
+        <div className="mt-4 rounded-lg border border-slate-800 bg-slate-950/35 px-3 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-slate-300">Nota fiscal</p>
+              <p className="mt-0.5 truncate text-xs text-slate-500">
+                {invoiceFile?.name ?? equipment?.invoiceFilename ?? "Sem nota fiscal anexada"}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {equipment?.invoiceUrl ? (
+                <a
+                  href={equipment.invoiceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg border border-slate-700 px-2.5 py-2 text-xs font-medium text-slate-300 transition-colors hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-300"
+                >
+                  Abrir
+                </a>
+              ) : null}
+              <label
+                className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-700 text-slate-400 transition-colors hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-300"
+                title={equipment?.invoiceUrl ? "Substituir nota fiscal" : "Anexar nota fiscal"}
+                aria-label={equipment?.invoiceUrl ? "Substituir nota fiscal" : "Anexar nota fiscal"}
+              >
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  className="sr-only"
+                  onChange={(event) => setInvoiceFile(event.target.files?.[0] ?? null)}
+                />
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94a3 3 0 114.243 4.243L8.56 18.31a1.5 1.5 0 11-2.121-2.121l9.192-9.193" />
+                </svg>
+              </label>
+            </div>
+          </div>
+        </div>
         <div className="mt-6 flex justify-center border-t border-slate-800 pt-4"><button disabled={saving} className="w-full rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-60 sm:w-auto" onClick={save}>{saving ? "Salvando..." : isEditing ? "Salvar alterações" : "Salvar"}</button></div>
       </div>
     </div>
@@ -234,7 +298,55 @@ export function EquipmentDetailModal({ equipment, users, currentUserId, isAdmin,
     if (!res.ok) { setError(payload?.error ?? "Não foi possível concluir a ação."); return; }
     onDone(isAvailable ? "Equipamento associado a você." : isMine && targetUserId === "company" ? "Equipamento devolvido para RAROTEC." : "Solicitação enviada.");
   };
-  return <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"><div className="max-h-[94dvh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-slate-800 bg-slate-900 p-4 pb-12 sm:pb-6 sm:rounded-2xl sm:p-6"><div className="mb-5 flex justify-between"><div><p className="font-mono text-sm text-blue-400">{equipment.code}</p><div className="flex items-center gap-2"><h3 className="text-xl font-bold text-white">{equipment.name}</h3>{canEdit ? <button type="button" onClick={onEdit} aria-label="Editar equipamento" title="Editar equipamento" className="rounded-lg border border-slate-700 p-2 text-slate-400 transition-colors hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-300"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.5 7.125L16.875 4.5" /></svg></button> : null}</div></div><button onClick={onClose} className="text-slate-400 hover:text-white">×</button></div>{error ? <p className="mb-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">{error}</p> : null}<div className="grid grid-cols-1 gap-4 text-sm min-[420px]:grid-cols-2"><Info label="Categoria">{equipment.category}</Info><Info label="Marca">{equipment.brand || "—"}</Info><Info label="Portador atual">{holderLabel(equipment)}</Info><Info label="Preço">{equipment.price ? `R$ ${Number(equipment.price).toFixed(2)}` : "—"}</Info></div>{equipment.observations ? <div className="mt-4"><Info label="Observações">{equipment.observations}</Info></div> : null}{!isMine ? <label className="mt-5 block text-sm font-medium text-slate-300"><span className="mb-1 block">Motivo</span><textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={3} className="w-full resize-none rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white" /></label> : <label className="mt-5 block text-sm font-medium text-slate-300"><span className="mb-1 block">Destino</span><select value={targetUserId} onChange={(event) => setTargetUserId(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white"><option value="company">RAROTEC</option>{users.filter((item) => item.id !== currentUserId).map((item) => <option key={item.id} value={item.id}>{item.nome}</option>)}</select><TransferTargetPreview targetUserId={targetUserId} user={selectedUser ?? null} /></label>}<div className="mt-6 flex justify-center"><button className={`rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-colors ${actionButtonClass}`} onClick={submit}>{actionLabel}</button></div>{isAdmin ? null : null}</div></div>;
+  const handleDelete = async () => {
+    if (!isAdmin) return;
+    const confirmed = window.confirm(`Excluir o equipamento "${equipment.name}"? Esta ação não pode ser desfeita.`);
+    if (!confirmed) return;
+
+    const res = await fetch("/api/equipments", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: equipment.id }),
+    });
+    const payload = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      setError(payload?.error ?? "Não foi possível excluir o equipamento.");
+      return;
+    }
+
+    onDone("Equipamento excluído.");
+  };
+  return <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"><div className="max-h-[94dvh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-slate-800 bg-slate-900 p-4 pb-12 sm:pb-6 sm:rounded-2xl sm:p-6"><div className="mb-5 flex justify-between"><div><p className="font-mono text-sm text-blue-400">{equipment.code}</p><div className="flex items-center gap-2"><h3 className="text-xl font-bold text-white">{equipment.name}</h3>{canEdit ? <button type="button" onClick={onEdit} aria-label="Editar equipamento" title="Editar equipamento" className="rounded-lg border border-slate-700 p-2 text-slate-400 transition-colors hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-300"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.5 7.125L16.875 4.5" /></svg></button> : null}{isAdmin ? <button type="button" onClick={handleDelete} aria-label="Excluir equipamento" title="Excluir equipamento" className="rounded-lg border border-slate-700 p-2 text-slate-400 transition-colors hover:border-rose-500/50 hover:bg-rose-500/10 hover:text-rose-300"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673A2.25 2.25 0 0115.916 21.75H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg></button> : null}</div></div><button onClick={onClose} className="text-slate-400 hover:text-white">×</button></div>{error ? <p className="mb-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">{error}</p> : null}<div className="grid grid-cols-1 gap-4 text-sm min-[420px]:grid-cols-2"><Info label="Categoria">{equipment.category}</Info><Info label="Marca">{equipment.brand || "—"}</Info><Info label="Portador atual">{holderLabel(equipment)}</Info><Info label="Preço">{equipment.price ? `R$ ${Number(equipment.price).toFixed(2)}` : "—"}</Info></div><EquipmentInvoiceLink equipment={equipment} />{equipment.observations ? <div className="mt-4"><Info label="Observações">{equipment.observations}</Info></div> : null}{!isMine ? <label className="mt-5 block text-sm font-medium text-slate-300"><span className="mb-1 block">Motivo</span><textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={3} className="w-full resize-none rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white" /></label> : <label className="mt-5 block text-sm font-medium text-slate-300"><span className="mb-1 block">Destino</span><select value={targetUserId} onChange={(event) => setTargetUserId(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white"><option value="company">RAROTEC</option>{users.filter((item) => item.id !== currentUserId).map((item) => <option key={item.id} value={item.id}>{item.nome}</option>)}</select><TransferTargetPreview targetUserId={targetUserId} user={selectedUser ?? null} /></label>}<div className="mt-6 flex justify-center"><button className={`rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-colors ${actionButtonClass}`} onClick={submit}>{actionLabel}</button></div>{isAdmin ? null : null}</div></div>;
+}
+
+function EquipmentInvoiceLink({ equipment }: { equipment: Equipment }) {
+  return (
+    <div className="mt-4 rounded-lg border border-slate-800 bg-slate-950/35 px-3 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs uppercase tracking-wider text-slate-500">Nota fiscal</p>
+          <p className="mt-1 truncate text-sm text-slate-300">
+            {equipment.invoiceFilename ?? "Sem nota fiscal anexada"}
+          </p>
+        </div>
+        {equipment.invoiceUrl ? (
+          <a
+            href={equipment.invoiceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-700 text-slate-400 transition-colors hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-300"
+            title="Abrir nota fiscal"
+            aria-label="Abrir nota fiscal"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5A3.375 3.375 0 0010.125 2.25H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+            </svg>
+          </a>
+        ) : null}
+      </div>
+    </div>
+  );
 }
 
 function TransferTargetPreview({ targetUserId, user }: { targetUserId: string; user: EquipmentUser | null }) {
