@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import {
@@ -49,7 +49,22 @@ type DashboardAnalytics = {
   categoryDistribution: DistributionPoint[];
 };
 
-type QuickAccessPath = "/produtos" | "/aquisicoes" | "/baixas";
+type QuickAccessPath = "/produtos" | "/aquisicoes" | "/baixas" | "/equipamentos" | "/movimentacoes" | "/pessoal";
+
+type QuickAccessGroup = {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  accent: string;
+  options: {
+    key: QuickAccessPath;
+    title: string;
+    description: string;
+    icon: React.ReactNode;
+  }[];
+};
+
+type OpenQuickAccessGroup = "Produto" | "Equipamento" | null;
 
 type DashboardTabProps = {
   onNavigate: (path: QuickAccessPath) => void;
@@ -68,6 +83,67 @@ const CATEGORY_COLORS = [
   "#94a3b8",
 ];
 
+const productIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7.5l-8-4-8 4m16 0l-8 4m8-4v9l-8 4m0-9l-8-4m8 4v9m-8-13v9l8 4" />
+  </svg>
+);
+
+const acquisitionIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+  </svg>
+);
+
+const issueIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+  </svg>
+);
+
+const equipmentIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17a2 2 0 104 0m-7-3h10l1-9H5l1 9zm0 0l-1 4h12l-1-4" />
+  </svg>
+);
+
+const movementsIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4" />
+  </svg>
+);
+
+const personalIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A7 7 0 0112 15a7 7 0 016.879 2.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+);
+
+const quickAccessGroups: QuickAccessGroup[] = [
+  {
+    title: "Produto",
+    description: "Produtos, entradas e saídas do estoque",
+    accent: "text-blue-400 bg-blue-500/15 border-blue-500/30 group-hover:border-blue-400/50",
+    icon: productIcon,
+    options: [
+      { key: "/produtos", title: "Catálogo", description: "Consultar e gerenciar produtos", icon: productIcon },
+      { key: "/aquisicoes", title: "Aquisição", description: "Registrar entradas", icon: acquisitionIcon },
+      { key: "/baixas", title: "Baixa", description: "Registrar saídas", icon: issueIcon },
+    ],
+  },
+  {
+    title: "Equipamento",
+    description: "Patrimônios, movimentações e solicitações",
+    accent: "text-cyan-400 bg-cyan-500/15 border-cyan-500/30 group-hover:border-cyan-400/50",
+    icon: equipmentIcon,
+    options: [
+      { key: "/equipamentos", title: "Catálogo", description: "Consultar equipamentos", icon: equipmentIcon },
+      { key: "/movimentacoes", title: "Movimentações", description: "Ver histórico", icon: movementsIcon },
+      { key: "/pessoal", title: "Pessoal", description: "Meus equipamentos", icon: personalIcon },
+    ],
+  },
+];
+
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -77,48 +153,6 @@ const formatCurrency = (value: number) =>
 
 const formatProductChartLabel = (value: string) =>
   value.length > 22 ? `${value.slice(0, 22)}...` : value;
-
-const quickAccessItems: {
-  key: QuickAccessPath;
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  accent: string;
-}[] = [
-  {
-    key: "/produtos",
-    title: "Produto",
-    description: "Cadastrar e gerenciar produtos",
-    accent: "text-blue-400 bg-blue-500/15 border-blue-500/30 group-hover:border-blue-400/50",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7.5l-8-4-8 4m16 0l-8 4m8-4v9l-8 4m0-9l-8-4m8 4v9m-8-13v9l8 4" />
-      </svg>
-    ),
-  },
-  {
-    key: "/aquisicoes",
-    title: "Aquisição",
-    description: "Registrar entradas no estoque",
-    accent: "text-emerald-400 bg-emerald-500/15 border-emerald-500/30 group-hover:border-emerald-400/50",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-      </svg>
-    ),
-  },
-  {
-    key: "/baixas",
-    title: "Baixa",
-    description: "Registrar saídas de itens",
-    accent: "text-rose-400 bg-rose-500/15 border-rose-500/30 group-hover:border-rose-400/50",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-      </svg>
-    ),
-  },
-];
 
 function ChartCard({
   title,
@@ -149,6 +183,7 @@ export function DashboardTab({ onNavigate, canManageStock }: DashboardTabProps) 
   const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [analyticsError, setAnalyticsError] = useState(false);
+  const [openQuickAccessGroup, setOpenQuickAccessGroup] = useState<OpenQuickAccessGroup>(null);
 
   useEffect(() => {
     let active = true;
@@ -237,47 +272,55 @@ export function DashboardTab({ onNavigate, canManageStock }: DashboardTabProps) 
             Escolha uma ação para continuar
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {quickAccessItems.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              onClick={() => onNavigate(item.key)}
-              className="group flex items-center justify-between gap-4 rounded-lg border border-slate-800 bg-slate-800/40 px-4 py-4 text-left transition-all hover:border-slate-700 hover:bg-slate-800"
-            >
-              <span className="flex items-center gap-3 min-w-0">
-                <span
-                  className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg border transition-colors ${item.accent}`}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {quickAccessGroups.map((group) => {
+            const open = openQuickAccessGroup === group.title;
+
+            return (
+              <div key={group.title} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setOpenQuickAccessGroup(open ? null : group.title as OpenQuickAccessGroup)}
+                  className={`group flex w-full items-center justify-between gap-4 rounded-lg border px-4 py-4 text-left transition-all ${open ? "border-blue-500/40 bg-blue-600/10" : "border-slate-800 bg-slate-800/40 hover:border-slate-700 hover:bg-slate-800"}`}
                 >
-                  {item.icon}
-                </span>
-                <span className="min-w-0">
-                  <span className="block font-semibold text-white">
-                    {item.title}
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg border transition-colors ${group.accent}`}>
+                      {group.icon}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-white">{group.title}</span>
+                      <span className="block text-sm text-slate-400">{group.description}</span>
+                    </span>
                   </span>
-                  <span className="block text-sm text-slate-400">
-                    {canManageStock
-                      ? item.description
-                      : item.key === "/produtos"
-                        ? "Consultar produtos e detalhes"
-                        : item.key === "/aquisicoes"
-                          ? "Consultar entradas registradas"
-                          : "Consultar baixas registradas"}
-                  </span>
-                </span>
-              </span>
-              <svg
-                className="w-5 h-5 flex-shrink-0 text-slate-500 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          ))}
-        </div>
-      </section>
+                  <svg className={`h-5 w-5 flex-shrink-0 text-slate-500 transition-transform group-hover:text-slate-300 ${open ? "rotate-180 text-blue-300" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {open ? (
+                  <div className="mt-2 overflow-hidden rounded-xl border border-slate-800 bg-slate-950/60 p-2 shadow-xl">
+                    {group.options.map((option) => (
+                      <button
+                        key={option.key}
+                        type="button"
+                        onClick={() => onNavigate(option.key)}
+                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-slate-800/70"
+                      >
+                        <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-300">
+                          {option.icon}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold text-white">{option.title}</span>
+                          <span className="block text-xs text-slate-500">{canManageStock ? option.description : option.title === "Catálogo" ? "Consultar registros" : "Consultar histórico"}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>      </section>
 
       {loading ? (
         <div className="flex justify-center py-12">

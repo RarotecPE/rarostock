@@ -207,7 +207,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
           <h2 className="text-2xl font-bold text-white">Baixa de Estoque</h2>
           <p className="text-slate-400 text-sm mt-1">
             {canManageStock
-              ? "Registre saÃƒÂ­das de itens do estoque"
+              ? "Registre saídas de itens do estoque"
               : "Consulte o historico de baixas do estoque"}
           </p>
         </div>
@@ -246,7 +246,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
                   setShowDropdown(true);
                 }}
                 onFocus={() => setShowDropdown(true)}
-                placeholder="Digite o cÃ³digo ou nome do item..."
+                placeholder="Digite o código ou nome do item..."
                 className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none"
               />
 
@@ -369,7 +369,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
                   />
                   {typeof quantity === "number" && quantity > selectedItem.quantity && (
                     <p className="text-xs text-rose-400 mt-1">
-                      Excede o saldo disponÃ­vel
+                      Excede o saldo disponível
                     </p>
                   )}
                 </div>
@@ -386,7 +386,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
                     onChange={(e) => {
                       setNewBalance(e.target.value ? parseInt(e.target.value) : "");
                     }}
-                    placeholder="Saldo atualizado apÃ³s contagem"
+                    placeholder="Saldo atualizado após contagem"
                     className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                   {typeof newBalance === "number" && newBalance >= selectedItem.quantity && (
@@ -396,7 +396,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
                   )}
                   {typeof newBalance === "number" && newBalance < selectedItem.quantity && (
                     <p className="text-xs text-slate-400 mt-1">
-                      SerÃ¡ registrada baixa de{" "}
+                      Será registrada baixa de{" "}
                       <span className="text-white font-medium">{calculatedQuantity}</span>{" "}
                       {pluralizeUnit(selectedItem.unit, calculatedQuantity, catalog.units)}
                     </p>
@@ -408,7 +408,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
             {isValidSubmission && (
               <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg">
                 <p className="text-sm text-rose-300">
-                  <span className="font-medium">Resumo:</span> SerÃ¡ registrada baixa de{" "}
+                  <span className="font-medium">Resumo:</span> Será registrada baixa de{" "}
                   <span className="font-bold">
                     {calculatedQuantity}{" "}
                     {pluralizeUnit(selectedItem.unit, calculatedQuantity, catalog.units)}
@@ -416,11 +416,11 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
                   .
                   {mode === "saldo" ? (
                     <span>
-                      {" "}Saldo passarÃ¡ de {selectedItem.quantity} para {newBalance}.
+                      {" "}Saldo passará de {selectedItem.quantity} para {newBalance}.
                     </span>
                   ) : (
                     <span>
-                      {" "}O saldo atualizado serÃ¡ de{" "}
+                      {" "}O saldo atualizado será de{" "}
                       <span className="font-bold">
                         {selectedItem.quantity - calculatedQuantity}
                       </span>
@@ -481,7 +481,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
-          HistÃ³rico de Baixas ({filteredIssues.length})
+          Histórico de Baixas ({filteredIssues.length})
         </button>
       </div>
 

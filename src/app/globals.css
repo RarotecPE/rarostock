@@ -355,3 +355,16 @@ body.theme-light .filter-dropdown-button.is-active:hover {
   border-color: #1d4ed8 !important;
   color: #1e40af !important;
 }
+
+.mobile-subnav-bubble {
+  opacity: 0;
+  transform: translateY(14px) scale(0.92);
+  animation: mobile-subnav-rise 180ms ease-out forwards;
+}
+
+@keyframes mobile-subnav-rise {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

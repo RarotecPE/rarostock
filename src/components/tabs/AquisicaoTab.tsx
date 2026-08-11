@@ -220,7 +220,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
     setAcqDate(nowDateTimeLocal());
     setInvoiceFile(null);
     setSubmitting(false);
-    setToast({ message: "AquisiÃ§Ã£o registrada com sucesso!", type: "success" });
+    setToast({ message: "Aquisição registrada com sucesso!", type: "success" });
     fetchAcquisitions();
     fetchItems();
   };
@@ -254,7 +254,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
       {/* Header */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="text-center lg:text-left">
-          <h2 className="text-2xl font-bold text-white">AquisiÃƒÂ§ÃƒÂ£o</h2>
+          <h2 className="text-2xl font-bold text-white">Aquisição</h2>
           <p className="text-slate-400 text-sm mt-1">
             {canManageStock
               ? "Registre entradas de itens no estoque"
@@ -269,13 +269,13 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
       {/* New Acquisition Form */}
       {canManageStock ? (
       <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-6">
-        <h3 className="text-lg font-semibold text-white">Nova AquisiÃ§Ã£o</h3>
+        <h3 className="text-lg font-semibold text-white">Nova Aquisição</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start">
           <div className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1">
-                Data da AquisiÃ§Ã£o
+                Data da Aquisição
               </label>
               {useManualAcqDate ? (
                 <input
@@ -425,7 +425,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
                 onChange={(e) =>
                   setAddPrice(e.target.value ? parseFloat(e.target.value) : "")
                 }
-                placeholder="R$ Valor UnitÃ¡rio"
+                placeholder="R$ Valor Unitário"
                 className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
@@ -492,7 +492,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
               >
                 {submitting
                   ? "Processando..."
-                  : "Confirmar AquisiÃ§Ã£o"}
+                  : "Confirmar Aquisição"}
               </button>
             </div>
           </div>
@@ -519,7 +519,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
-          HistÃ³rico de AquisiÃ§Ãµes ({filteredAcquisitions.length})
+          Histórico de Aquisições ({filteredAcquisitions.length})
         </button>
       </div>
 
@@ -548,7 +548,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
             </div>
           ) : filteredAcquisitions.length === 0 ? (
             <p className="text-center py-8 text-slate-500">
-              Nenhuma aquisiÃ§Ã£o encontrada
+              Nenhuma aquisição encontrada
             </p>
           ) : (
             <>
