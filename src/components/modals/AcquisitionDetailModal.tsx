@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { Acquisition, AcquisitionItemWithDetails, pluralizeUnit, type StockUnitOption } from "@/types/stock";
@@ -62,7 +62,7 @@ export function AcquisitionDetailModal({
       const uploadData = await uploadRes.json();
 
       if (!uploadRes.ok) {
-        throw new Error(uploadData.error ?? "Nao foi possivel enviar a nota fiscal.");
+        throw new Error(uploadData.error ?? "Não foi possível enviar a nota fiscal.");
       }
 
       const invoiceRes = await fetch(`/api/acquisitions/${acquisitionId}/invoice`, {
@@ -77,7 +77,7 @@ export function AcquisitionDetailModal({
       const invoiceData = await invoiceRes.json();
 
       if (!invoiceRes.ok) {
-        throw new Error(invoiceData.error ?? "Nao foi possivel anexar a nota fiscal.");
+        throw new Error(invoiceData.error ?? "Não foi possível anexar a nota fiscal.");
       }
 
       setAcquisition(invoiceData.acquisition);
@@ -88,7 +88,7 @@ export function AcquisitionDetailModal({
         message:
           error instanceof Error
             ? error.message
-            : "Nao foi possivel anexar a nota fiscal.",
+            : "Não foi possível anexar a nota fiscal.",
         type: "error",
       });
     } finally {
@@ -99,7 +99,7 @@ export function AcquisitionDetailModal({
   const handleDeleteInvoice = async () => {
     if (!acquisition?.invoiceUrl || deletingInvoice) return;
 
-    const confirmed = window.confirm("Excluir a nota fiscal desta aquisicao?");
+    const confirmed = window.confirm("Excluir a nota fiscal desta aquisição?");
     if (!confirmed) return;
 
     setDeletingInvoice(true);
@@ -111,18 +111,18 @@ export function AcquisitionDetailModal({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error ?? "Nao foi possivel excluir a nota fiscal.");
+        throw new Error(data.error ?? "Não foi possível excluir a nota fiscal.");
       }
 
       setAcquisition(data.acquisition);
       onInvoiceChanged?.();
-      onToast?.({ message: "Nota fiscal excluida com sucesso!", type: "success" });
+      onToast?.({ message: "Nota fiscal excluída com sucesso!", type: "success" });
     } catch (error) {
       onToast?.({
         message:
           error instanceof Error
             ? error.message
-            : "Nao foi possivel excluir a nota fiscal.",
+            : "Não foi possível excluir a nota fiscal.",
         type: "error",
       });
     } finally {
@@ -287,7 +287,7 @@ export function AcquisitionDetailModal({
                       </div>
                       <div className="text-right">
                         <p className="text-sm text-slate-300">
-                          {ai.quantity} {pluralizeUnit(ai.itemUnit, ai.quantity, units)} ? R${" "}
+                          {ai.quantity} {pluralizeUnit(ai.itemUnit, ai.quantity, units)} x R${" "}
                           {parseFloat(ai.unitPrice).toFixed(2)}
                         </p>
                         <p className="text-sm text-white font-medium">
