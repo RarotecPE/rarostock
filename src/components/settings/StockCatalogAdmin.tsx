@@ -1,6 +1,7 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { RefreshButton } from "@/components/ui/RefreshButton";
 import { Toast } from "@/components/ui/Toast";
 import type { StockCatalog, StockCategoryOption, StockUnitOption } from "@/lib/stock-catalog";
 
@@ -116,9 +117,14 @@ export function StockCatalogAdmin() {
     <div className="space-y-6">
       {toast ? <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} /> : null}
 
-      <div className="text-center lg:text-left">
-        <h2 className="text-2xl font-bold text-white">Configurações</h2>
-        <p className="mt-1 text-sm text-slate-400">Gerencie categorias e unidades usadas nos produtos e equipamentos.</p>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="text-center lg:text-left">
+          <h2 className="text-2xl font-bold text-white">Configurações</h2>
+          <p className="mt-1 text-sm text-slate-400">Gerencie categorias e unidades usadas nos produtos e equipamentos.</p>
+        </div>
+        <div className="flex items-center justify-center gap-2 lg:justify-end">
+          <RefreshButton onClick={() => void loadCatalog()} />
+        </div>
       </div>
 
       <section className="grid gap-6 xl:grid-cols-3">

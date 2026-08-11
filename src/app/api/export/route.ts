@@ -10,17 +10,17 @@ export async function GET(req: NextRequest) {
   if (hasAuthError(auth)) return auth.response;
 
   const url = new URL(req.url);
-  const categoryFilter = url.searchParams.get("category");
-  const statusFilter = url.searchParams.get("status");
+  const categoryFilters = url.searchParams.getAll("category");
+  const statusFilters = url.searchParams.getAll("status");
   const search = url.searchParams.get("search");
   let allProducts = await db.select().from(products);
 
-  if (categoryFilter) allProducts = allProducts.filter((i) => i.category === categoryFilter);
+  if (categoryFilters.length) allProducts = allProducts.filter((i) => categoryFilters.includes(i.category));
   if (search) {
     const norm = search.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     allProducts = allProducts.filter((i) => i.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(norm) || i.code.toLowerCase().includes(norm));
   }
-  if (statusFilter) allProducts = allProducts.filter((i) => getStockStatus(i.quantity, i.minimumLimit, i.desiredLimit) === statusFilter);
+  if (statusFilters.length) allProducts = allProducts.filter((i) => statusFilters.includes(getStockStatus(i.quantity, i.minimumLimit, i.desiredLimit)));
 
   const headers = ["Código", "Nome", "Categoria", "Unidade", "Unidade Adicional", "Quantidade", "Limite Mínimo", "Limite Desejável", "Status", "Marca", "Observações"];
   const rows = allProducts.map((i) => [

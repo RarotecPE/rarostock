@@ -1,9 +1,11 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Item, normalizeSearch, pluralizeUnit } from "@/types/stock";
 import { StatusBadge } from "@/components/ui/Badge";
+import { RefreshButton } from "@/components/ui/RefreshButton";
 import { Toast } from "@/components/ui/Toast";
+import { FilterDropdown, FilterSection } from "@/components/ui/FilterDropdown";
 import { useStockCatalog } from "@/lib/use-stock-catalog";
 
 type BaixaMode = "unidade" | "saldo";
@@ -52,6 +54,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
   const [showHistory, setShowHistory] = useState(!canManageStock);
   const [historyStartDate, setHistoryStartDate] = useState("");
   const [historyEndDate, setHistoryEndDate] = useState("");
+  const [showHistoryFilters, setShowHistoryFilters] = useState(false);
   const [historyPage, setHistoryPage] = useState(1);
   const historyPerPage = 10;
 
@@ -199,13 +202,18 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
         />
       )}
 
-      <div className="text-center lg:text-left">
-        <h2 className="text-2xl font-bold text-white">Baixa de Estoque</h2>
-        <p className="text-slate-400 text-sm mt-1">
-          {canManageStock
-            ? "Registre saídas de itens do estoque"
-            : "Consulte o historico de baixas do estoque"}
-        </p>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="text-center lg:text-left">
+          <h2 className="text-2xl font-bold text-white">Baixa de Estoque</h2>
+          <p className="text-slate-400 text-sm mt-1">
+            {canManageStock
+              ? "Registre saÃƒÂ­das de itens do estoque"
+              : "Consulte o historico de baixas do estoque"}
+          </p>
+        </div>
+        <div className="flex items-center justify-center gap-2 lg:justify-end">
+          <RefreshButton onClick={() => { void fetchItems(); void fetchIssues(); }} />
+        </div>
       </div>
 
       {canManageStock ? (
@@ -238,7 +246,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
                   setShowDropdown(true);
                 }}
                 onFocus={() => setShowDropdown(true)}
-                placeholder="Digite o código ou nome do item..."
+                placeholder="Digite o cÃ³digo ou nome do item..."
                 className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none"
               />
 
@@ -361,7 +369,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
                   />
                   {typeof quantity === "number" && quantity > selectedItem.quantity && (
                     <p className="text-xs text-rose-400 mt-1">
-                      Excede o saldo disponível
+                      Excede o saldo disponÃ­vel
                     </p>
                   )}
                 </div>
@@ -378,7 +386,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
                     onChange={(e) => {
                       setNewBalance(e.target.value ? parseInt(e.target.value) : "");
                     }}
-                    placeholder="Saldo atualizado após contagem"
+                    placeholder="Saldo atualizado apÃ³s contagem"
                     className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                   {typeof newBalance === "number" && newBalance >= selectedItem.quantity && (
@@ -388,7 +396,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
                   )}
                   {typeof newBalance === "number" && newBalance < selectedItem.quantity && (
                     <p className="text-xs text-slate-400 mt-1">
-                      Será registrada baixa de{" "}
+                      SerÃ¡ registrada baixa de{" "}
                       <span className="text-white font-medium">{calculatedQuantity}</span>{" "}
                       {pluralizeUnit(selectedItem.unit, calculatedQuantity, catalog.units)}
                     </p>
@@ -400,7 +408,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
             {isValidSubmission && (
               <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg">
                 <p className="text-sm text-rose-300">
-                  <span className="font-medium">Resumo:</span> Será registrada baixa de{" "}
+                  <span className="font-medium">Resumo:</span> SerÃ¡ registrada baixa de{" "}
                   <span className="font-bold">
                     {calculatedQuantity}{" "}
                     {pluralizeUnit(selectedItem.unit, calculatedQuantity, catalog.units)}
@@ -408,11 +416,11 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
                   .
                   {mode === "saldo" ? (
                     <span>
-                      {" "}Saldo passará de {selectedItem.quantity} para {newBalance}.
+                      {" "}Saldo passarÃ¡ de {selectedItem.quantity} para {newBalance}.
                     </span>
                   ) : (
                     <span>
-                      {" "}O saldo atualizado será de{" "}
+                      {" "}O saldo atualizado serÃ¡ de{" "}
                       <span className="font-bold">
                         {selectedItem.quantity - calculatedQuantity}
                       </span>
@@ -473,53 +481,25 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
-          Histórico de Baixas ({filteredIssues.length})
+          HistÃ³rico de Baixas ({filteredIssues.length})
         </button>
       </div>
 
       {showHistory && (
-        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-4">
-          <div className="flex flex-wrap gap-4 items-end">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
-                Data Inicial
-              </label>
-              <input
-                type="date"
-                value={historyStartDate}
-                onChange={(e) => {
-                  setHistoryStartDate(e.target.value);
-                  setHistoryPage(1);
-                }}
-                className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
-                Data Final
-              </label>
-              <input
-                type="date"
-                value={historyEndDate}
-                onChange={(e) => {
-                  setHistoryEndDate(e.target.value);
-                  setHistoryPage(1);
-                }}
-                className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-            {(historyStartDate || historyEndDate) && (
-              <button
-                onClick={() => {
-                  setHistoryStartDate("");
-                  setHistoryEndDate("");
-                  setHistoryPage(1);
-                }}
-                className="px-3 py-2 text-sm text-slate-400 hover:text-white transition-colors"
-              >
-                Limpar
-              </button>
-            )}
+        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-4">          <div className="flex justify-end">
+            <FilterDropdown
+              open={showHistoryFilters}
+              onOpenChange={setShowHistoryFilters}
+              activeCount={(historyStartDate ? 1 : 0) + (historyEndDate ? 1 : 0)}
+              onClear={() => { setHistoryStartDate(""); setHistoryEndDate(""); setHistoryPage(1); }}
+            >
+              <FilterSection title="Período" activeCount={(historyStartDate ? 1 : 0) + (historyEndDate ? 1 : 0)}>
+                <div className="grid grid-cols-1 gap-2">
+                  <label className="space-y-1 text-sm text-slate-300"><span className="block text-xs text-slate-500">Data inicial</span><input type="date" value={historyStartDate} onChange={(e) => { setHistoryStartDate(e.target.value); setHistoryPage(1); }} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-blue-500" /></label>
+                  <label className="space-y-1 text-sm text-slate-300"><span className="block text-xs text-slate-500">Data final</span><input type="date" value={historyEndDate} onChange={(e) => { setHistoryEndDate(e.target.value); setHistoryPage(1); }} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-blue-500" /></label>
+                </div>
+              </FilterSection>
+            </FilterDropdown>
           </div>
 
           {loadingIssues ? (

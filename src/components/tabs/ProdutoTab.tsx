@@ -1,8 +1,9 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import { useStockCatalog } from "@/lib/use-stock-catalog";
+import { RefreshButton } from "@/components/ui/RefreshButton";
 import { Toast } from "@/components/ui/Toast";
 import { ProductList } from "@/components/products/ProductList";
 
@@ -96,7 +97,9 @@ export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
             {canManageStock ? "Consulte, filtre e cadastre produtos de consumo." : "Consulte os produtos cadastrados no estoque."}
           </p>
         </div>
-        <div className="flex items-center justify-center gap-2 lg:justify-end">          {canManageStock ? (
+        <div className="flex items-center justify-center gap-2 lg:justify-end">
+          <RefreshButton onClick={() => setRefreshKey((key) => key + 1)} />
+          {canManageStock ? (
             <button type="button" onClick={() => setModalOpen(true)} className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-50 flex items-center gap-2">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
               Novo produto

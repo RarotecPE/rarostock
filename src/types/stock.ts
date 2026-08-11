@@ -1,4 +1,4 @@
-﻿export { pluralizeUnit } from "@/lib/stock-catalog";
+export { pluralizeUnit } from "@/lib/stock-catalog";
 export type { StockCatalog, StockCategoryOption, StockUnitOption } from "@/lib/stock-catalog";
 
 export type StockStatus =
@@ -103,6 +103,25 @@ export interface Equipment {
   updatedAt: Date;
 }
 
+export interface EquipmentMovement {
+  id: number;
+  equipmentId: number;
+  equipmentCode: string;
+  equipmentName: string;
+  equipmentCategory: string;
+  fromHolderType: EquipmentHolderType;
+  fromUserId: string | null;
+  fromUserName: string | null;
+  fromUserEmail: string | null;
+  toHolderType: EquipmentHolderType;
+  toUserId: string | null;
+  toUserName: string | null;
+  toUserEmail: string | null;
+  reason: string | null;
+  requestId: number | null;
+  createdByUserId: string | null;
+  createdAt: string | Date;
+}
 export interface EquipmentRequest {
   id: number;
   equipmentId: number;

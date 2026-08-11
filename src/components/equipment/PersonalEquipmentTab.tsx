@@ -1,18 +1,34 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Equipment, EquipmentRequest, EquipmentUser, holderLabel } from "@/types/stock";
+import { Equipment, EquipmentMovement, EquipmentRequest, EquipmentUser, holderLabel } from "@/types/stock";
+import { RefreshButton } from "@/components/ui/RefreshButton";
 import { Toast } from "@/components/ui/Toast";
 import { useStockSession } from "@/components/layout/StockAppShell";
 import { EquipmentDetailModal } from "@/components/equipment/EquipmentTab";
 
 type ToastState = { message: string; type?: "success" | "error" } | null;
 
+function formatDateTime(value: string | Date) {
+  const date = new Date(value);
+  const datePart = new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+  const timePart = new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(date);
+  return `${datePart} - ${timePart}`;
+}
 export function PersonalEquipmentTab() {
   const { user, isAdmin, canMutateStock } = useStockSession();
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [users, setUsers] = useState<EquipmentUser[]>([]);
   const [requests, setRequests] = useState<EquipmentRequest[]>([]);
+  const [movements, setMovements] = useState<EquipmentMovement[]>([]);
   const [loading, setLoading] = useState(true);
   const [showRequestHistory, setShowRequestHistory] = useState(false);
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
@@ -20,17 +36,19 @@ export function PersonalEquipmentTab() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [equipmentRes, requestsRes, usersRes] = await Promise.all([
+    const [equipmentRes, requestsRes, usersRes, movementsRes] = await Promise.all([
       fetch("/api/equipments"),
       fetch("/api/equipment-requests?scope=mine&status=all"),
       fetch("/api/equipment-users"),
+      fetch("/api/equipment-movements"),
     ]);
-    const [equipmentData, requestData, usersData] = await Promise.all([
+    const [equipmentData, requestData, usersData, movementData] = await Promise.all([
       equipmentRes.json().catch(() => []),
       requestsRes.json().catch(() => []),
       usersRes.json().catch(() => ({ users: [] })),
+      movementsRes.json().catch(() => []),
     ]);
-    if (!equipmentRes.ok || !requestsRes.ok) {
+    if (!equipmentRes.ok || !requestsRes.ok || !movementsRes.ok) {
       setToast({ message: "Não foi possível carregar os dados pessoais.", type: "error" });
     }
     setEquipments(
@@ -41,6 +59,7 @@ export function PersonalEquipmentTab() {
         : [],
     );
     setRequests(Array.isArray(requestData) ? requestData : []);
+    setMovements(Array.isArray(movementData) ? movementData : []);
     setUsers(Array.isArray(usersData?.users) ? usersData.users : []);
     setLoading(false);
   }, [user?.id]);
@@ -59,6 +78,17 @@ export function PersonalEquipmentTab() {
     [requests],
   );
 
+  const equipmentSinceById = useMemo(() => {
+    const map = new Map<number, string | Date>();
+    for (const movement of movements) {
+      if (movement.toHolderType !== "user" || movement.toUserId !== user?.id) continue;
+      const current = map.get(movement.equipmentId);
+      if (!current || new Date(movement.createdAt).getTime() > new Date(current).getTime()) {
+        map.set(movement.equipmentId, movement.createdAt);
+      }
+    }
+    return map;
+  }, [movements, user?.id]);
   const decide = async (id: number, approve: boolean) => {
     const res = await fetch(`/api/equipment-requests/${id}/${approve ? "approve" : "reject"}`, {
       method: "POST",
@@ -78,9 +108,14 @@ export function PersonalEquipmentTab() {
   return (
     <div className="space-y-6">
       {toast ? <Toast message={toast.message} type={toast.type ?? "success"} onClose={() => setToast(null)} /> : null}
-      <div className="text-center lg:text-left">
-        <h2 className="text-2xl font-bold text-white">Pessoal</h2>
-        <p className="mt-1 text-sm text-slate-400">Seus equipamentos e solicitações.</p>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="text-center lg:text-left">
+          <h2 className="text-2xl font-bold text-white">Pessoal</h2>
+          <p className="mt-1 text-sm text-slate-400">Seus equipamentos e solicitações.</p>
+        </div>
+        <div className="flex items-center justify-center gap-2 lg:justify-end">
+          <RefreshButton onClick={() => void load()} />
+        </div>
       </div>
 
       {loading ? (
@@ -103,7 +138,7 @@ export function PersonalEquipmentTab() {
                     <p className="mt-1 text-sm text-slate-400">
                       {equipment.category} · {holderLabel(equipment)}
                     </p>
-                    <p className="mt-3 text-xs text-slate-500">Clique para devolver ou transferir.</p>
+                    <p className="mt-3 text-xs text-slate-500">{equipmentSinceById.get(equipment.id) ? `Com você desde ${formatDateTime(equipmentSinceById.get(equipment.id)!)}` : "Com você desde data não identificada"}</p><p className="mt-1 text-xs text-slate-500">Clique para devolver ou transferir.</p>
                   </button>
                 ))}
               </div>
@@ -178,6 +213,7 @@ function RequestList({ requests, users, userId, isAdmin, onDecide, emptyText }: 
                 <p className="mt-1 text-sm text-slate-400">
                   De {request.fromUserName || "RAROTEC"} para {request.toUserName || "RAROTEC"}
                 </p>
+                <p className="mt-1 text-xs text-slate-500">Solicitada em {formatDateTime(request.createdAt)}</p>
                 {request.reason ? <p className="mt-1 text-xs text-slate-500">{request.reason}</p> : null}
               </div>
               <div className="flex flex-col items-start gap-3 lg:items-end">

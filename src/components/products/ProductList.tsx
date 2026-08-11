@@ -1,9 +1,10 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Item, normalizeSearch, getStockStatus, formatLimit } from "@/types/stock";
 import { StatusBadge } from "@/components/ui/Badge";
 import { ItemDetailModal } from "@/components/modals/ItemDetailModal";
+import { FilterCheckbox, FilterDropdown, FilterSection, toggleFilterValue } from "@/components/ui/FilterDropdown";
 
 type SortField = "code" | "name" | "category" | "quantity" | "minimumLimit" | "desiredLimit" | "status";
 type SortDir = "asc" | "desc";
@@ -17,8 +18,8 @@ export function ProductList({ refreshKey = 0, canManageStock }: ProductListProps
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [categoryFilters, setCategoryFilters] = useState<string[]>([]);
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [sortField, setSortField] = useState<SortField>("code");
@@ -32,7 +33,10 @@ export function ProductList({ refreshKey = 0, canManageStock }: ProductListProps
     setLoading(false);
   }, []);
 
-  useEffect(() => { const timer = setTimeout(() => void fetchItems(), 0); return () => clearTimeout(timer); }, [fetchItems, refreshKey]);
+  useEffect(() => {
+    const timer = setTimeout(() => void fetchItems(), 0);
+    return () => clearTimeout(timer);
+  }, [fetchItems, refreshKey]);
 
   const filtered = useMemo(() => {
     let result = items;
@@ -40,8 +44,8 @@ export function ProductList({ refreshKey = 0, canManageStock }: ProductListProps
       const norm = normalizeSearch(search);
       result = result.filter((i) => normalizeSearch(i.name).includes(norm) || normalizeSearch(i.code).includes(norm));
     }
-    if (categoryFilter) result = result.filter((i) => i.category === categoryFilter);
-    if (statusFilter) result = result.filter((i) => getStockStatus(i.quantity, i.minimumLimit, i.desiredLimit) === statusFilter);
+    if (categoryFilters.length) result = result.filter((i) => categoryFilters.includes(i.category));
+    if (statusFilters.length) result = result.filter((i) => statusFilters.includes(getStockStatus(i.quantity, i.minimumLimit, i.desiredLimit)));
 
     return [...result].sort((a, b) => {
       let cmp = 0;
@@ -54,25 +58,33 @@ export function ProductList({ refreshKey = 0, canManageStock }: ProductListProps
       if (sortField === "status") cmp = getStockStatus(a.quantity, a.minimumLimit, a.desiredLimit).localeCompare(getStockStatus(b.quantity, b.minimumLimit, b.desiredLimit));
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [items, search, categoryFilter, statusFilter, sortField, sortDir]);
+  }, [items, search, categoryFilters, statusFilters, sortField, sortDir]);
 
   const categories = useMemo(() => [...new Set(items.map((i) => i.category))].sort(), [items]);
-  const activeFiltersCount = [categoryFilter, statusFilter].filter(Boolean).length;
+  const statusOptions = ["Em Estoque", "Abaixo do Desejável", "Abaixo do Mínimo", "Indisponível"];
+  const activeFiltersCount = categoryFilters.length + statusFilters.length;
 
   const handleSort = (field: SortField) => {
     if (sortField === field) setSortDir(sortDir === "asc" ? "desc" : "asc");
     else { setSortField(field); setSortDir("asc"); }
   };
 
-  const renderSortIcon = (field: SortField) => (
-    <span className={sortField === field ? "text-blue-400" : "text-slate-600"}>{sortField === field && sortDir === "desc" ? "↓" : "↑"}</span>
-  );
+  const renderSortIcon = (field: SortField) => {
+    const active = sortField === field;
+    const descending = active && sortDir === "desc";
+
+    return (
+      <svg className={`h-3 w-3 transition-transform ${active ? "text-blue-400" : "text-slate-600"} ${descending ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+      </svg>
+    );
+  };
 
   const handleExport = () => {
     const params = new URLSearchParams();
     if (search) params.set("search", search);
-    if (categoryFilter) params.set("category", categoryFilter);
-    if (statusFilter) params.set("status", statusFilter);
+    categoryFilters.forEach((category) => params.append("category", category));
+    statusFilters.forEach((status) => params.append("status", status));
     window.location.href = `/api/export${params.toString() ? `?${params}` : ""}`;
   };
 
@@ -80,23 +92,27 @@ export function ProductList({ refreshKey = 0, canManageStock }: ProductListProps
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome ou código..." className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white placeholder-slate-500 outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 w-full pl-3" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome ou código..." className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 pl-3 text-white placeholder-slate-500 outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500" />
         </div>
-        <button type="button" onClick={() => setShowFilters(!showFilters)} className={`btn-secondary flex items-center justify-center gap-2 ${showFilters || activeFiltersCount > 0 ? "border-blue-500/40 text-blue-300" : ""}`}>
-          Filtros {activeFiltersCount > 0 ? <span className="rounded-full bg-blue-500 px-1.5 text-xs text-white">{activeFiltersCount}</span> : null}
-        </button>
+        <FilterDropdown
+          open={showFilters}
+          onOpenChange={setShowFilters}
+          activeCount={activeFiltersCount}
+          onClear={() => { setCategoryFilters([]); setStatusFilters([]); }}
+        >
+          <FilterSection title="Categorias" activeCount={categoryFilters.length}>
+            {categories.map((category) => (
+              <FilterCheckbox key={category} label={category} checked={categoryFilters.includes(category)} onChange={() => setCategoryFilters((prev) => toggleFilterValue(prev, category))} />
+            ))}
+          </FilterSection>
+          <FilterSection title="Status" activeCount={statusFilters.length}>
+            {statusOptions.map((status) => (
+              <FilterCheckbox key={status} label={status} checked={statusFilters.includes(status)} onChange={() => setStatusFilters((prev) => toggleFilterValue(prev, status))} />
+            ))}
+          </FilterSection>
+        </FilterDropdown>
         <button type="button" onClick={handleExport} className="rounded-lg border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:border-slate-600 hover:bg-slate-800 hover:text-white">Exportar CSV</button>
       </div>
-
-      {showFilters ? (
-        <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white placeholder-slate-500 outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500"><option value="">Todas as categorias</option>{categories.map((category) => <option key={category} value={category}>{category}</option>)}</select>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white placeholder-slate-500 outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500"><option value="">Todos os status</option><option value="Em Estoque">Em Estoque</option><option value="Abaixo do Desejável">Abaixo do Desejável</option><option value="Abaixo do Mínimo">Abaixo do Mínimo</option><option value="Indisponível">Indisponível</option></select>
-          </div>
-          {activeFiltersCount > 0 ? <button type="button" onClick={() => { setCategoryFilter(""); setStatusFilter(""); }} className="mt-3 text-xs text-slate-400 hover:text-white">Limpar filtros</button> : null}
-        </div>
-      ) : null}
 
       {loading ? <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" /></div> : filtered.length === 0 ? <div className="py-12 text-center text-slate-500">Nenhum produto encontrado</div> : (
         <>
@@ -115,6 +131,3 @@ export function ProductList({ refreshKey = 0, canManageStock }: ProductListProps
     </div>
   );
 }
-
-
-

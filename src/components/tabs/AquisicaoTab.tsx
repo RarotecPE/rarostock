@@ -1,10 +1,12 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Item, CartItem, normalizeSearch, Acquisition, pluralizeUnit } from "@/types/stock";
 import { InvoicePreviewModal } from "@/components/modals/InvoicePreviewModal";
+import { RefreshButton } from "@/components/ui/RefreshButton";
 import { AcquisitionDetailModal } from "@/components/modals/AcquisitionDetailModal";
 import { Toast } from "@/components/ui/Toast";
+import { FilterDropdown, FilterSection } from "@/components/ui/FilterDropdown";
 import { useStockCatalog } from "@/lib/use-stock-catalog";
 
 function nowDateTimeLocal() {
@@ -54,6 +56,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
   const [showHistory, setShowHistory] = useState(!canManageStock);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [showHistoryFilters, setShowHistoryFilters] = useState(false);
   const [previewInvoice, setPreviewInvoice] = useState<{
     url: string;
     filename?: string | null;
@@ -217,7 +220,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
     setAcqDate(nowDateTimeLocal());
     setInvoiceFile(null);
     setSubmitting(false);
-    setToast({ message: "Aquisição registrada com sucesso!", type: "success" });
+    setToast({ message: "AquisiÃ§Ã£o registrada com sucesso!", type: "success" });
     fetchAcquisitions();
     fetchItems();
   };
@@ -249,25 +252,30 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
       )}
 
       {/* Header */}
-      <div className="text-center lg:text-left">
-        <h2 className="text-2xl font-bold text-white">Aquisição</h2>
-        <p className="text-slate-400 text-sm mt-1">
-          {canManageStock
-            ? "Registre entradas de itens no estoque"
-            : "Consulte o historico de entradas do estoque"}
-        </p>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="text-center lg:text-left">
+          <h2 className="text-2xl font-bold text-white">AquisiÃƒÂ§ÃƒÂ£o</h2>
+          <p className="text-slate-400 text-sm mt-1">
+            {canManageStock
+              ? "Registre entradas de itens no estoque"
+              : "Consulte o historico de entradas do estoque"}
+          </p>
+        </div>
+        <div className="flex items-center justify-center gap-2 lg:justify-end">
+          <RefreshButton onClick={() => { void fetchAcquisitions(); void fetchItems(); }} />
+        </div>
       </div>
 
       {/* New Acquisition Form */}
       {canManageStock ? (
       <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-6">
-        <h3 className="text-lg font-semibold text-white">Nova Aquisição</h3>
+        <h3 className="text-lg font-semibold text-white">Nova AquisiÃ§Ã£o</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start">
           <div className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1">
-                Data da Aquisição
+                Data da AquisiÃ§Ã£o
               </label>
               {useManualAcqDate ? (
                 <input
@@ -417,7 +425,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
                 onChange={(e) =>
                   setAddPrice(e.target.value ? parseFloat(e.target.value) : "")
                 }
-                placeholder="R$ Valor Unitário"
+                placeholder="R$ Valor UnitÃ¡rio"
                 className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
@@ -484,7 +492,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
               >
                 {submitting
                   ? "Processando..."
-                  : "Confirmar Aquisição"}
+                  : "Confirmar AquisiÃ§Ã£o"}
               </button>
             </div>
           </div>
@@ -511,45 +519,26 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
-          Histórico de Aquisições ({filteredAcquisitions.length})
+          HistÃ³rico de AquisiÃ§Ãµes ({filteredAcquisitions.length})
         </button>
       </div>
 
       {/* History */}
       {showHistory && (
-        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-4">
-          {/* Date Filters */}
-          <div className="flex flex-wrap gap-4 items-end">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
-                Data Inicial
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => { setStartDate(e.target.value); setHistoryPage(1); }}
-                className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
-                Data Final
-              </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => { setEndDate(e.target.value); setHistoryPage(1); }}
-                className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-            {(startDate || endDate) && (
-              <button
-                onClick={() => { setStartDate(""); setEndDate(""); setHistoryPage(1); }}
-                className="px-3 py-2 text-sm text-slate-400 hover:text-white transition-colors"
-              >
-                Limpar
-              </button>
-            )}
+        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-4">          <div className="flex justify-end">
+            <FilterDropdown
+              open={showHistoryFilters}
+              onOpenChange={setShowHistoryFilters}
+              activeCount={(startDate ? 1 : 0) + (endDate ? 1 : 0)}
+              onClear={() => { setStartDate(""); setEndDate(""); setHistoryPage(1); }}
+            >
+              <FilterSection title="Período" activeCount={(startDate ? 1 : 0) + (endDate ? 1 : 0)}>
+                <div className="grid grid-cols-1 gap-2">
+                  <label className="space-y-1 text-sm text-slate-300"><span className="block text-xs text-slate-500">Data inicial</span><input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setHistoryPage(1); }} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-blue-500" /></label>
+                  <label className="space-y-1 text-sm text-slate-300"><span className="block text-xs text-slate-500">Data final</span><input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setHistoryPage(1); }} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-blue-500" /></label>
+                </div>
+              </FilterSection>
+            </FilterDropdown>
           </div>
 
           {/* Acquisitions List */}
@@ -559,7 +548,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
             </div>
           ) : filteredAcquisitions.length === 0 ? (
             <p className="text-center py-8 text-slate-500">
-              Nenhuma aquisição encontrada
+              Nenhuma aquisiÃ§Ã£o encontrada
             </p>
           ) : (
             <>
