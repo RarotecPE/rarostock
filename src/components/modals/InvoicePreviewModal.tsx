@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 interface Props {
   imageUrl: string;
@@ -29,8 +29,8 @@ export function InvoicePreviewModal({ imageUrl, filename, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/80 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="flex max-h-[94dvh] w-full max-w-2xl flex-col rounded-t-2xl border border-slate-800 bg-slate-900 sm:max-h-[90vh] sm:rounded-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-slate-800">
           <h3 className="text-lg font-semibold text-white">Nota Fiscal</h3>
@@ -60,7 +60,7 @@ export function InvoicePreviewModal({ imageUrl, filename, onClose }: Props) {
             <iframe
               src={imageUrl}
               title="Nota Fiscal"
-              className="w-full h-[70vh] rounded-lg bg-white"
+              className="h-[72dvh] w-full rounded-lg bg-white sm:h-[70vh]"
             />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element

@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unexpected upload error";
-    const status = message.includes("Tipo de arquivo nao permitido") ? 400 : 500;
+    const status = message.includes("Tipo de arquivo não permitido") ? 400 : 500;
 
     return NextResponse.json({ error: message }, { status });
   }

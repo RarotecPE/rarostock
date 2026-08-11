@@ -49,7 +49,7 @@ type DashboardAnalytics = {
   categoryDistribution: DistributionPoint[];
 };
 
-type QuickAccessPath = "/produtos" | "/aquisicoes" | "/baixas" | "/equipamentos" | "/movimentacoes" | "/pessoal";
+type QuickAccessPath = "/produtos" | "/aquisições" | "/baixas" | "/equipamentos" | "/movimentacoes" | "/pessoal";
 
 type QuickAccessGroup = {
   title: string;
@@ -127,7 +127,7 @@ const quickAccessGroups: QuickAccessGroup[] = [
     icon: productIcon,
     options: [
       { key: "/produtos", title: "Catálogo", description: "Consultar e gerenciar produtos", icon: productIcon },
-      { key: "/aquisicoes", title: "Aquisição", description: "Registrar entradas", icon: acquisitionIcon },
+      { key: "/aquisições", title: "Aquisição", description: "Registrar entradas", icon: acquisitionIcon },
       { key: "/baixas", title: "Baixa", description: "Registrar saídas", icon: issueIcon },
     ],
   },
@@ -261,7 +261,7 @@ export function DashboardTab({ onNavigate, canManageStock }: DashboardTabProps) 
       <div className="text-center lg:text-left">
         <h2 className="text-2xl font-bold text-white">Dashboard</h2>
         <p className="text-slate-400 text-sm mt-1">
-          Visao geral dos saldos, alertas e analises mensais do estoque
+          Visão geral dos saldos, alertas e análises mensais do estoque
         </p>
       </div>
 
@@ -361,11 +361,11 @@ export function DashboardTab({ onNavigate, canManageStock }: DashboardTabProps) 
               <p className="text-4xl font-bold text-cyan-400 mt-2">{belowDesired}</p>
             </div>
             <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5">
-              <p className="text-sm text-slate-400">Abaixo do minimo</p>
+              <p className="text-sm text-slate-400">Abaixo do mínimo</p>
               <p className="text-4xl font-bold text-amber-400 mt-2">{belowMin}</p>
             </div>
             <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5">
-              <p className="text-sm text-slate-400">Indisponiveis</p>
+              <p className="text-sm text-slate-400">Indisponíveis</p>
               <p className="text-4xl font-bold text-rose-400 mt-2">{unavailable}</p>
             </div>
           </div>
@@ -374,9 +374,9 @@ export function DashboardTab({ onNavigate, canManageStock }: DashboardTabProps) 
 
       <section className="space-y-4">
         <div className="text-center lg:text-left">
-          <h2 className="text-xl font-bold text-white">Analises mensais</h2>
+          <h2 className="text-xl font-bold text-white">Análises mensais</h2>
           <p className="text-slate-400 text-sm mt-1">
-            Ultimos 12 meses, incluindo o mes atual
+            Últimos 12 meses, incluindo o mês atual
           </p>
         </div>
 
@@ -386,7 +386,7 @@ export function DashboardTab({ onNavigate, canManageStock }: DashboardTabProps) 
           </div>
         ) : analyticsError || !analytics ? (
           <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 text-sm text-rose-300">
-            Nao foi possivel carregar as analises do Dashboard.
+            Não foi possível carregar as análises do Dashboard.
           </div>
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -407,7 +407,7 @@ export function DashboardTab({ onNavigate, canManageStock }: DashboardTabProps) 
               </ResponsiveContainer>
             </ChartCard>
 
-            <ChartCard title="Valor de aquisicoes por mes" empty={!hasMonthlyValue}>
+            <ChartCard title="Valor de aquisições por mes" empty={!hasMonthlyValue}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={analytics.monthlyAcquisitionValue}>
                   <CartesianGrid stroke="#1e293b" vertical={false} />
@@ -434,7 +434,7 @@ export function DashboardTab({ onNavigate, canManageStock }: DashboardTabProps) 
               </ResponsiveContainer>
             </ChartCard>
 
-            <ChartCard title="Top produtos com mais saida" empty={!hasTopIssued}>
+            <ChartCard title="Top produtos com mais saída" empty={!hasTopIssued}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={analytics.topIssuedProducts} layout="vertical" margin={{ left: 12 }}>
                   <CartesianGrid stroke="#1e293b" horizontal={false} />
@@ -513,7 +513,7 @@ export function DashboardTab({ onNavigate, canManageStock }: DashboardTabProps) 
               </ResponsiveContainer>
             </ChartCard>
 
-            <ChartCard title="Distribuicao por categoria" empty={!hasCategories}>
+            <ChartCard title="Distribuição por categoria" empty={!hasCategories}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={analytics.categoryDistribution}>
                   <CartesianGrid stroke="#1e293b" vertical={false} />

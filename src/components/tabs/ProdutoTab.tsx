@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -90,19 +90,19 @@ export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
     <div className="space-y-6">
       {toast ? <Toast message={toast.message} subMessage={toast.subMessage} type={toast.type ?? "success"} onClose={() => setToast(null)} /> : null}
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div className="text-center lg:text-left">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 text-left">
           <h2 className="text-2xl font-bold text-white">Produtos</h2>
           <p className="text-slate-400 text-sm mt-1">
             {canManageStock ? "Consulte, filtre e cadastre produtos de consumo." : "Consulte os produtos cadastrados no estoque."}
           </p>
         </div>
-        <div className="flex items-center justify-center gap-2 lg:justify-end">
+        <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
           <RefreshButton onClick={() => setRefreshKey((key) => key + 1)} />
           {canManageStock ? (
-            <button type="button" onClick={() => setModalOpen(true)} className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-50 flex items-center gap-2">
+            <button type="button" onClick={() => setModalOpen(true)} className="fixed bottom-24 left-1/2 z-40 -translate-x-1/2 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 p-0 text-white shadow-[0_14px_30px_rgba(37,99,235,0.38)] transition-all hover:bg-blue-500 active:scale-95 disabled:opacity-50 lg:static lg:h-auto lg:gap-2 lg:w-auto lg:rounded-lg lg:px-4 lg:py-2.5 lg:text-sm lg:font-semibold lg:shadow-none lg:translate-x-0 lg:active:scale-100">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-              Novo produto
+              <span className="sr-only lg:not-sr-only">Novo produto</span>
             </button>
           ) : null}
         </div>
@@ -111,8 +111,8 @@ export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
       <ProductList refreshKey={refreshKey} canManageStock={canManageStock} />
 
       {modalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm">
+          <div className="max-h-[86dvh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 pb-8 sm:max-h-[92dvh] sm:p-6">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-xl font-bold text-white">Novo produto</h3>
@@ -137,9 +137,8 @@ export function ProdutoTab({ canManageStock }: ProdutoTabProps) {
                   <Field label="Unidade adicional"><select value={formAdditionalUnit} onChange={(e) => setFormAdditionalUnit(e.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white placeholder-slate-500 outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500"><option value="">Nenhuma</option>{catalog.units.map((unit) => <option key={unit.id} value={unit.name}>{unit.name}</option>)}</select></Field>
                 </div>
               ) : null}
-              <div className="flex justify-end gap-3 border-t border-slate-800 pt-4">
-                <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:border-slate-600 hover:bg-slate-800 hover:text-white">Cancelar</button>
-                <button type="submit" disabled={submitting || loadingCatalog} className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-50 disabled:opacity-50">{submitting ? "Cadastrando..." : "Cadastrar produto"}</button>
+              <div className="flex justify-center border-t border-slate-800 pt-4">
+                <button type="submit" disabled={submitting || loadingCatalog} className="w-full rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-50 sm:w-auto">{submitting ? "Cadastrando..." : "Cadastrar produto"}</button>
               </div>
             </form>
           </div>

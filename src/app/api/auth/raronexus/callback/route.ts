@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import {
   SSO_STATE_COOKIE_NAME,
   buildSessionPayload,
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (!code || !state || !expectedState || state !== expectedState) {
-    const response = popupResponse("error", "Resposta SSO invalida.", mode);
+    const response = popupResponse("error", "Resposta SSO inválida.", mode);
     clearSessionCookies(response);
     response.cookies.delete(SSO_STATE_COOKIE_NAME);
     return response;
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (!tokenResponse.ok || !payload?.success || !payload.data) {
-    const response = popupResponse("error", payload?.message ?? "Nao foi possivel concluir o login.", mode);
+    const response = popupResponse("error", payload?.message ?? "Não foi possível concluir o login.", mode);
     clearSessionCookies(response);
     response.cookies.delete(SSO_STATE_COOKIE_NAME);
     return response;
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
 
   const role = parseAppRole(payload.data.role.chave);
   if (!role || !canAccessApp(role)) {
-    const response = popupResponse("error", "Usuario nao autorizado para acessar o RaroStock.", mode);
+    const response = popupResponse("error", "Usuário não autorizado para acessar o RaroStock.", mode);
     clearSessionCookies(response);
     response.cookies.delete(SSO_STATE_COOKIE_NAME);
     return response;

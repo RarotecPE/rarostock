@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
@@ -64,7 +64,7 @@ export default function LoginPage() {
       }
 
       if (event.data.mode !== "silent") {
-        setError(event.data.message || "Nao foi possivel entrar com RaroNexus.");
+        setError(event.data.message || "Não foi possível entrar com RaroNexus.");
       }
     }
 

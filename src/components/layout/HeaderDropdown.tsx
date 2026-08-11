@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
@@ -31,7 +31,7 @@ export function HeaderIconButton({
     <button
       type={type}
       onClick={onClick}
-      className={`inline-flex h-10 w-10 items-center justify-center rounded-lg border text-slate-400 transition-colors hover:text-white ${
+      className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-slate-400 transition-colors hover:text-white sm:h-10 sm:w-10 ${
         active
           ? "border-blue-500/40 bg-blue-600/20 text-blue-300"
           : "border-transparent hover:border-slate-700 hover:bg-slate-800/70"
@@ -76,7 +76,7 @@ export function HeaderDropdown({ open, onClose, children, className = "" }: Head
 
   return (
     <div ref={ref} className={`absolute right-0 top-full z-50 mt-2 ${className}`}>
-      <div className="w-80 overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-2xl">
+      <div className="max-h-[70dvh] w-[min(calc(100vw-1.5rem),20rem)] overflow-y-auto overflow-x-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-2xl">
         {children}
       </div>
     </div>

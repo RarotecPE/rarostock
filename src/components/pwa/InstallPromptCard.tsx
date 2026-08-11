@@ -69,10 +69,10 @@ export function InstallPromptCard() {
   const canShowInstallButton = Boolean(installPrompt);
   const helpText = useMemo(() => {
     if (iosDevice && !canShowInstallButton) {
-      return "No Safari, use Compartilhar e depois Adicionar a Tela de Inicio.";
+      return "No Safari, use Compartilhar e depois Adicionar à Tela de Início.";
     }
 
-    return "Acesse o RaroStock mais rapido pela tela inicial do celular.";
+    return "Acesse o RaroStock mais rápido pela tela inicial do celular.";
   }, [canShowInstallButton, iosDevice]);
 
   async function handleInstall() {
@@ -97,7 +97,7 @@ export function InstallPromptCard() {
   if (!visible) return null;
 
   return (
-    <aside className="fixed inset-x-3 bottom-20 z-50 mx-auto max-w-md rounded-xl border border-blue-400/25 bg-slate-900/95 p-4 text-slate-100 shadow-2xl shadow-slate-950/60 backdrop-blur lg:hidden">
+    <aside className="fixed inset-x-3 bottom-28 z-50 mx-auto max-w-md rounded-xl border border-blue-400/25 bg-slate-900/95 p-4 text-slate-100 shadow-2xl shadow-slate-950/60 backdrop-blur lg:hidden">
       <div className="flex items-start gap-3">
         <Image
           src="/rarostock-logo.png"
@@ -126,7 +126,7 @@ export function InstallPromptCard() {
               onClick={handleDismiss}
               className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-medium text-slate-300 transition-colors hover:border-slate-600 hover:text-white"
             >
-              Agora nao
+              Agora não
             </button>
           </div>
         </div>

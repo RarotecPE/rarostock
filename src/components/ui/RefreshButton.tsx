@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from "react";
+﻿import type { ButtonHTMLAttributes } from "react";
 
 type RefreshButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> & {
   label?: string;
@@ -10,7 +10,7 @@ export function RefreshButton({ label = "Recarregar", className = "", ...props }
       type="button"
       title={label}
       aria-label={label}
-      className={`refresh-button inline-flex min-h-10 items-center justify-center rounded-lg border px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${className}`.trim()}
+      className={`refresh-button inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border p-0 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${className}`.trim()}
       {...props}
     >
       <svg className="h-[17px] w-[17px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

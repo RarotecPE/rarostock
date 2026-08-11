@@ -128,9 +128,9 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Pro
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-800 bg-slate-900 p-6">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="max-h-[94dvh] w-full max-w-3xl overflow-y-auto rounded-t-2xl border border-slate-800 bg-slate-900 sm:max-h-[90vh] sm:rounded-2xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-800 bg-slate-900 p-4 sm:p-6">
           <div>
             <p className="font-mono text-sm text-blue-400">{item.code}</p>
             <div className="flex items-center gap-2">
@@ -153,7 +153,7 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Pro
           </div>
           <button onClick={onClose} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">×</button>
         </div>
-        <div className="space-y-6 p-6">
+        <div className="space-y-6 p-4 pb-12 sm:pb-6 sm:p-6">
           {editing && canManageStock ? (
             <div className="space-y-4">
               {editError ? <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">{editError}</p> : null}
@@ -171,7 +171,7 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock }: Pro
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 md:grid-cols-3">
                 <Info label="Status"><StatusBadge quantity={item.quantity} minimumLimit={item.minimumLimit} desiredLimit={item.desiredLimit} /></Info>
                 <Info label="Saldo"><span className="text-lg font-semibold text-white">{item.quantity} {pluralizeUnit(item.unit, item.quantity, catalog.units)}</span></Info>
                 <Info label="Categoria">{item.category}</Info>

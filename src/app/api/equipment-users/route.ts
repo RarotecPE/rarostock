@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 
     const payload = await response.json().catch(() => null) as NexusAuthorizedUsersPayload | null;
     if (!response.ok || !payload?.success || !Array.isArray(payload.data)) {
-      return NextResponse.json({ users: fallback, warning: payload?.message ?? "Nao foi possivel carregar usuarios do Nexus." });
+      return NextResponse.json({ users: fallback, warning: payload?.message ?? "Não foi possível carregar usuários do Nexus." });
     }
 
     const users = payload.data
@@ -61,6 +61,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ users: users.length ? users : fallback });
   } catch (error) {
     console.error("raronexus_authorized_users_fetch_failed", error);
-    return NextResponse.json({ users: fallback, warning: "Nao foi possivel carregar usuarios do Nexus." });
+    return NextResponse.json({ users: fallback, warning: "Não foi possível carregar usuários do Nexus." });
   }
 }

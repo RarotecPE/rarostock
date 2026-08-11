@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useCallback, useState } from "react";
@@ -183,7 +183,7 @@ export function StockHeaderActions({
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5 sm:gap-2">
       <div className="relative">
         <HeaderIconButton
           label="Notificações"

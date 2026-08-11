@@ -189,6 +189,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
   const currentRoute = flatNavigationItems.find((item) => isActivePath(pathname, item.href)) ?? flatNavigationItems[0];
   const unavailableCount = alertItems.filter((item) => item.quantity === 0).length;
   const belowMinCount = alertItems.filter((item) => item.status === "Abaixo do Mínimo").length;
+  const hasEnvironmentBanner = Boolean(process.env.NEXT_PUBLIC_ENVIRONMENT_LABEL?.trim());
 
 
   useEffect(() => {
@@ -421,11 +422,11 @@ export function StockAppShell({ children }: { children: ReactNode }) {
             </div>
           </header>
 
-          <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-6">{children}</main>
+          <main className="flex-1 px-4 py-5 pb-28 sm:px-6 lg:px-8 lg:py-6 lg:pb-6">{children}</main>
 
           {mobileGroupId ? <button type="button" aria-label="Fechar opções" className="fixed inset-0 z-30 bg-transparent lg:hidden" onClick={() => setMobileGroupId(null)} /> : null}
 
-          <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur border-t border-slate-800">
+          <nav className="fixed left-0 right-0 bottom-0 z-40 border-t border-slate-800 bg-slate-900/95 backdrop-blur lg:hidden">
             <MobileBottomNav
               pathname={pathname}
               openGroupId={mobileGroupId}
@@ -514,10 +515,10 @@ function MobileBottomNav({
   onNavigateChild: (href: string) => void;
 }) {
   return (
-    <div className="flex h-16 items-center justify-around">
+    <div className="flex min-h-16 items-center justify-around pb-[env(safe-area-inset-bottom)]">
       <Link
         href="/dashboard"
-        className={`flex flex-1 flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${isActivePath(pathname, "/dashboard") ? "text-blue-400" : "text-slate-500"}`}
+        className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${isActivePath(pathname, "/dashboard") ? "text-blue-400" : "text-slate-500"}`}
       >
         {dashboardIcon}
         Dashboard
@@ -555,7 +556,7 @@ function MobileBottomNav({
             <button
               type="button"
               onClick={() => onOpenGroup(open ? null : group.id)}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${active || open ? "text-blue-400" : "text-slate-500"}`}
+              className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${active || open ? "text-blue-400" : "text-slate-500"}`}
             >
               {group.icon}
               {group.label}

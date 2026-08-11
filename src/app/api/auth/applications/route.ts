@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { getGlobalSessionToken } from "@/lib/auth-server";
 
 type NexusApplication = {
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
   const token = getGlobalSessionToken(request);
 
   if (!token) {
-    return NextResponse.json({ error: "Sessao nao encontrada." }, { status: 401 });
+    return NextResponse.json({ error: "Sessao não encontrada." }, { status: 401 });
   }
 
   const nexusBaseUrl = getEnv("RARONEXUS_BASE_URL", "http://localhost:3001");
@@ -61,14 +61,14 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("raronexus_applications_fetch_failed", error);
     return NextResponse.json(
-      { error: "Nao foi possivel carregar os aplicativos." },
+      { error: "Não foi possível carregar os aplicativos." },
       { status: 502 }
     );
   }
 
   if (!response.ok || !payload?.success || !Array.isArray(payload.data)) {
     return NextResponse.json(
-      { error: payload?.message ?? "Nao foi possivel carregar os aplicativos." },
+      { error: payload?.message ?? "Não foi possível carregar os aplicativos." },
       { status: response.status || 502 }
     );
   }

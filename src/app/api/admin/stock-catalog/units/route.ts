@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { items, stockUnits } from "@/db/schema";
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       .returning();
     return NextResponse.json(created, { status: 201 });
   } catch {
-    return validationError("Ja existe uma unidade com esse nome.", 409);
+    return validationError("Já existe uma unidade com esse nome.", 409);
   }
 }
 
@@ -51,7 +51,7 @@ export async function PUT(req: NextRequest) {
   const id = Number(body.id);
   const name = normalizeCatalogName(body.name);
   const pluralName = normalizeCatalogName(body.pluralName) || name;
-  if (!Number.isInteger(id) || id <= 0) return validationError("Unidade invalida.");
+  if (!Number.isInteger(id) || id <= 0) return validationError("Unidade inválida.");
   if (!name) return validationError("Informe o nome da unidade.");
 
   try {
@@ -66,10 +66,10 @@ export async function PUT(req: NextRequest) {
       .where(eq(stockUnits.id, id))
       .returning();
 
-    if (!updated) return validationError("Unidade nao encontrada.", 404);
+    if (!updated) return validationError("Unidade não encontrada.", 404);
     return NextResponse.json(updated);
   } catch {
-    return validationError("Ja existe uma unidade com esse nome.", 409);
+    return validationError("Já existe uma unidade com esse nome.", 409);
   }
 }
 
@@ -79,14 +79,14 @@ export async function DELETE(req: NextRequest) {
 
   const body = await readBody(req);
   const id = Number(req.nextUrl.searchParams.get("id") ?? body.id);
-  if (!Number.isInteger(id) || id <= 0) return validationError("Unidade invalida.");
+  if (!Number.isInteger(id) || id <= 0) return validationError("Unidade inválida.");
 
   const [unit] = await db.select().from(stockUnits).where(eq(stockUnits.id, id)).limit(1);
-  if (!unit) return validationError("Unidade nao encontrada.", 404);
+  if (!unit) return validationError("Unidade não encontrada.", 404);
 
   const used = await db.select({ id: items.id }).from(items).where(eq(items.unit, unit.name)).limit(1);
   if (used.length > 0) {
-    return validationError("Esta unidade esta em uso. Desative-a em vez de excluir.", 409);
+    return validationError("Esta unidade está em uso. Desative-a em vez de excluir.", 409);
   }
 
   await db.delete(stockUnits).where(eq(stockUnits.id, id));

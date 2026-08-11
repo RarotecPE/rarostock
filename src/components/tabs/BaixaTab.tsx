@@ -203,8 +203,8 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
         />
       )}
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div className="text-center lg:text-left">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 text-left">
           <h2 className="text-2xl font-bold text-white">Baixa de Estoque</h2>
           <p className="text-slate-400 text-sm mt-1">
             {canManageStock
@@ -212,26 +212,26 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
               : "Consulte o histórico de baixas do estoque"}
           </p>
         </div>
-        <div className="flex items-center justify-center gap-2 lg:justify-end">
+        <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
           <RefreshButton onClick={() => { void fetchItems(); void fetchIssues(); }} />
           {canManageStock ? (
             <button
               type="button"
               onClick={() => setModalOpen(true)}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+              className="fixed bottom-24 left-1/2 z-40 -translate-x-1/2 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 p-0 text-white shadow-[0_14px_30px_rgba(37,99,235,0.38)] transition-all hover:bg-blue-500 active:scale-95 disabled:opacity-50 lg:static lg:h-auto lg:gap-2 lg:w-auto lg:rounded-lg lg:px-4 lg:py-2.5 lg:text-sm lg:font-semibold lg:shadow-none lg:translate-x-0 lg:active:scale-100"
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              Nova baixa
+              <span className="sr-only lg:not-sr-only">Nova baixa</span>
             </button>
           ) : null}
         </div>
       </div>
 
       {canManageStock && modalOpen ? (
-      <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm">
-      <div className="my-4 w-full max-w-4xl overflow-visible rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-6">
+      <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-0 backdrop-blur-sm sm:p-4">
+      <div className="min-h-dvh w-full max-w-4xl overflow-visible border border-slate-800 bg-slate-900 p-4 pb-12 space-y-6 sm:pb-6 sm:my-4 sm:min-h-0 sm:rounded-2xl sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold text-white">Nova baixa</h3>
@@ -452,18 +452,18 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
               </div>
             )}
 
-            <div className="flex justify-center lg:justify-end gap-3 pt-4 border-t border-slate-800">
+            <div className="flex flex-col-reverse justify-center gap-3 border-t border-slate-800 pt-4 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={clearSelectedItem}
-                className="px-4 py-2.5 text-slate-400 hover:text-white transition-colors"
+                className="rounded-lg px-4 py-2.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={submitting || !isValidSubmission}
-                className="flex items-center gap-2 px-6 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-6 py-2.5 font-medium text-white transition-colors hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting ? (
                   <>
@@ -487,7 +487,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
       ) : null}
 
       <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start justify-between gap-3">
             <h3 className="text-lg font-semibold text-white">
               Histórico de Baixas ({filteredIssues.length})
             </h3>

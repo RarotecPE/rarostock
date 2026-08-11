@@ -184,7 +184,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
       if (!upRes.ok) {
         setSubmitting(false);
         setToast({
-          message: upData.error ?? "Nao foi possivel enviar a nota fiscal.",
+          message: upData.error ?? "Não foi possível enviar a nota fiscal.",
           type: "error",
         });
         return;
@@ -253,8 +253,8 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
       )}
 
       {/* Header */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div className="text-center lg:text-left">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 text-left">
           <h2 className="text-2xl font-bold text-white">Aquisição</h2>
           <p className="text-slate-400 text-sm mt-1">
             {canManageStock
@@ -262,18 +262,18 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
               : "Consulte o histórico de entradas do estoque"}
           </p>
         </div>
-        <div className="flex items-center justify-center gap-2 lg:justify-end">
+        <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
           <RefreshButton onClick={() => { void fetchAcquisitions(); void fetchItems(); }} />
           {canManageStock ? (
             <button
               type="button"
               onClick={() => setModalOpen(true)}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+              className="fixed bottom-24 left-1/2 z-40 -translate-x-1/2 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 p-0 text-white shadow-[0_14px_30px_rgba(37,99,235,0.38)] transition-all hover:bg-blue-500 active:scale-95 disabled:opacity-50 lg:static lg:h-auto lg:gap-2 lg:w-auto lg:rounded-lg lg:px-4 lg:py-2.5 lg:text-sm lg:font-semibold lg:shadow-none lg:translate-x-0 lg:active:scale-100"
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              Nova aquisição
+              <span className="sr-only lg:not-sr-only">Nova aquisição</span>
             </button>
           ) : null}
         </div>
@@ -281,8 +281,8 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
 
       {/* New Acquisition Modal */}
       {canManageStock && modalOpen ? (
-      <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm">
-      <div className="my-4 w-full max-w-5xl overflow-visible rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-6">
+      <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:items-start">
+      <div className="max-h-[86dvh] w-full max-w-5xl space-y-5 overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 pb-8 sm:my-4 sm:max-h-none sm:overflow-visible sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold text-white">Nova Aquisição</h3>
@@ -471,7 +471,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
               {cart.map((c, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between bg-slate-800/50 rounded-lg px-4 py-3"
+                  className="flex flex-col gap-3 rounded-lg bg-slate-800/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
                     <span className="text-blue-400 font-mono text-xs">
@@ -479,7 +479,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
                     </span>
                     <span className="text-white ml-2">{c.itemName}</span>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
                     <span className="text-sm text-slate-300">
                       {c.quantity} {pluralizeUnit(c.itemUnit, c.quantity, catalog.units)} x {formatCurrency(c.unitPrice)}
                     </span>
@@ -504,11 +504,11 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
                 {formatCurrency(cartTotal)}
               </span>
             </div>
-            <div className="flex justify-center lg:justify-end mt-4">
+            <div className="flex justify-center mt-4 sm:justify-end">
               <button
                 onClick={handleSubmitAcquisition}
                 disabled={submitting}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                className="w-full rounded-lg bg-blue-600 px-6 py-2.5 font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50 sm:w-auto"
               >
                 {submitting
                   ? "Processando..."
@@ -523,7 +523,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
 
       {/* History */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start justify-between gap-3">
             <h3 className="text-lg font-semibold text-white">
               Histórico de Aquisições ({filteredAcquisitions.length})
             </h3>

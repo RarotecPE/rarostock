@@ -17,7 +17,7 @@ export async function PUT(
   const acquisitionId = Number(id);
 
   if (!Number.isInteger(acquisitionId)) {
-    return NextResponse.json({ error: "Aquisicao invalida." }, { status: 400 });
+    return NextResponse.json({ error: "Aquisicao inválida." }, { status: 400 });
   }
 
   const body = (await req.json()) as {
@@ -51,7 +51,7 @@ export async function PUT(
 
   if (!current) {
     return NextResponse.json(
-      { error: "Aquisicao nao encontrada." },
+      { error: "Aquisicao não encontrada." },
       { status: 404 }
     );
   }
@@ -94,7 +94,7 @@ export async function DELETE(
   const acquisitionId = Number(id);
 
   if (!Number.isInteger(acquisitionId)) {
-    return NextResponse.json({ error: "Aquisicao invalida." }, { status: 400 });
+    return NextResponse.json({ error: "Aquisicao inválida." }, { status: 400 });
   }
 
   const [current] = await db
@@ -105,7 +105,7 @@ export async function DELETE(
 
   if (!current) {
     return NextResponse.json(
-      { error: "Aquisicao nao encontrada." },
+      { error: "Aquisicao não encontrada." },
       { status: 404 }
     );
   }
@@ -120,7 +120,7 @@ export async function DELETE(
       const message =
         error instanceof Error
           ? error.message
-          : "Nao foi possivel excluir a nota fiscal do storage.";
+          : "Não foi possível excluir a nota fiscal do storage.";
 
       return NextResponse.json({ error: message }, { status: 500 });
     }

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { RefreshButton } from "@/components/ui/RefreshButton";
@@ -117,12 +117,12 @@ export function StockCatalogAdmin() {
     <div className="space-y-6">
       {toast ? <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} /> : null}
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div className="text-center lg:text-left">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 text-left">
           <h2 className="text-2xl font-bold text-white">Configurações</h2>
           <p className="mt-1 text-sm text-slate-400">Gerencie categorias e unidades usadas nos produtos e equipamentos.</p>
         </div>
-        <div className="flex items-center justify-center gap-2 lg:justify-end">
+        <div className="flex shrink-0 items-center justify-end gap-2">
           <RefreshButton onClick={() => void loadCatalog()} />
         </div>
       </div>
@@ -233,10 +233,10 @@ function CatalogRow({ title, subtitle, active, onEdit, onDelete, disabled }: { t
         <p className="font-medium text-white">{title}</p>
         {subtitle ? <p className="text-xs text-slate-500">{subtitle}</p> : null}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
         <span className={`rounded-full border px-2 py-1 text-xs ${active ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : "border-slate-700 bg-slate-800 text-slate-400"}`}>{active ? "Ativo" : "Inativo"}</span>
         <button className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-300 transition-colors hover:border-slate-600 hover:text-white" type="button" onClick={onEdit} disabled={disabled}>Editar</button>
-        <button className="rounded-lg border border-rose-500/30 px-3 py-1.5 text-sm text-rose-300 transition-colors hover:border-rose-400 hover:text-rose-200" type="button" onClick={onDelete} disabled={disabled}>Excluir</button>
+        <button className="col-span-2 rounded-lg border border-rose-500/30 px-3 py-1.5 text-sm text-rose-300 transition-colors hover:border-rose-400 hover:text-rose-200 sm:col-span-1" type="button" onClick={onDelete} disabled={disabled}>Excluir</button>
       </div>
     </div>
   );

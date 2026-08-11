@@ -142,18 +142,18 @@ export function EquipmentMovementsTab() {
   return (
     <div className="space-y-6">
       {toast ? <Toast message={toast.message} type={toast.type ?? "success"} onClose={() => setToast(null)} /> : null}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div className="text-center lg:text-left">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 text-left">
           <h2 className="text-2xl font-bold text-white">Movimentações</h2>
           <p className="mt-1 text-sm text-slate-400">Histórico de transferências, obtenções e devoluções de equipamentos.</p>
         </div>
-        <div className="flex items-center justify-center gap-2 lg:justify-end">
+        <div className="flex shrink-0 items-center justify-end gap-2">
           <RefreshButton onClick={() => void load()} />
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <input value={search} onChange={(event) => setSearch(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Buscar por equipamento, código, usuário ou motivo..." />
+      <div className="flex items-center gap-2 sm:gap-3">
+        <input value={search} onChange={(event) => setSearch(event.target.value)} className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Buscar por equipamento, código, usuário ou motivo..." />
         <FilterDropdown open={showFilters} onOpenChange={setShowFilters} activeCount={activeFiltersCount} onClear={clearFilters}>
           <FilterSection title="Período" activeCount={(startDate ? 1 : 0) + (endDate ? 1 : 0)}>
             <div className="grid grid-cols-1 gap-2">
