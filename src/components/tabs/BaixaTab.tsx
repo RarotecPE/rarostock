@@ -37,6 +37,7 @@ interface BaixaTabProps {
 export function BaixaTab({ canManageStock }: BaixaTabProps) {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const [search, setSearch] = useState("");
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
@@ -51,7 +52,6 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
 
   const [issues, setIssues] = useState<StockIssueHistoryRow[]>([]);
   const [loadingIssues, setLoadingIssues] = useState(true);
-  const [showHistory, setShowHistory] = useState(!canManageStock);
   const [historyStartDate, setHistoryStartDate] = useState("");
   const [historyEndDate, setHistoryEndDate] = useState("");
   const [showHistoryFilters, setShowHistoryFilters] = useState(false);
@@ -173,6 +173,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
     setSelectedItem(null);
     setQuantity("");
     setNewBalance("");
+    setModalOpen(false);
     fetchItems();
     fetchIssues();
   };
@@ -208,16 +209,36 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
           <p className="text-slate-400 text-sm mt-1">
             {canManageStock
               ? "Registre saídas de itens do estoque"
-              : "Consulte o historico de baixas do estoque"}
+              : "Consulte o histórico de baixas do estoque"}
           </p>
         </div>
         <div className="flex items-center justify-center gap-2 lg:justify-end">
           <RefreshButton onClick={() => { void fetchItems(); void fetchIssues(); }} />
+          {canManageStock ? (
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Nova baixa
+            </button>
+          ) : null}
         </div>
       </div>
 
-      {canManageStock ? (
-      <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-6">
+      {canManageStock && modalOpen ? (
+      <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm">
+      <div className="my-4 w-full max-w-4xl overflow-visible rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-white">Nova baixa</h3>
+            <p className="text-sm text-slate-400">Registre saídas de produtos do estoque.</p>
+          </div>
+          <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">×</button>
+        </div>
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-1">
             Item *
@@ -251,7 +272,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
               />
 
               {showDropdown && search && (
-                <div className="absolute z-20 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg max-h-60 overflow-y-auto shadow-xl">
+                <div className="absolute z-[70] w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg max-h-72 overflow-y-auto shadow-xl">
                   {loading ? (
                     <div className="px-3 py-4 flex justify-center">
                       <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
@@ -462,31 +483,14 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
           </>
         )}
       </div>
-      ) : (
-        <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-4 text-sm text-slate-400">
-          Seu perfil permite visualizar o historico de baixas, mas nao registrar novas saidas.
-        </div>
-      )}
-
-      <div>
-        <button
-          onClick={() => setShowHistory(!showHistory)}
-          className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-300 transition-colors"
-        >
-          <svg
-            className={`w-4 h-4 transition-transform ${showHistory ? "rotate-90" : ""}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-          Histórico de Baixas ({filteredIssues.length})
-        </button>
       </div>
+      ) : null}
 
-      {showHistory && (
-        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-4">          <div className="flex justify-end">
+      <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-lg font-semibold text-white">
+              Histórico de Baixas ({filteredIssues.length})
+            </h3>
             <FilterDropdown
               open={showHistoryFilters}
               onOpenChange={setShowHistoryFilters}
@@ -563,8 +567,11 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
                     onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
                     disabled={historyPage === 1}
                     className="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 disabled:opacity-40"
+                    aria-label="Página anterior"
                   >
-                    ?
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
                   </button>
                   <span className="px-2 text-slate-500">
                     {historyPage} / {totalHistoryPages}
@@ -575,15 +582,17 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
                     }
                     disabled={historyPage === totalHistoryPages}
                     className="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 disabled:opacity-40"
+                    aria-label="Próxima página"
                   >
-                    ?
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </button>
                 </div>
               )}
             </>
           )}
         </div>
-      )}
     </div>
   );
 }
