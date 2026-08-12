@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, type MouseEvent, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 
 type HeaderIconButtonProps = {
@@ -30,7 +30,10 @@ export function HeaderIconButton({
   return (
     <button
       type={type}
-      onClick={onClick}
+      onClick={(event: MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation();
+        onClick?.();
+      }}
       className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-slate-400 transition-colors hover:text-white sm:h-10 sm:w-10 ${
         active
           ? "border-blue-500/40 bg-blue-600/20 text-blue-300"
@@ -51,7 +54,7 @@ export function HeaderDropdown({ open, onClose, children, className = "" }: Head
   useEffect(() => {
     if (!open) return;
 
-    function onPointerDown(event: PointerEvent) {
+    function onClick(event: globalThis.MouseEvent) {
       if (!ref.current?.contains(event.target as Node)) onClose();
     }
 
@@ -59,11 +62,11 @@ export function HeaderDropdown({ open, onClose, children, className = "" }: Head
       if (event.key === "Escape") onClose();
     }
 
-    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("click", onClick);
     document.addEventListener("keydown", onKeyDown);
 
     return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("click", onClick);
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [open, onClose]);
@@ -75,7 +78,7 @@ export function HeaderDropdown({ open, onClose, children, className = "" }: Head
   if (!open) return null;
 
   return (
-    <div ref={ref} className={`absolute right-0 top-full z-50 mt-2 ${className}`}>
+    <div ref={ref} className={`absolute right-0 top-full z-[60] mt-2 ${className}`}>
       <div className="max-h-[70dvh] w-[min(calc(100vw-1.5rem),20rem)] overflow-y-auto overflow-x-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-2xl">
         {children}
       </div>

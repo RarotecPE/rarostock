@@ -341,7 +341,10 @@ export function StockHeaderActions({
       <div className="relative">
         <button
           type="button"
-          onClick={() => openDropdown("account")}
+          onClick={(event) => {
+            event.stopPropagation();
+            openDropdown("account");
+          }}
           className="flex h-10 w-10 items-center justify-center rounded-full transition-opacity hover:opacity-85"
           aria-label="Conta do usuário"
           title="Conta do usuário"

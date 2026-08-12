@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useStockCatalog } from "@/lib/use-stock-catalog";
+import { useActionCursor } from "@/lib/use-action-cursor";
 import { RefreshButton } from "@/components/ui/RefreshButton";
 import { Toast } from "@/components/ui/Toast";
 import { ProductList } from "@/components/products/ProductList";
@@ -28,6 +29,7 @@ export function ProdutoTab({ canManageStock, isAdmin = false }: ProdutoTabProps)
   const [toast, setToast] = useState<{ message: string; subMessage?: string; type?: "success" | "error" | "warning" } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const { catalog, loading: loadingCatalog, error: catalogError } = useStockCatalog();
+  useActionCursor(submitting);
 
   const resetForm = () => {
     setFormName("");
@@ -111,14 +113,14 @@ export function ProdutoTab({ canManageStock, isAdmin = false }: ProdutoTabProps)
       <ProductList refreshKey={refreshKey} canManageStock={canManageStock} isAdmin={isAdmin} />
 
       {modalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm">
-          <div className="max-h-[86dvh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 pb-8 sm:max-h-[92dvh] sm:p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm" onClick={() => setModalOpen(false)}>
+          <div className="max-h-[86dvh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 pb-8 sm:max-h-[92dvh] sm:p-6" onClick={(event) => event.stopPropagation()}>
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-xl font-bold text-white">Novo produto</h3>
                 <p className="text-sm text-slate-400">Preencha os dados do produto de consumo.</p>
               </div>
-              <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">×</button>
+              <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-2 text-2xl leading-none text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">×</button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-5">
               {catalogError ? <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">{catalogError}</p> : null}
@@ -151,6 +153,7 @@ export function ProdutoTab({ canManageStock, isAdmin = false }: ProdutoTabProps)
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="block text-sm font-medium text-slate-300"><span className="mb-1 block">{label}</span>{children}</label>;
 }
+
 
 
 

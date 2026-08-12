@@ -2,6 +2,7 @@
 
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { Acquisition, AcquisitionItemWithDetails, pluralizeUnit, type StockUnitOption } from "@/types/stock";
+import { useActionCursor } from "@/lib/use-action-cursor";
 
 interface Props {
   acquisitionId: number;
@@ -30,6 +31,7 @@ export function AcquisitionDetailModal({
   const [attaching, setAttaching] = useState(false);
   const [deletingInvoice, setDeletingInvoice] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  useActionCursor(attaching || deletingInvoice);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -131,8 +133,8 @@ export function AcquisitionDetailModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="max-h-[94dvh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-slate-800 bg-slate-900 sm:max-h-[90vh] sm:rounded-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-4" onClick={onClose}>
+      <div className="max-h-[88dvh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl sm:max-h-[90vh]" onClick={(event) => event.stopPropagation()}>
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-800 bg-slate-900 p-4 sm:p-6">
           <h2 className="text-xl font-bold text-white">
@@ -142,7 +144,7 @@ export function AcquisitionDetailModal({
             onClick={onClose}
             className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>

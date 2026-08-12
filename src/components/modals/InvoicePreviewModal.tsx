@@ -29,8 +29,8 @@ export function InvoicePreviewModal({ imageUrl, filename, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/80 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="flex max-h-[94dvh] w-full max-w-2xl flex-col rounded-t-2xl border border-slate-800 bg-slate-900 sm:max-h-[90vh] sm:rounded-2xl">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-3 backdrop-blur-sm sm:p-4" onClick={onClose}>
+      <div className="flex max-h-[88dvh] w-full max-w-2xl flex-col rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl sm:max-h-[90vh]" onClick={(event) => event.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-slate-800">
           <h3 className="text-lg font-semibold text-white">Nota Fiscal</h3>
@@ -48,7 +48,7 @@ export function InvoicePreviewModal({ imageUrl, filename, onClose }: Props) {
               onClick={onClose}
               className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>

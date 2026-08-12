@@ -8,6 +8,7 @@ import { AcquisitionDetailModal } from "@/components/modals/AcquisitionDetailMod
 import { Toast } from "@/components/ui/Toast";
 import { FilterDropdown, FilterSection } from "@/components/ui/FilterDropdown";
 import { useStockCatalog } from "@/lib/use-stock-catalog";
+import { useActionCursor } from "@/lib/use-action-cursor";
 
 function nowDateTimeLocal() {
   const d = new Date();
@@ -84,6 +85,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const { catalog } = useStockCatalog();
+  useActionCursor(submitting);
 
   const fetchAcquisitions = useCallback(async () => {
     setLoadingAcq(true);
@@ -281,14 +283,14 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
 
       {/* New Acquisition Modal */}
       {canManageStock && modalOpen ? (
-      <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-3 backdrop-blur-sm sm:p-4">
-      <div className="max-h-[86dvh] w-full max-w-5xl space-y-5 overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl sm:p-6">
+      <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-3 backdrop-blur-sm sm:p-4" onClick={() => setModalOpen(false)}>
+      <div className="max-h-[88dvh] w-full max-w-5xl space-y-5 overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl sm:p-6" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold text-white">Nova Aquisição</h3>
             <p className="text-sm text-slate-400">Registre entradas de produtos no estoque.</p>
           </div>
-          <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">×</button>
+          <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-2 text-2xl leading-none text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">×</button>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start">
@@ -397,7 +399,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
                     className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                   {showDropdown && searchItem && (
-                    <div className="absolute z-[70] w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg max-h-72 overflow-y-auto shadow-xl">
+                    <div className="relative z-[70] mt-1 max-h-[42dvh] w-full overflow-y-auto rounded-lg border border-slate-700 bg-slate-800 shadow-xl sm:absolute">
                       {loadingItems ? (
                         <div className="px-3 py-4 flex justify-center">
                           <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
@@ -659,3 +661,4 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
     </div>
   );
 }
+

@@ -16,6 +16,30 @@ body {
   color: #e2e8f0;
 }
 
+button,
+[role="button"],
+a,
+label:has(input[type="file"]),
+summary,
+select,
+input[type="checkbox"],
+input[type="radio"] {
+  cursor: pointer;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"],
+select:disabled,
+input:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+}
+
+body.action-loading,
+body.action-loading * {
+  cursor: progress !important;
+}
+
 input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.7);
 }

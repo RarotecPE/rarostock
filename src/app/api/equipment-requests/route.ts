@@ -4,6 +4,7 @@ import { equipmentRequests, equipments } from "@/db/schema";
 import { and, desc, eq, or } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canAdmin, canView } from "@/lib/roles";
+import { autoMatchEquipmentRequest } from "@/lib/equipment-request-matching";
 
 export async function GET(req: NextRequest) {
   const auth = await requirePermission(req, canView);
@@ -102,6 +103,10 @@ export async function POST(req: NextRequest) {
       toUserEmail: auth.user.email,
       reason: typeof body.reason === "string" ? body.reason : null,
     }).returning();
+    const match = await autoMatchEquipmentRequest(request, auth.user.id);
+    if (match) {
+      return NextResponse.json({ ...match, autoApproved: true }, { status: 201 });
+    }
     return NextResponse.json(request, { status: 201 });
   } catch (error) {
     if ((error as { code?: string }).code === "23505") {

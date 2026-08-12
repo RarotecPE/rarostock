@@ -4,6 +4,7 @@ import { equipmentMovements, equipmentRequests, equipments } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canAdmin, canView } from "@/lib/roles";
+import { cancelPendingEquipmentRequestsForHolderChange } from "@/lib/equipment-request-cancellation";
 
 const APPROVE = true;
 
@@ -52,6 +53,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       requestId: request.id,
       createdByUserId: auth.user.id,
     });
+    if (request.fromHolderType === "user" && request.fromUserId) {
+      await cancelPendingEquipmentRequestsForHolderChange({
+        equipmentId: request.equipmentId,
+        previousHolderUserId: request.fromUserId,
+        decidedByUserId: auth.user.id,
+        exceptRequestIds: [request.id],
+        note: "Anulada automaticamente porque outra solicitação movimentou este equipamento.",
+      });
+    }
     return NextResponse.json({ request: updatedRequest, equipment });
   }
 

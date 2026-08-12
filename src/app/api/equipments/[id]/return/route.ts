@@ -4,6 +4,8 @@ import { equipments, equipmentMovements, equipmentRequests } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canView } from "@/lib/roles";
+import { cancelPendingEquipmentRequestsForHolderChange } from "@/lib/equipment-request-cancellation";
+import { autoMatchEquipmentRequest } from "@/lib/equipment-request-matching";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requirePermission(req, canView);
@@ -43,6 +45,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         toUserEmail: target.email,
         reason: typeof body.reason === "string" ? body.reason : null,
       }).returning();
+      const match = await autoMatchEquipmentRequest(request, auth.user.id);
+      if (match) {
+        return NextResponse.json({ ...match, autoApproved: true }, { status: 201 });
+      }
+      await cancelPendingEquipmentRequestsForHolderChange({
+        equipmentId,
+        previousHolderUserId: auth.user.id,
+        decidedByUserId: auth.user.id,
+        exceptRequestIds: [request.id],
+        note: "Anulada automaticamente porque o portador iniciou transferência para outro usuário.",
+      });
       return NextResponse.json(request, { status: 201 });
     } catch (error) {
       if ((error as { code?: string }).code === "23505") {
@@ -68,6 +81,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     toHolderType: "company",
     reason: typeof body.reason === "string" ? body.reason : "Devolução para RAROTEC",
     createdByUserId: auth.user.id,
+  });
+  await cancelPendingEquipmentRequestsForHolderChange({
+    equipmentId,
+    previousHolderUserId: auth.user.id,
+    decidedByUserId: auth.user.id,
+    note: "Anulada automaticamente porque o equipamento foi devolvido para RAROTEC.",
   });
   return NextResponse.json(updated);
 }

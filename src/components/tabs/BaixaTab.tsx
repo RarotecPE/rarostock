@@ -7,6 +7,7 @@ import { RefreshButton } from "@/components/ui/RefreshButton";
 import { Toast } from "@/components/ui/Toast";
 import { FilterDropdown, FilterSection } from "@/components/ui/FilterDropdown";
 import { useStockCatalog } from "@/lib/use-stock-catalog";
+import { useActionCursor } from "@/lib/use-action-cursor";
 
 type BaixaMode = "unidade" | "saldo";
 
@@ -49,6 +50,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const { catalog } = useStockCatalog();
+  useActionCursor(submitting);
 
   const [issues, setIssues] = useState<StockIssueHistoryRow[]>([]);
   const [loadingIssues, setLoadingIssues] = useState(true);
@@ -230,14 +232,14 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
       </div>
 
       {canManageStock && modalOpen ? (
-      <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-3 backdrop-blur-sm sm:p-4">
-      <div className="max-h-[82dvh] w-full max-w-[min(92vw,32rem)] space-y-5 overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl sm:my-4 sm:max-h-[90vh] sm:max-w-4xl sm:p-6">
+      <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-3 backdrop-blur-sm sm:p-4" onClick={() => setModalOpen(false)}>
+      <div className="max-h-[88dvh] w-full max-w-[min(92vw,32rem)] space-y-5 overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl sm:my-4 sm:max-w-4xl sm:p-6" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold text-white">Nova baixa</h3>
             <p className="text-sm text-slate-400">Registre saídas de produtos do estoque.</p>
           </div>
-          <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">×</button>
+          <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-2 text-2xl leading-none text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">×</button>
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-1">
@@ -272,7 +274,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
               />
 
               {showDropdown && search && (
-                <div className="absolute z-[70] w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg max-h-72 overflow-y-auto shadow-xl">
+                <div className="relative z-[70] mt-1 max-h-[42dvh] w-full overflow-y-auto rounded-lg border border-slate-700 bg-slate-800 shadow-xl sm:absolute">
                   {loading ? (
                     <div className="px-3 py-4 flex justify-center">
                       <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
@@ -596,3 +598,4 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
     </div>
   );
 }
+

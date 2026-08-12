@@ -389,7 +389,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
         </aside>
 
         <div className="flex-1 flex flex-col min-h-screen lg:ml-64">
-          <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800">
+          <header className="sticky top-0 z-[45] bg-slate-900/95 backdrop-blur border-b border-slate-800">
             <div className="relative flex items-center justify-between px-4 sm:px-6 h-16">
               <div className="flex items-center gap-1 lg:hidden">
                 <button

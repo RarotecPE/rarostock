@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Item, pluralizeUnit, formatLimit } from "@/types/stock";
 import { includeCurrentCategory, includeCurrentUnit } from "@/lib/stock-catalog";
 import { useStockCatalog } from "@/lib/use-stock-catalog";
+import { useActionCursor } from "@/lib/use-action-cursor";
 import { StatusBadge } from "@/components/ui/Badge";
 import {
   CartesianGrid,
@@ -53,6 +54,7 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock, isAdm
   const [chartStartDate, setChartStartDate] = useState("");
   const [chartEndDate, setChartEndDate] = useState("");
   const { catalog } = useStockCatalog();
+  useActionCursor(submitting);
 
   const categoryOptions = useMemo(() => includeCurrentCategory(catalog.categories, formCategory), [catalog.categories, formCategory]);
   const unitOptions = useMemo(() => includeCurrentUnit(catalog.units, formUnit), [catalog.units, formUnit]);
@@ -145,8 +147,8 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock, isAdm
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="max-h-[94dvh] w-full max-w-3xl overflow-y-auto rounded-t-2xl border border-slate-800 bg-slate-900 sm:max-h-[90vh] sm:rounded-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-4" onClick={onClose}>
+      <div className="max-h-[88dvh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl sm:max-h-[90vh]" onClick={(event) => event.stopPropagation()}>
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-800 bg-slate-900 p-4 sm:p-6">
           <div>
             <p className="font-mono text-sm text-blue-400">{item.code}</p>
@@ -181,7 +183,7 @@ export function ItemDetailModal({ item, onClose, onUpdate, canManageStock, isAdm
               ) : null}
             </div>
           </div>
-          <button onClick={onClose} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">×</button>
+          <button onClick={onClose} className="rounded-lg p-2 text-2xl leading-none text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">×</button>
         </div>
         <div className="space-y-6 p-4 pb-12 sm:pb-6 sm:p-6">
           {editing && canManageStock ? (
@@ -228,5 +230,6 @@ function ChartDateFilters({ startDate, endDate, onStartDateChange, onEndDateChan
 function ProductLineChart({ title, data, color, unit, units, kind }: { title: string; data: ProductChartPoint[]; color: string; unit: string; units: Parameters<typeof pluralizeUnit>[2]; kind: "stock" | "value" }) { return <div><h3 className="mb-3 text-sm font-medium text-slate-300">{title}</h3><div className="h-44 rounded-lg bg-slate-800/50 px-2 py-3">{data.length ? <ResponsiveContainer width="100%" height="100%"><LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: -22 }}><CartesianGrid stroke="#334155" strokeDasharray="3 3" vertical={false} /><XAxis dataKey="xKey" tick={{ fill: "#94a3b8", fontSize: 11 }} tickLine={false} axisLine={{ stroke: "#475569" }} minTickGap={18} tickFormatter={(_, index) => data[index]?.label ?? ""} /><YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(value) => String(value)} /><Tooltip cursor={{ stroke: "#64748b", strokeWidth: 1 }} content={({ active, payload, label }) => <ProductChartTooltip active={active} payload={payload as unknown as ReadonlyArray<{ payload?: ProductChartPoint }> | undefined} label={String(label ?? "")} unit={unit} units={units} kind={kind} />} /><Line type="monotone" dataKey="value" stroke={color} strokeWidth={2.5} dot={{ r: 3, stroke: color, strokeWidth: 2, fill: "#0f172a" }} activeDot={{ r: 5 }} /></LineChart></ResponsiveContainer> : <div className="flex h-full items-center justify-center text-sm text-slate-500">Sem dados para exibir</div>}</div></div>; }
 function ProductChartTooltip({ active, payload, unit, units, kind }: { active?: boolean; payload?: ReadonlyArray<{ payload?: ProductChartPoint }>; label: string; unit: string; units: Parameters<typeof pluralizeUnit>[2]; kind: "stock" | "value" }) { const point = payload?.[0]?.payload; if (!active || !point) return null; const quantity = point.quantity ?? 0; const quantityText = `${quantity > 0 ? "+" : ""}${quantity} ${pluralizeUnit(unit, Math.abs(quantity), units)}`; return <div className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 shadow-xl"><p className="mb-1 font-medium text-white">{point.label}</p>{kind === "stock" ? <><p><span className="text-slate-400">Movimentação:</span> <span className={quantity >= 0 ? "text-emerald-300" : "text-rose-300"}>{quantityText}</span></p><p><span className="text-slate-400">Saldo:</span> {point.balanceAfter ?? point.value} {pluralizeUnit(unit, point.balanceAfter ?? point.value, units)}</p></> : <p><span className="text-slate-400">Valor:</span> R$ {point.value.toFixed(2)}</p>}</div>; }
 function History({ title, rows }: { title: string; rows: Array<{ left: string; middle: string; right: string }> }) { return <div><h3 className="mb-3 text-sm font-medium text-slate-300">{title}</h3>{rows.length ? <div className="space-y-2">{rows.map((row, index) => <div key={index} className="rounded-lg bg-slate-800/50 px-3 py-2 text-sm"><div className="flex items-center justify-between gap-3"><span className="font-medium text-blue-300">{row.left}</span><span className="text-slate-400">{row.middle}</span></div><p className="mt-1 text-xs text-slate-500">{row.right}</p></div>)}</div> : <p className="text-sm text-slate-500">Nenhum registro.</p>}</div>; }
+
 
 

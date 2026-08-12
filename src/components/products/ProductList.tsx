@@ -5,6 +5,7 @@ import { Item, normalizeSearch, getStockStatus, formatLimit } from "@/types/stoc
 import { StatusBadge } from "@/components/ui/Badge";
 import { ItemDetailModal } from "@/components/modals/ItemDetailModal";
 import { FilterCheckbox, FilterDropdown, FilterSection, toggleFilterValue } from "@/components/ui/FilterDropdown";
+import { useActionCursor } from "@/lib/use-action-cursor";
 
 type SortField = "code" | "name" | "category" | "quantity" | "minimumLimit" | "desiredLimit" | "status";
 type SortDir = "asc" | "desc";
@@ -40,6 +41,7 @@ export function ProductList({ refreshKey = 0, canManageStock, isAdmin = false }:
   const [shoppingListDownloading, setShoppingListDownloading] = useState(false);
   const [sortField, setSortField] = useState<SortField>("code");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  useActionCursor(shoppingListDownloading);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -205,8 +207,8 @@ return (
         </button>
       </div>
       {shoppingListModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="shopping-list-modal w-full max-w-lg rounded-2xl border p-5 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onClick={() => setShoppingListModalOpen(false)}>
+          <div className="shopping-list-modal w-full max-w-lg rounded-2xl border p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="shopping-list-modal-title text-lg font-bold">Gerar lista de compras?</h3>
@@ -218,20 +220,11 @@ return (
                 type="button"
                 onClick={() => setShoppingListModalOpen(false)}
                 disabled={shoppingListDownloading}
-                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+                className="rounded-lg p-2 text-2xl leading-none text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
                 aria-label="Fechar"
               >
                 ×
               </button>
-            </div>
-
-            <div className="shopping-list-summary mt-5 rounded-xl border p-4">
-              <p className="shopping-list-summary-title text-sm font-semibold">
-                {shoppingListItems.length} {shoppingListItems.length === 1 ? "item será incluído" : "itens serão incluídos"}
-              </p>
-              <p className="shopping-list-summary-description mt-1 text-xs">
-                A quantidade sugerida será calculada por limite desejável menos estoque atual.
-              </p>
             </div>
 
             {shoppingListWarning ? (
@@ -276,3 +269,4 @@ return (
     </div>
   );
 }
+

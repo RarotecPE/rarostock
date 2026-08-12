@@ -6,6 +6,7 @@ import { RefreshButton } from "@/components/ui/RefreshButton";
 import { Toast } from "@/components/ui/Toast";
 import { FilterCheckbox, FilterDropdown, FilterSection, toggleFilterValue } from "@/components/ui/FilterDropdown";
 import { useStockSession } from "@/components/layout/StockAppShell";
+import { useActionCursor } from "@/lib/use-action-cursor";
 
 type ToastState = { message: string; type?: "success" | "error" | "warning"; subMessage?: string } | null;
 type EquipmentDraft = { code: string; name: string; brand: string; category: string; price: string; observations: string; active: boolean };
@@ -166,6 +167,7 @@ function EquipmentFormModal({ equipment, categories, onClose, onDone }: { equipm
   const [saving, setSaving] = useState(false);
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const isEditing = Boolean(equipment);
+  useActionCursor(saving);
 
   const save = async () => {
     setError("");
@@ -215,14 +217,14 @@ function EquipmentFormModal({ equipment, categories, onClose, onDone }: { equipm
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="max-h-[94dvh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-slate-800 bg-slate-900 p-4 pb-12 sm:pb-6 sm:rounded-2xl sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-4" onClick={onClose}>
+      <div className="max-h-[88dvh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl sm:max-h-[94dvh] sm:p-6" onClick={(event) => event.stopPropagation()}>
         <div className="mb-5 flex justify-between">
           <div>
             <h3 className="text-xl font-bold text-white">{isEditing ? "Editar equipamento" : "Novo equipamento"}</h3>
             <p className="text-sm text-slate-400">Código patrimonial obrigatório e único.</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">×</button>
+          <button onClick={onClose} className="text-2xl leading-none text-slate-400 transition-colors hover:text-white">×</button>
         </div>
         {error ? <p className="mb-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">{error}</p> : null}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -281,6 +283,9 @@ export function EquipmentDetailModal({ equipment, users, currentUserId, isAdmin,
   const [reason, setReason] = useState("");
   const [targetUserId, setTargetUserId] = useState("company");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  useActionCursor(submitting || deleting);
   const isMine = equipment.holderType === "user" && equipment.holderUserId === currentUserId;
   const isAvailable = equipment.holderType === "company";
   const selectedUser = users.find((item) => item.id === targetUserId);
@@ -289,35 +294,47 @@ export function EquipmentDetailModal({ equipment, users, currentUserId, isAdmin,
     ? "bg-emerald-600 hover:bg-emerald-500"
     : actionLabel === "Devolver"
       ? "bg-rose-600 hover:bg-rose-500"
-      : "bg-blue-600 hover:bg-blue-500";
+      : "bg-amber-500 text-slate-950 hover:bg-amber-400";
   const submit = async () => {
-    const url = isAvailable ? `/api/equipments/${equipment.id}/obtain` : isMine ? `/api/equipments/${equipment.id}/return` : "/api/equipment-requests";
-    const body = isAvailable ? { reason } : isMine ? { reason, toUserId: targetUserId, toUserName: selectedUser?.nome, toUserEmail: selectedUser?.email } : { equipmentId: equipment.id, reason };
-    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const payload = await res.json().catch(() => null);
-    if (!res.ok) { setError(payload?.error ?? "Não foi possível concluir a ação."); return; }
-    onDone(isAvailable ? "Equipamento associado a você." : isMine && targetUserId === "company" ? "Equipamento devolvido para RAROTEC." : "Solicitação enviada.");
+    if (submitting) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      const url = isAvailable ? `/api/equipments/${equipment.id}/obtain` : isMine ? `/api/equipments/${equipment.id}/return` : "/api/equipment-requests";
+      const body = isAvailable ? { reason } : isMine ? { reason, toUserId: targetUserId, toUserName: selectedUser?.nome, toUserEmail: selectedUser?.email } : { equipmentId: equipment.id, reason };
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) { setError(payload?.error ?? "Não foi possível concluir a ação."); return; }
+      onDone(payload?.autoApproved ? "Solicitações confrontadas e transferência realizada." : isAvailable ? "Equipamento associado a você." : isMine && targetUserId === "company" ? "Equipamento devolvido para RAROTEC." : "Solicitação enviada.");
+    } finally {
+      setSubmitting(false);
+    }
   };
   const handleDelete = async () => {
     if (!isAdmin) return;
     const confirmed = window.confirm(`Excluir o equipamento "${equipment.name}"? Esta ação não pode ser desfeita.`);
     if (!confirmed) return;
+    setDeleting(true);
 
-    const res = await fetch("/api/equipments", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: equipment.id }),
-    });
-    const payload = await res.json().catch(() => null);
+    try {
+      const res = await fetch("/api/equipments", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: equipment.id }),
+      });
+      const payload = await res.json().catch(() => null);
 
-    if (!res.ok) {
-      setError(payload?.error ?? "Não foi possível excluir o equipamento.");
-      return;
+      if (!res.ok) {
+        setError(payload?.error ?? "Não foi possível excluir o equipamento.");
+        return;
+      }
+
+      onDone("Equipamento excluído.");
+    } finally {
+      setDeleting(false);
     }
-
-    onDone("Equipamento excluído.");
   };
-  return <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"><div className="max-h-[94dvh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-slate-800 bg-slate-900 p-4 pb-12 sm:pb-6 sm:rounded-2xl sm:p-6"><div className="mb-5 flex justify-between"><div><p className="font-mono text-sm text-blue-400">{equipment.code}</p><div className="flex items-center gap-2"><h3 className="text-xl font-bold text-white">{equipment.name}</h3>{canEdit ? <button type="button" onClick={onEdit} aria-label="Editar equipamento" title="Editar equipamento" className="rounded-lg border border-slate-700 p-2 text-slate-400 transition-colors hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-300"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.5 7.125L16.875 4.5" /></svg></button> : null}{isAdmin ? <button type="button" onClick={handleDelete} aria-label="Excluir equipamento" title="Excluir equipamento" className="rounded-lg border border-slate-700 p-2 text-slate-400 transition-colors hover:border-rose-500/50 hover:bg-rose-500/10 hover:text-rose-300"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673A2.25 2.25 0 0115.916 21.75H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg></button> : null}</div></div><button onClick={onClose} className="text-slate-400 hover:text-white">×</button></div>{error ? <p className="mb-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">{error}</p> : null}<div className="grid grid-cols-1 gap-4 text-sm min-[420px]:grid-cols-2"><Info label="Categoria">{equipment.category}</Info><Info label="Marca">{equipment.brand || "—"}</Info><Info label="Portador atual">{holderLabel(equipment)}</Info><Info label="Preço">{equipment.price ? `R$ ${Number(equipment.price).toFixed(2)}` : "—"}</Info></div><EquipmentInvoiceLink equipment={equipment} />{equipment.observations ? <div className="mt-4"><Info label="Observações">{equipment.observations}</Info></div> : null}{!isMine ? <label className="mt-5 block text-sm font-medium text-slate-300"><span className="mb-1 block">Motivo</span><textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={3} className="w-full resize-none rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white" /></label> : <label className="mt-5 block text-sm font-medium text-slate-300"><span className="mb-1 block">Destino</span><select value={targetUserId} onChange={(event) => setTargetUserId(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white"><option value="company">RAROTEC</option>{users.filter((item) => item.id !== currentUserId).map((item) => <option key={item.id} value={item.id}>{item.nome}</option>)}</select><TransferTargetPreview targetUserId={targetUserId} user={selectedUser ?? null} /></label>}<div className="mt-6 flex justify-center"><button className={`rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-colors ${actionButtonClass}`} onClick={submit}>{actionLabel}</button></div>{isAdmin ? null : null}</div></div>;
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-4" onClick={onClose}><div className="max-h-[88dvh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl sm:max-h-[94dvh] sm:p-6" onClick={(event) => event.stopPropagation()}><div className="mb-5 flex justify-between"><div><p className="font-mono text-sm text-blue-400">{equipment.code}</p><div className="flex items-center gap-2"><h3 className="text-xl font-bold text-white">{equipment.name}</h3>{canEdit ? <button type="button" onClick={onEdit} aria-label="Editar equipamento" title="Editar equipamento" className="rounded-lg border border-slate-700 p-2 text-slate-400 transition-colors hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-300"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.5 7.125L16.875 4.5" /></svg></button> : null}{isAdmin ? <button type="button" onClick={handleDelete} disabled={deleting} aria-label="Excluir equipamento" title="Excluir equipamento" className="rounded-lg border border-slate-700 p-2 text-slate-400 transition-colors hover:border-rose-500/50 hover:bg-rose-500/10 hover:text-rose-300 disabled:opacity-60"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673A2.25 2.25 0 0115.916 21.75H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg></button> : null}</div></div><button onClick={onClose} className="text-2xl leading-none text-slate-400 transition-colors hover:text-white">×</button></div>{error ? <p className="mb-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">{error}</p> : null}<div className="grid grid-cols-1 gap-4 text-sm min-[420px]:grid-cols-2"><Info label="Categoria">{equipment.category}</Info><Info label="Marca">{equipment.brand || "—"}</Info><Info label="Portador atual">{holderLabel(equipment)}</Info><Info label="Preço">{equipment.price ? `R$ ${Number(equipment.price).toFixed(2)}` : "—"}</Info></div><EquipmentInvoiceLink equipment={equipment} />{equipment.observations ? <div className="mt-4"><Info label="Observações">{equipment.observations}</Info></div> : null}{!isMine ? <label className="mt-5 block text-sm font-medium text-slate-300"><span className="mb-1 block">Motivo</span><textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={3} className="w-full resize-none rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white" /></label> : <label className="mt-5 block text-sm font-medium text-slate-300"><span className="mb-1 block">Destino</span><select value={targetUserId} onChange={(event) => setTargetUserId(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white"><option value="company">RAROTEC</option>{users.filter((item) => item.id !== currentUserId).map((item) => <option key={item.id} value={item.id}>{item.nome}</option>)}</select><TransferTargetPreview targetUserId={targetUserId} user={selectedUser ?? null} /></label>}<div className="mt-6 flex justify-center"><button disabled={submitting} className={`rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-70 ${actionButtonClass}`} onClick={submit}>{submitting ? "Enviando..." : actionLabel}</button></div>{isAdmin ? null : null}</div></div>;
 }
 
 function EquipmentInvoiceLink({ equipment }: { equipment: Equipment }) {
@@ -400,3 +417,7 @@ function HolderCell({ equipment, users }: { equipment: Equipment; users: Equipme
 
 function Input({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (value: string) => void; type?: string }) { return <label className="text-sm font-medium text-slate-300"><span className="mb-1 block">{label}</span><input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white" /></label>; }
 function Info({ label, children }: { label: string; children: React.ReactNode }) { return <div><p className="text-xs uppercase tracking-wider text-slate-500">{label}</p><div className="mt-1 text-slate-300">{children}</div></div>; }
+
+
+
+
