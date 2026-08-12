@@ -1,6 +1,6 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { acquisitions, acquisitionItems, products, stockIssues } from "@/db/schema";
+import { acquisitions, acquisitionItems, equipments, products, stockIssues } from "@/db/schema";
 import { eq, gte } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canView } from "@/lib/roles";
@@ -26,8 +26,9 @@ export async function GET(req: NextRequest) {
   if (hasAuthError(auth)) return auth.response;
 
   const { start, buckets, byKey } = buildMonthBuckets();
-  const [allProducts, purchaseRows, issueRows, acquisitionTotals] = await Promise.all([
+  const [allProducts, allEquipments, purchaseRows, issueRows, acquisitionTotals] = await Promise.all([
     db.select().from(products),
+    db.select().from(equipments).where(eq(equipments.active, true)),
     db.select({ date: acquisitions.date, itemId: acquisitionItems.productId, itemCode: products.code, itemName: products.name, quantity: acquisitionItems.quantity })
       .from(acquisitionItems).innerJoin(acquisitions, eq(acquisitions.id, acquisitionItems.acquisitionId)).innerJoin(products, eq(products.id, acquisitionItems.productId)).where(gte(acquisitions.date, start)),
     db.select({ date: stockIssues.date, itemId: stockIssues.productId, itemCode: products.code, itemName: products.name, quantity: stockIssues.quantity })
@@ -64,6 +65,20 @@ export async function GET(req: NextRequest) {
     statusCounts.set(status, (statusCounts.get(status) ?? 0) + 1);
     categoryCounts.set(item.category, (categoryCounts.get(item.category) ?? 0) + 1);
   }
+
+  const equipmentCategoryCounts = new Map<string, number>();
+  const equipmentCategoryValues = new Map<string, number>();
+  let allocatedEquipments = 0;
+  let totalEquipmentValue = 0;
+
+  for (const equipment of allEquipments) {
+    const price = Number(equipment.price ?? 0);
+    totalEquipmentValue += Number.isFinite(price) ? price : 0;
+    if (equipment.holderType === "user") allocatedEquipments += 1;
+    equipmentCategoryCounts.set(equipment.category, (equipmentCategoryCounts.get(equipment.category) ?? 0) + 1);
+    equipmentCategoryValues.set(equipment.category, (equipmentCategoryValues.get(equipment.category) ?? 0) + price);
+  }
+
   const topItems = (source: Map<number, { code: string; name: string; quantity: number }>) => [...source.values()].sort((a, b) => b.quantity - a.quantity).slice(0, 5);
 
   return NextResponse.json({
@@ -78,5 +93,21 @@ export async function GET(req: NextRequest) {
       { name: "Indisponível", value: statusCounts.get("Indisponível") ?? 0 },
     ],
     categoryDistribution: [...categoryCounts.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value),
+    equipmentSummary: {
+      total: allEquipments.length,
+      allocated: allocatedEquipments,
+      available: allEquipments.length - allocatedEquipments,
+      totalValue: Number(totalEquipmentValue.toFixed(2)),
+    },
+    equipmentHolderDistribution: [
+      { name: "Disponíveis", value: allEquipments.length - allocatedEquipments },
+      { name: "Alocados", value: allocatedEquipments },
+    ],
+    equipmentCategoryDistribution: [...equipmentCategoryCounts.entries()]
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value),
+    equipmentCategoryValue: [...equipmentCategoryValues.entries()]
+      .map(([name, value]) => ({ name, value: Number(value.toFixed(2)) }))
+      .sort((a, b) => b.value - a.value),
   });
 }

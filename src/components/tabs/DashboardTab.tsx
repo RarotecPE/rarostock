@@ -47,6 +47,15 @@ type DashboardAnalytics = {
   topPurchasedProducts: TopProductPoint[];
   stockStatus: DistributionPoint[];
   categoryDistribution: DistributionPoint[];
+  equipmentSummary: {
+    total: number;
+    allocated: number;
+    available: number;
+    totalValue: number;
+  };
+  equipmentHolderDistribution: DistributionPoint[];
+  equipmentCategoryDistribution: DistributionPoint[];
+  equipmentCategoryValue: DistributionPoint[];
 };
 
 type QuickAccessPath = "/produtos" | "/aquisições" | "/baixas" | "/equipamentos" | "/movimentacoes" | "/pessoal";
@@ -82,6 +91,7 @@ const CATEGORY_COLORS = [
   "#fb923c",
   "#94a3b8",
 ];
+const EQUIPMENT_COLORS = ["#22d3ee", "#a78bfa", "#38bdf8", "#facc15", "#4ade80", "#fb923c"];
 
 const productIcon = (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -255,6 +265,12 @@ export function DashboardTab({ onNavigate, canManageStock }: DashboardTabProps) 
     analytics?.stockStatus.some((point) => point.value > 0) ?? false;
   const hasCategories =
     analytics?.categoryDistribution.some((point) => point.value > 0) ?? false;
+  const hasEquipmentHolderDistribution =
+    analytics?.equipmentHolderDistribution.some((point) => point.value > 0) ?? false;
+  const hasEquipmentCategoryDistribution =
+    analytics?.equipmentCategoryDistribution.some((point) => point.value > 0) ?? false;
+  const hasEquipmentCategoryValue =
+    analytics?.equipmentCategoryValue.some((point) => point.value > 0) ?? false;
 
   return (
     <div className="space-y-6">
@@ -389,6 +405,116 @@ export function DashboardTab({ onNavigate, canManageStock }: DashboardTabProps) 
             Não foi possível carregar as análises do Dashboard.
           </div>
         ) : (
+          <>
+          <section className="space-y-4">
+            <div className="text-center lg:text-left">
+              <h2 className="text-xl font-bold text-white">Equipamentos</h2>
+              <p className="text-slate-400 text-sm mt-1">
+                Visão geral dos patrimônios e investimento em equipamentos
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4">
+                <p className="text-xs text-slate-500 uppercase tracking-wider">Equipamentos</p>
+                <p className="text-3xl font-bold text-white mt-1">{analytics.equipmentSummary.total}</p>
+              </div>
+              <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4">
+                <p className="text-xs text-slate-500 uppercase tracking-wider">Alocados</p>
+                <p className="text-3xl font-bold text-cyan-400 mt-1">{analytics.equipmentSummary.allocated}</p>
+              </div>
+              <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4">
+                <p className="text-xs text-slate-500 uppercase tracking-wider">Disponíveis</p>
+                <p className="text-3xl font-bold text-emerald-400 mt-1">{analytics.equipmentSummary.available}</p>
+              </div>
+              <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4">
+                <p className="text-xs text-slate-500 uppercase tracking-wider">Total gasto</p>
+                <p className="text-2xl font-bold text-blue-400 mt-1">{formatCurrency(analytics.equipmentSummary.totalValue)}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+              <ChartCard title="Equipamentos por portador" empty={!hasEquipmentHolderDistribution}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={analytics.equipmentHolderDistribution}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={58}
+                      outerRadius={92}
+                      paddingAngle={3}
+                    >
+                      {analytics.equipmentHolderDistribution.map((entry, index) => (
+                        <Cell key={entry.name} fill={EQUIPMENT_COLORS[index % EQUIPMENT_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ background: "#0f172a", border: "1px solid #1e293b" }}
+                      labelStyle={{ color: "#e2e8f0" }}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <ChartCard title="Equipamentos por categoria" empty={!hasEquipmentCategoryDistribution}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={analytics.equipmentCategoryDistribution}>
+                    <CartesianGrid stroke="#1e293b" vertical={false} />
+                    <XAxis
+                      dataKey="name"
+                      stroke="#94a3b8"
+                      tick={{ fontSize: 12 }}
+                      interval={0}
+                      angle={-20}
+                      textAnchor="end"
+                      height={70}
+                    />
+                    <YAxis stroke="#94a3b8" tick={{ fontSize: 12 }} />
+                    <Tooltip
+                      contentStyle={{ background: "#0f172a", border: "1px solid #1e293b" }}
+                      labelStyle={{ color: "#e2e8f0" }}
+                    />
+                    <Bar dataKey="value" name="Equipamentos" radius={[4, 4, 0, 0]}>
+                      {analytics.equipmentCategoryDistribution.map((entry, index) => (
+                        <Cell key={entry.name} fill={EQUIPMENT_COLORS[index % EQUIPMENT_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <ChartCard title="Valor por categoria" empty={!hasEquipmentCategoryValue}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={analytics.equipmentCategoryValue} layout="vertical" margin={{ left: 12 }}>
+                    <CartesianGrid stroke="#1e293b" horizontal={false} />
+                    <XAxis
+                      type="number"
+                      stroke="#94a3b8"
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(value) => formatCurrency(Number(value))}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      stroke="#94a3b8"
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(value) => formatProductChartLabel(String(value))}
+                      width={140}
+                    />
+                    <Tooltip
+                      formatter={(value) => formatCurrency(Number(value))}
+                      contentStyle={{ background: "#0f172a", border: "1px solid #1e293b" }}
+                      labelStyle={{ color: "#e2e8f0" }}
+                    />
+                    <Bar dataKey="value" name="Valor" fill="#38bdf8" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            </div>
+          </section>
+
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             <ChartCard title="Entradas vs baixas por mes" empty={!hasMonthlyFlow}>
               <ResponsiveContainer width="100%" height="100%">
@@ -543,6 +669,7 @@ export function DashboardTab({ onNavigate, canManageStock }: DashboardTabProps) 
               </ResponsiveContainer>
             </ChartCard>
           </div>
+          </>
         )}
       </section>
     </div>
