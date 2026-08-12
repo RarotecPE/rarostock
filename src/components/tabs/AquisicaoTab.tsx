@@ -6,9 +6,11 @@ import { InvoicePreviewModal } from "@/components/modals/InvoicePreviewModal";
 import { RefreshButton } from "@/components/ui/RefreshButton";
 import { AcquisitionDetailModal } from "@/components/modals/AcquisitionDetailModal";
 import { Toast } from "@/components/ui/Toast";
-import { FilterDropdown, FilterSection } from "@/components/ui/FilterDropdown";
+import { FilterCheckbox, FilterDropdown, FilterSection, toggleFilterValue } from "@/components/ui/FilterDropdown";
 import { useStockCatalog } from "@/lib/use-stock-catalog";
 import { useActionCursor } from "@/lib/use-action-cursor";
+
+type PurchaseType = "physical_store" | "online";
 
 function nowDateTimeLocal() {
   const d = new Date();
@@ -57,6 +59,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
   const [modalOpen, setModalOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [purchaseTypeFilters, setPurchaseTypeFilters] = useState<PurchaseType[]>([]);
   const [showHistoryFilters, setShowHistoryFilters] = useState(false);
   const [previewInvoice, setPreviewInvoice] = useState<{
     url: string;
@@ -72,6 +75,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
   const [cart, setCart] = useState<CartItem[]>([]);
   const [useManualAcqDate, setUseManualAcqDate] = useState(false);
   const [acqDate, setAcqDate] = useState(nowDateTimeLocal());
+  const [purchaseType, setPurchaseType] = useState<PurchaseType>("physical_store");
   const [liveNow, setLiveNow] = useState(new Date());
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   
@@ -206,6 +210,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         date: effectiveAcqDate,
+        purchaseType,
         invoiceUrl: invoiceUrl || undefined,
         invoiceFilename: invoiceFilename || undefined,
         invoiceStoragePath: invoiceStoragePath || undefined,
@@ -220,6 +225,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
     setCart([]);
     setUseManualAcqDate(false);
     setAcqDate(nowDateTimeLocal());
+    setPurchaseType("physical_store");
     setInvoiceFile(null);
     setSubmitting(false);
     setToast({ message: "Aquisição registrada com sucesso!", type: "success" });
@@ -233,9 +239,10 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
       const dayKey = getDateKey(acq.date);
       if (startDate && dayKey < startDate) return false;
       if (endDate && dayKey > endDate) return false;
+      if (purchaseTypeFilters.length && !purchaseTypeFilters.includes(acq.purchaseType)) return false;
       return true;
     });
-  }, [acquisitions, startDate, endDate]);
+  }, [acquisitions, startDate, endDate, purchaseTypeFilters]);
 
   const paginatedAcqs = filteredAcquisitions.slice(
     (historyPage - 1) * historyPerPage,
@@ -360,6 +367,34 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
                 <span className="text-xs text-slate-500">Sem arquivo</span>
               )}
             </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
+          <p className="mb-2 text-sm font-medium text-slate-300">Tipo de compra</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setPurchaseType("physical_store")}
+              className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
+                purchaseType === "physical_store"
+                  ? "border-blue-500/40 bg-blue-600/20 text-blue-300"
+                  : "border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600 hover:text-white"
+              }`}
+            >
+              Loja física
+            </button>
+            <button
+              type="button"
+              onClick={() => setPurchaseType("online")}
+              className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
+                purchaseType === "online"
+                  ? "border-blue-500/40 bg-blue-600/20 text-blue-300"
+                  : "border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600 hover:text-white"
+              }`}
+            >
+              Compra online
+            </button>
           </div>
         </div>
 
@@ -532,14 +567,32 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
             <FilterDropdown
               open={showHistoryFilters}
               onOpenChange={setShowHistoryFilters}
-              activeCount={(startDate ? 1 : 0) + (endDate ? 1 : 0)}
-              onClear={() => { setStartDate(""); setEndDate(""); setHistoryPage(1); }}
+              activeCount={(startDate ? 1 : 0) + (endDate ? 1 : 0) + purchaseTypeFilters.length}
+              onClear={() => { setStartDate(""); setEndDate(""); setPurchaseTypeFilters([]); setHistoryPage(1); }}
             >
               <FilterSection title="Período" activeCount={(startDate ? 1 : 0) + (endDate ? 1 : 0)}>
                 <div className="grid grid-cols-1 gap-2">
                   <label className="space-y-1 text-sm text-slate-300"><span className="block text-xs text-slate-500">Data inicial</span><input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setHistoryPage(1); }} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-blue-500" /></label>
                   <label className="space-y-1 text-sm text-slate-300"><span className="block text-xs text-slate-500">Data final</span><input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setHistoryPage(1); }} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-blue-500" /></label>
                 </div>
+              </FilterSection>
+              <FilterSection title="Tipo de compra" activeCount={purchaseTypeFilters.length}>
+                <FilterCheckbox
+                  label="Loja física"
+                  checked={purchaseTypeFilters.includes("physical_store")}
+                  onChange={() => {
+                    setPurchaseTypeFilters((prev) => toggleFilterValue(prev, "physical_store") as PurchaseType[]);
+                    setHistoryPage(1);
+                  }}
+                />
+                <FilterCheckbox
+                  label="Compra online"
+                  checked={purchaseTypeFilters.includes("online")}
+                  onChange={() => {
+                    setPurchaseTypeFilters((prev) => toggleFilterValue(prev, "online") as PurchaseType[]);
+                    setHistoryPage(1);
+                  }}
+                />
               </FilterSection>
             </FilterDropdown>
           </div>
@@ -579,6 +632,9 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
                       </div>
                     </div>
                     <div className="flex items-center gap-2.5">
+                      <span className="rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-slate-400">
+                        {acq.purchaseType === "online" ? "Online" : "Loja física"}
+                      </span>
                       {acq.invoiceUrl ? (
                         <span className="text-emerald-500/60 flex items-center gap-1" title="Nota fiscal anexada">
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

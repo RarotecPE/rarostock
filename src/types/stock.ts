@@ -29,6 +29,7 @@ export interface Acquisition {
   id: number;
   date: Date;
   totalValue: string;
+  purchaseType: "physical_store" | "online";
   invoiceUrl: string | null;
   invoiceFilename: string | null;
   invoiceStoragePath: string | null;

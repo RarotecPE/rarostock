@@ -25,13 +25,18 @@ export async function POST(req: NextRequest) {
   if (hasAuthError(auth)) return auth.response;
 
   const body = await req.json();
-  const { date, invoiceUrl, invoiceFilename, invoiceStoragePath, cartItems } = body as {
+  const { date, purchaseType = "physical_store", invoiceUrl, invoiceFilename, invoiceStoragePath, cartItems } = body as {
     date: string;
+    purchaseType?: string;
     invoiceUrl?: string;
     invoiceFilename?: string;
     invoiceStoragePath?: string;
     cartItems: Array<{ itemId: number; quantity: number; unitPrice: number }>;
   };
+
+  if (!["physical_store", "online"].includes(purchaseType)) {
+    return NextResponse.json({ error: "Tipo de compra inválido." }, { status: 400 });
+  }
 
   if (!Array.isArray(cartItems) || cartItems.length === 0) {
     return NextResponse.json({ error: "Informe ao menos um produto." }, { status: 400 });
@@ -48,6 +53,7 @@ export async function POST(req: NextRequest) {
   const [acq] = await db.insert(acquisitions).values({
     date: new Date(date),
     totalValue: totalValue.toFixed(2),
+    purchaseType,
     invoiceUrl: invoiceUrl || null,
     invoiceFilename: invoiceFilename || null,
     invoiceStoragePath: invoiceStoragePath || null,

@@ -157,7 +157,7 @@ export function AcquisitionDetailModal({
             </div>
           ) : acquisition ? (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div>
                   <p className="text-xs text-slate-500 uppercase tracking-wider">
                     Data da Aquisição
@@ -170,6 +170,14 @@ export function AcquisitionDetailModal({
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider">
+                    Tipo de Compra
+                  </p>
+                  <p className="text-white">
+                    {acquisition.purchaseType === "online" ? "Compra online" : "Loja física"}
                   </p>
                 </div>
                 <div>

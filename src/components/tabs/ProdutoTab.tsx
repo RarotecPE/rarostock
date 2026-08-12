@@ -104,7 +104,7 @@ export function ProdutoTab({ canManageStock, isAdmin = false }: ProdutoTabProps)
           {canManageStock ? (
             <button type="button" onClick={() => setModalOpen(true)} className="fixed bottom-24 left-1/2 z-40 -translate-x-1/2 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 p-0 text-white shadow-[0_14px_30px_rgba(37,99,235,0.38)] transition-all hover:bg-blue-500 active:scale-95 disabled:opacity-50 lg:static lg:h-auto lg:gap-2 lg:w-auto lg:rounded-lg lg:px-4 lg:py-2.5 lg:text-sm lg:font-semibold lg:shadow-none lg:translate-x-0 lg:active:scale-100">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-              <span className="sr-only lg:not-sr-only">Novo produto</span>
+              <span className="sr-only lg:not-sr-only">Novo cadastro</span>
             </button>
           ) : null}
         </div>
@@ -117,7 +117,7 @@ export function ProdutoTab({ canManageStock, isAdmin = false }: ProdutoTabProps)
           <div className="max-h-[86dvh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 pb-8 sm:max-h-[92dvh] sm:p-6" onClick={(event) => event.stopPropagation()}>
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-xl font-bold text-white">Novo produto</h3>
+                <h3 className="text-xl font-bold text-white">Novo cadastro</h3>
                 <p className="text-sm text-slate-400">Preencha os dados do produto de consumo.</p>
               </div>
               <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-2 text-2xl leading-none text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">×</button>

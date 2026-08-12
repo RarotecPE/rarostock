@@ -75,6 +75,7 @@ export const acquisitions = pgTable("acquisitions", {
   totalValue: numeric("total_value", { precision: 12, scale: 2 })
     .notNull()
     .default("0"),
+  purchaseType: varchar("purchase_type", { length: 20 }).notNull().default("physical_store"),
   invoiceUrl: text("invoice_url"),
   invoiceFilename: varchar("invoice_filename", { length: 255 }),
   invoiceStoragePath: text("invoice_storage_path"),
