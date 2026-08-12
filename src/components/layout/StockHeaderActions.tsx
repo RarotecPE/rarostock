@@ -200,7 +200,7 @@ export function StockHeaderActions({
           </span>
         </HeaderIconButton>
 
-        <HeaderDropdown open={openMenu === "notifications"} onClose={closeMenu}>
+        <HeaderDropdown open={openMenu === "notifications"} onClose={closeMenu} align="center">
           <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
             <h3 className="font-semibold text-white">Notificações</h3>
             <span className="text-xs text-slate-500">

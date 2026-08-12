@@ -17,6 +17,7 @@ type HeaderDropdownProps = {
   onClose: () => void;
   children: ReactNode;
   className?: string;
+  align?: "right" | "center";
 };
 
 export function HeaderIconButton({
@@ -47,7 +48,7 @@ export function HeaderIconButton({
   );
 }
 
-export function HeaderDropdown({ open, onClose, children, className = "" }: HeaderDropdownProps) {
+export function HeaderDropdown({ open, onClose, children, className = "", align = "right" }: HeaderDropdownProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
 
@@ -77,8 +78,13 @@ export function HeaderDropdown({ open, onClose, children, className = "" }: Head
 
   if (!open) return null;
 
+  const alignmentClass =
+    align === "center"
+      ? "left-1/2 -translate-x-1/2"
+      : "right-0";
+
   return (
-    <div ref={ref} className={`absolute right-0 top-full z-[60] mt-2 ${className}`}>
+    <div ref={ref} className={`absolute top-full z-[60] mt-2 ${alignmentClass} ${className}`}>
       <div className="max-h-[70dvh] w-[min(calc(100vw-1.5rem),20rem)] overflow-y-auto overflow-x-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-2xl">
         {children}
       </div>
