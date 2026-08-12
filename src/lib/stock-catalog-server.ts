@@ -1,6 +1,6 @@
-import { asc, eq } from "drizzle-orm";
+﻿import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { stockCategories, stockUnits } from "@/db/schema";
+import { equipmentCategories, stockCategories, stockUnits } from "@/db/schema";
 
 export async function listStockCatalog(includeInactive = false) {
   const categories = includeInactive
@@ -26,6 +26,19 @@ export async function listStockCatalog(includeInactive = false) {
       .orderBy(asc(stockUnits.name));
 
   return { categories, units };
+}
+
+export async function listEquipmentCategories(includeInactive = false) {
+  return includeInactive
+    ? await db
+      .select()
+      .from(equipmentCategories)
+      .orderBy(asc(equipmentCategories.name))
+    : await db
+      .select()
+      .from(equipmentCategories)
+      .where(eq(equipmentCategories.active, true))
+      .orderBy(asc(equipmentCategories.name));
 }
 
 export function normalizeCatalogName(value: unknown) {

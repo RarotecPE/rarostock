@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canAdmin } from "@/lib/roles";
-import { listStockCatalog } from "@/lib/stock-catalog-server";
+import { listEquipmentCategories, listStockCatalog } from "@/lib/stock-catalog-server";
 
 function getDatabaseErrorCode(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error
@@ -30,19 +30,21 @@ export async function GET(req: NextRequest) {
   if (hasAuthError(auth)) return auth.response;
 
   try {
-    return NextResponse.json(await listStockCatalog(true));
+    const catalog = await listStockCatalog(true);
+    const equipmentCategories = await listEquipmentCategories(true);
+    return NextResponse.json({ ...catalog, equipmentCategories });
   } catch (error) {
     console.error("Failed to load stock catalog", error);
 
     return NextResponse.json(
       {
         error: isPermissionDenied(error)
-          ? "Usu\u00e1rio do banco sem permiss\u00e3o para acessar o cat\u00e1logo. Aplique os GRANTs nas tabelas stock_categories e stock_units."
+          ? "Usuário do banco sem permissão para acessar o catálogo. Aplique os GRANTs nas tabelas stock_categories, stock_units e equipment_categories."
           : isMissingCatalogTable(error)
-            ? "Cat\u00e1logo n\u00e3o encontrado no banco. Aplique a migration 003_stock_catalog.sql no banco do RaroStock."
-            : "N\u00e3o foi poss\u00edvel carregar o cat\u00e1logo.",
+            ? "Catálogo não encontrado no banco. Aplique as migrations 003_stock_catalog.sql e 005_products_equipments_split.sql no banco do RaroStock."
+            : "Não foi possível carregar o catálogo.",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

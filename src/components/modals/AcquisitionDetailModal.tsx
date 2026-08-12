@@ -1,7 +1,8 @@
-"use client";
+﻿"use client";
 
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { Acquisition, AcquisitionItemWithDetails, pluralizeUnit, type StockUnitOption } from "@/types/stock";
+import { useActionCursor } from "@/lib/use-action-cursor";
 
 interface Props {
   acquisitionId: number;
@@ -30,6 +31,7 @@ export function AcquisitionDetailModal({
   const [attaching, setAttaching] = useState(false);
   const [deletingInvoice, setDeletingInvoice] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  useActionCursor(attaching || deletingInvoice);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -62,7 +64,7 @@ export function AcquisitionDetailModal({
       const uploadData = await uploadRes.json();
 
       if (!uploadRes.ok) {
-        throw new Error(uploadData.error ?? "Nao foi possivel enviar a nota fiscal.");
+        throw new Error(uploadData.error ?? "Não foi possível enviar a nota fiscal.");
       }
 
       const invoiceRes = await fetch(`/api/acquisitions/${acquisitionId}/invoice`, {
@@ -77,7 +79,7 @@ export function AcquisitionDetailModal({
       const invoiceData = await invoiceRes.json();
 
       if (!invoiceRes.ok) {
-        throw new Error(invoiceData.error ?? "Nao foi possivel anexar a nota fiscal.");
+        throw new Error(invoiceData.error ?? "Não foi possível anexar a nota fiscal.");
       }
 
       setAcquisition(invoiceData.acquisition);
@@ -88,7 +90,7 @@ export function AcquisitionDetailModal({
         message:
           error instanceof Error
             ? error.message
-            : "Nao foi possivel anexar a nota fiscal.",
+            : "Não foi possível anexar a nota fiscal.",
         type: "error",
       });
     } finally {
@@ -99,7 +101,7 @@ export function AcquisitionDetailModal({
   const handleDeleteInvoice = async () => {
     if (!acquisition?.invoiceUrl || deletingInvoice) return;
 
-    const confirmed = window.confirm("Excluir a nota fiscal desta aquisicao?");
+    const confirmed = window.confirm("Excluir a nota fiscal desta aquisição?");
     if (!confirmed) return;
 
     setDeletingInvoice(true);
@@ -111,18 +113,18 @@ export function AcquisitionDetailModal({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error ?? "Nao foi possivel excluir a nota fiscal.");
+        throw new Error(data.error ?? "Não foi possível excluir a nota fiscal.");
       }
 
       setAcquisition(data.acquisition);
       onInvoiceChanged?.();
-      onToast?.({ message: "Nota fiscal excluida com sucesso!", type: "success" });
+      onToast?.({ message: "Nota fiscal excluída com sucesso!", type: "success" });
     } catch (error) {
       onToast?.({
         message:
           error instanceof Error
             ? error.message
-            : "Nao foi possivel excluir a nota fiscal.",
+            : "Não foi possível excluir a nota fiscal.",
         type: "error",
       });
     } finally {
@@ -131,10 +133,10 @@ export function AcquisitionDetailModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-4" onClick={onClose}>
+      <div className="max-h-[88dvh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl sm:max-h-[90vh]" onClick={(event) => event.stopPropagation()}>
         {/* Header */}
-        <div className="sticky top-0 bg-slate-900 border-b border-slate-800 p-6 flex items-center justify-between z-10">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-800 bg-slate-900 p-4 sm:p-6">
           <h2 className="text-xl font-bold text-white">
             Aquisição #{acquisitionId}
           </h2>
@@ -142,20 +144,20 @@ export function AcquisitionDetailModal({
             onClick={onClose}
             className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {loading ? (
             <div className="flex justify-center py-12">
               <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : acquisition ? (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div>
                   <p className="text-xs text-slate-500 uppercase tracking-wider">
                     Data da Aquisição
@@ -168,6 +170,14 @@ export function AcquisitionDetailModal({
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider">
+                    Tipo de Compra
+                  </p>
+                  <p className="text-white">
+                    {acquisition.purchaseType === "online" ? "Compra online" : "Loja física"}
                   </p>
                 </div>
                 <div>
@@ -277,7 +287,7 @@ export function AcquisitionDetailModal({
                   {acqItems.map((ai) => (
                     <div
                       key={ai.id}
-                      className="flex items-center justify-between bg-slate-800/50 rounded-lg px-4 py-3"
+                      className="flex flex-col gap-2 rounded-lg bg-slate-800/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div>
                         <span className="text-blue-400 font-mono text-xs">
@@ -287,7 +297,7 @@ export function AcquisitionDetailModal({
                       </div>
                       <div className="text-right">
                         <p className="text-sm text-slate-300">
-                          {ai.quantity} {pluralizeUnit(ai.itemUnit, ai.quantity, units)} ? R${" "}
+                          {ai.quantity} {pluralizeUnit(ai.itemUnit, ai.quantity, units)} x R${" "}
                           {parseFloat(ai.unitPrice).toFixed(2)}
                         </p>
                         <p className="text-sm text-white font-medium">

@@ -1,11 +1,16 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Item, CartItem, normalizeSearch, Acquisition, pluralizeUnit } from "@/types/stock";
 import { InvoicePreviewModal } from "@/components/modals/InvoicePreviewModal";
+import { RefreshButton } from "@/components/ui/RefreshButton";
 import { AcquisitionDetailModal } from "@/components/modals/AcquisitionDetailModal";
 import { Toast } from "@/components/ui/Toast";
+import { FilterCheckbox, FilterDropdown, FilterSection, toggleFilterValue } from "@/components/ui/FilterDropdown";
 import { useStockCatalog } from "@/lib/use-stock-catalog";
+import { useActionCursor } from "@/lib/use-action-cursor";
+
+type PurchaseType = "physical_store" | "online";
 
 function nowDateTimeLocal() {
   const d = new Date();
@@ -51,16 +56,18 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
   // History state
   const [acquisitions, setAcquisitions] = useState<Acquisition[]>([]);
   const [loadingAcq, setLoadingAcq] = useState(true);
-  const [showHistory, setShowHistory] = useState(!canManageStock);
+  const [modalOpen, setModalOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [purchaseTypeFilters, setPurchaseTypeFilters] = useState<PurchaseType[]>([]);
+  const [showHistoryFilters, setShowHistoryFilters] = useState(false);
   const [previewInvoice, setPreviewInvoice] = useState<{
     url: string;
     filename?: string | null;
   } | null>(null);
   const [selectedAcqId, setSelectedAcqId] = useState<number | null>(null);
   const [historyPage, setHistoryPage] = useState(1);
-  const historyPerPage = 10;
+  const historyPerPage = 15;
 
   // New acquisition state
   const [items, setItems] = useState<Item[]>([]);
@@ -68,6 +75,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
   const [cart, setCart] = useState<CartItem[]>([]);
   const [useManualAcqDate, setUseManualAcqDate] = useState(false);
   const [acqDate, setAcqDate] = useState(nowDateTimeLocal());
+  const [purchaseType, setPurchaseType] = useState<PurchaseType>("physical_store");
   const [liveNow, setLiveNow] = useState(new Date());
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   
@@ -81,6 +89,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const { catalog } = useStockCatalog();
+  useActionCursor(submitting);
 
   const fetchAcquisitions = useCallback(async () => {
     setLoadingAcq(true);
@@ -181,7 +190,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
       if (!upRes.ok) {
         setSubmitting(false);
         setToast({
-          message: upData.error ?? "Nao foi possivel enviar a nota fiscal.",
+          message: upData.error ?? "Não foi possível enviar a nota fiscal.",
           type: "error",
         });
         return;
@@ -201,6 +210,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         date: effectiveAcqDate,
+        purchaseType,
         invoiceUrl: invoiceUrl || undefined,
         invoiceFilename: invoiceFilename || undefined,
         invoiceStoragePath: invoiceStoragePath || undefined,
@@ -215,9 +225,11 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
     setCart([]);
     setUseManualAcqDate(false);
     setAcqDate(nowDateTimeLocal());
+    setPurchaseType("physical_store");
     setInvoiceFile(null);
     setSubmitting(false);
     setToast({ message: "Aquisição registrada com sucesso!", type: "success" });
+    setModalOpen(false);
     fetchAcquisitions();
     fetchItems();
   };
@@ -227,9 +239,10 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
       const dayKey = getDateKey(acq.date);
       if (startDate && dayKey < startDate) return false;
       if (endDate && dayKey > endDate) return false;
+      if (purchaseTypeFilters.length && !purchaseTypeFilters.includes(acq.purchaseType)) return false;
       return true;
     });
-  }, [acquisitions, startDate, endDate]);
+  }, [acquisitions, startDate, endDate, purchaseTypeFilters]);
 
   const paginatedAcqs = filteredAcquisitions.slice(
     (historyPage - 1) * historyPerPage,
@@ -249,19 +262,43 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
       )}
 
       {/* Header */}
-      <div className="text-center lg:text-left">
-        <h2 className="text-2xl font-bold text-white">Aquisição</h2>
-        <p className="text-slate-400 text-sm mt-1">
-          {canManageStock
-            ? "Registre entradas de itens no estoque"
-            : "Consulte o historico de entradas do estoque"}
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 text-left">
+          <h2 className="text-2xl font-bold text-white">Aquisição</h2>
+          <p className="text-slate-400 text-sm mt-1">
+            {canManageStock
+              ? "Registre entradas de itens no estoque"
+              : "Consulte o histórico de entradas do estoque"}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
+          <RefreshButton onClick={() => { void fetchAcquisitions(); void fetchItems(); }} />
+          {canManageStock ? (
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="fixed bottom-24 left-1/2 z-40 -translate-x-1/2 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 p-0 text-white shadow-[0_14px_30px_rgba(37,99,235,0.38)] transition-all hover:bg-blue-500 active:scale-95 disabled:opacity-50 lg:static lg:h-auto lg:gap-2 lg:w-auto lg:rounded-lg lg:px-4 lg:py-2.5 lg:text-sm lg:font-semibold lg:shadow-none lg:translate-x-0 lg:active:scale-100"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              <span className="sr-only lg:not-sr-only">Nova aquisição</span>
+            </button>
+          ) : null}
+        </div>
       </div>
 
-      {/* New Acquisition Form */}
-      {canManageStock ? (
-      <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-6">
-        <h3 className="text-lg font-semibold text-white">Nova Aquisição</h3>
+      {/* New Acquisition Modal */}
+      {canManageStock && modalOpen ? (
+      <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-3 backdrop-blur-sm sm:p-4" onClick={() => setModalOpen(false)}>
+      <div className="max-h-[88dvh] w-full max-w-5xl space-y-5 overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl sm:p-6" onClick={(event) => event.stopPropagation()}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-white">Nova Aquisição</h3>
+            <p className="text-sm text-slate-400">Registre entradas de produtos no estoque.</p>
+          </div>
+          <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-2 text-2xl leading-none text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">×</button>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start">
           <div className="space-y-3">
@@ -333,6 +370,34 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
           </div>
         </div>
 
+        <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
+          <p className="mb-2 text-sm font-medium text-slate-300">Tipo de compra</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setPurchaseType("physical_store")}
+              className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
+                purchaseType === "physical_store"
+                  ? "border-blue-500/40 bg-blue-600/20 text-blue-300"
+                  : "border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600 hover:text-white"
+              }`}
+            >
+              Loja física
+            </button>
+            <button
+              type="button"
+              onClick={() => setPurchaseType("online")}
+              className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
+                purchaseType === "online"
+                  ? "border-blue-500/40 bg-blue-600/20 text-blue-300"
+                  : "border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600 hover:text-white"
+              }`}
+            >
+              Compra online
+            </button>
+          </div>
+        </div>
+
         {/* Add item */}
         <div className="border-t border-slate-800 pt-4">
           <h4 className="text-sm font-medium text-slate-300 mb-3">
@@ -369,7 +434,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
                     className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                   {showDropdown && searchItem && (
-                    <div className="absolute z-20 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg max-h-48 overflow-y-auto shadow-xl">
+                    <div className="relative z-[70] mt-1 max-h-[42dvh] w-full overflow-y-auto rounded-lg border border-slate-700 bg-slate-800 shadow-xl sm:absolute">
                       {loadingItems ? (
                         <div className="px-3 py-4 flex justify-center">
                           <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
@@ -443,7 +508,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
               {cart.map((c, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between bg-slate-800/50 rounded-lg px-4 py-3"
+                  className="flex flex-col gap-3 rounded-lg bg-slate-800/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
                     <span className="text-blue-400 font-mono text-xs">
@@ -451,7 +516,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
                     </span>
                     <span className="text-white ml-2">{c.itemName}</span>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
                     <span className="text-sm text-slate-300">
                       {c.quantity} {pluralizeUnit(c.itemUnit, c.quantity, catalog.units)} x {formatCurrency(c.unitPrice)}
                     </span>
@@ -476,11 +541,11 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
                 {formatCurrency(cartTotal)}
               </span>
             </div>
-            <div className="flex justify-center lg:justify-end mt-4">
+            <div className="flex justify-center mt-4 sm:justify-end">
               <button
                 onClick={handleSubmitAcquisition}
                 disabled={submitting}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                className="w-full rounded-lg bg-blue-600 px-6 py-2.5 font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50 sm:w-auto"
               >
                 {submitting
                   ? "Processando..."
@@ -490,66 +555,46 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
           </div>
         )}
       </div>
-
-      ) : (
-        <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-4 text-sm text-slate-400">
-          Seu perfil permite visualizar o historico de aquisicoes, mas nao registrar novas entradas.
-        </div>
-      )}
-
-      {/* History Toggle */}
-      <div>
-        <button
-          onClick={() => setShowHistory(!showHistory)}
-          className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-300 transition-colors"
-        >
-          <svg
-            className={`w-4 h-4 transition-transform ${showHistory ? "rotate-90" : ""}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-          Histórico de Aquisições ({filteredAcquisitions.length})
-        </button>
       </div>
+      ) : null}
 
       {/* History */}
-      {showHistory && (
-        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-4">
-          {/* Date Filters */}
-          <div className="flex flex-wrap gap-4 items-end">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
-                Data Inicial
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => { setStartDate(e.target.value); setHistoryPage(1); }}
-                className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
-                Data Final
-              </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => { setEndDate(e.target.value); setHistoryPage(1); }}
-                className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-            {(startDate || endDate) && (
-              <button
-                onClick={() => { setStartDate(""); setEndDate(""); setHistoryPage(1); }}
-                className="px-3 py-2 text-sm text-slate-400 hover:text-white transition-colors"
-              >
-                Limpar
-              </button>
-            )}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="text-lg font-semibold text-white">
+              Histórico de Aquisições ({filteredAcquisitions.length})
+            </h3>
+            <FilterDropdown
+              open={showHistoryFilters}
+              onOpenChange={setShowHistoryFilters}
+              activeCount={(startDate ? 1 : 0) + (endDate ? 1 : 0) + purchaseTypeFilters.length}
+              onClear={() => { setStartDate(""); setEndDate(""); setPurchaseTypeFilters([]); setHistoryPage(1); }}
+            >
+              <FilterSection title="Período" activeCount={(startDate ? 1 : 0) + (endDate ? 1 : 0)}>
+                <div className="grid grid-cols-1 gap-2">
+                  <label className="space-y-1 text-sm text-slate-300"><span className="block text-xs text-slate-500">Data inicial</span><input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setHistoryPage(1); }} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-blue-500" /></label>
+                  <label className="space-y-1 text-sm text-slate-300"><span className="block text-xs text-slate-500">Data final</span><input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setHistoryPage(1); }} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-blue-500" /></label>
+                </div>
+              </FilterSection>
+              <FilterSection title="Tipo de compra" activeCount={purchaseTypeFilters.length}>
+                <FilterCheckbox
+                  label="Loja física"
+                  checked={purchaseTypeFilters.includes("physical_store")}
+                  onChange={() => {
+                    setPurchaseTypeFilters((prev) => toggleFilterValue(prev, "physical_store") as PurchaseType[]);
+                    setHistoryPage(1);
+                  }}
+                />
+                <FilterCheckbox
+                  label="Compra online"
+                  checked={purchaseTypeFilters.includes("online")}
+                  onChange={() => {
+                    setPurchaseTypeFilters((prev) => toggleFilterValue(prev, "online") as PurchaseType[]);
+                    setHistoryPage(1);
+                  }}
+                />
+              </FilterSection>
+            </FilterDropdown>
           </div>
 
           {/* Acquisitions List */}
@@ -587,6 +632,9 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
                       </div>
                     </div>
                     <div className="flex items-center gap-2.5">
+                      <span className="rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-slate-400">
+                        {acq.purchaseType === "online" ? "Online" : "Loja física"}
+                      </span>
                       {acq.invoiceUrl ? (
                         <span className="text-emerald-500/60 flex items-center gap-1" title="Nota fiscal anexada">
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -617,8 +665,11 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
                     onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
                     disabled={historyPage === 1}
                     className="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 disabled:opacity-40"
+                    aria-label="Página anterior"
                   >
-                    ?
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
                   </button>
                   <span className="px-2 text-slate-500">
                     {historyPage} / {totalHistoryPages}
@@ -629,15 +680,17 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
                     }
                     disabled={historyPage === totalHistoryPages}
                     className="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 disabled:opacity-40"
+                    aria-label="Próxima página"
                   >
-                    ?
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </button>
                 </div>
               )}
             </>
           )}
         </div>
-      )}
 
       {/* Invoice Preview Modal */}
       {previewInvoice && (
@@ -664,3 +717,4 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
     </div>
   );
 }
+

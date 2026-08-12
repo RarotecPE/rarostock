@@ -10,12 +10,17 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
+    const contextValue = formData.get("context");
+    const context =
+      contextValue === "equipment" || contextValue === "equipmentTerm"
+        ? contextValue
+        : "product";
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const upload = await uploadInvoiceToFtp(file);
+    const upload = await uploadInvoiceToFtp(file, context);
 
     return NextResponse.json({
       url: upload.url,
@@ -25,7 +30,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unexpected upload error";
-    const status = message.includes("Tipo de arquivo nao permitido") ? 400 : 500;
+    const status = message.includes("Tipo de arquivo não permitido") ? 400 : 500;
 
     return NextResponse.json({ error: message }, { status });
   }

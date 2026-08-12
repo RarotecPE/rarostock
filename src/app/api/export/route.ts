@@ -1,6 +1,6 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { items } from "@/db/schema";
+import { products } from "@/db/schema";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canExport } from "@/lib/roles";
 import { getStockStatus, formatLimit } from "@/types/stock";
@@ -10,82 +10,33 @@ export async function GET(req: NextRequest) {
   if (hasAuthError(auth)) return auth.response;
 
   const url = new URL(req.url);
-  const typeFilter = url.searchParams.get("type");
-  const categoryFilter = url.searchParams.get("category");
-  const statusFilter = url.searchParams.get("status");
+  const categoryFilters = url.searchParams.getAll("category");
+  const statusFilters = url.searchParams.getAll("status");
   const search = url.searchParams.get("search");
+  let allProducts = await db.select().from(products);
 
-  let allItems = await db.select().from(items);
-
-  // Apply filters
-  if (typeFilter) {
-    allItems = allItems.filter((i) => i.type === typeFilter);
-  }
-  if (categoryFilter) {
-    allItems = allItems.filter((i) => i.category === categoryFilter);
-  }
+  if (categoryFilters.length) allProducts = allProducts.filter((i) => categoryFilters.includes(i.category));
   if (search) {
-    const norm = search
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase();
-    allItems = allItems.filter((i) => {
-      const nameNorm = i.name
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase();
-      const codeNorm = i.code.toLowerCase();
-      return nameNorm.includes(norm) || codeNorm.includes(norm);
-    });
+    const norm = search.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    allProducts = allProducts.filter((i) => i.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(norm) || i.code.toLowerCase().includes(norm));
   }
-  if (statusFilter) {
-    allItems = allItems.filter((i) => {
-      const st = getStockStatus(i.quantity, i.minimumLimit, i.desiredLimit);
-      return st === statusFilter;
-    });
-  }
+  if (statusFilters.length) allProducts = allProducts.filter((i) => statusFilters.includes(getStockStatus(i.quantity, i.minimumLimit, i.desiredLimit)));
 
-  // Build CSV with BOM
-  const BOM = "\uFEFF";
-  const headers = [
-    "Código",
-    "Nome",
-    "Categoria",
-    "Tipo",
-    "Unidade",
-    "Unidade Adicional",
-    "Quantidade",
-    "Limite Mínimo",
-    "Limite Desejável",
-    "Status",
-    "Marca",
-    "Observações",
-  ];
-  const rows = allItems.map((i) => {
-    const status = getStockStatus(i.quantity, i.minimumLimit, i.desiredLimit);
-    return [
-      i.code,
-      `"${i.name}"`,
-      `"${i.category}"`,
-      i.type,
-      i.unit,
-      `"${i.additionalUnit || ""}"`,
-      String(i.quantity),
-      formatLimit(i.minimumLimit),
-      formatLimit(i.desiredLimit),
-      status,
-      `"${i.brand || ""}"`,
-      `"${(i.observations || "").replace(/"/g, '""')}"`,
-    ].join(";");
-  });
+  const headers = ["Código", "Nome", "Categoria", "Unidade", "Unidade Adicional", "Quantidade", "Limite Mínimo", "Limite Desejável", "Status", "Marca", "Observações"];
+  const rows = allProducts.map((i) => [
+    i.code,
+    `"${i.name}"`,
+    `"${i.category}"`,
+    i.unit,
+    `"${i.additionalUnit || ""}"`,
+    String(i.quantity),
+    formatLimit(i.minimumLimit),
+    formatLimit(i.desiredLimit),
+    getStockStatus(i.quantity, i.minimumLimit, i.desiredLimit),
+    `"${i.brand || ""}"`,
+    `"${(i.observations || "").replace(/"/g, '""')}"`,
+  ].join(";"));
 
-  const csv = BOM + headers.join(";") + "\n" + rows.join("\n");
-
-  return new NextResponse(csv, {
-    headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": 'attachment; filename="rarostock_export.csv"',
-    },
-  });
+  const csv = "\uFEFF" + headers.join(";") + "\n" + rows.join("\n");
+  return new NextResponse(csv, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": 'attachment; filename="rarostock_produtos.csv"' } });
 }
-

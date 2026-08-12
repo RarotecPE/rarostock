@@ -21,7 +21,7 @@ import {
   type ColorTheme,
 } from "@/components/theme/ThemeBootstrap";
 import { AppRole, canAdmin, canManageStock, roleConfigs } from "@/lib/roles";
-import { getStockStatus, Item, StockStatus } from "@/types/stock";
+import { EquipmentRequest, getStockStatus, Item, StockStatus } from "@/types/stock";
 
 type SessionUser = {
   id: string;
@@ -38,12 +38,23 @@ type StockSessionContextValue = {
   isAdmin: boolean;
 };
 
-type NavItem = {
+type NavLeaf = {
+  kind: "leaf";
   href: string;
   label: string;
   icon: ReactNode;
   adminOnly?: boolean;
 };
+
+type NavGroup = {
+  kind: "group";
+  id: "produto" | "equipamento";
+  label: string;
+  icon: ReactNode;
+  children: NavLeaf[];
+};
+
+type NavEntry = NavLeaf | NavGroup;
 
 type AlertItem = {
   id: number;
@@ -57,58 +68,98 @@ type AlertItem = {
 
 const StockSessionContext = createContext<StockSessionContextValue | null>(null);
 
-const navigationItems: NavItem[] = [
+const dashboardIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+  </svg>
+);
+
+const productIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7.5l-8-4-8 4m16 0l-8 4m8-4v9l-8 4m0-9l-8-4m8 4v9m-8-13v9l8 4" />
+  </svg>
+);
+
+const acquisitionIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+  </svg>
+);
+
+const issueIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+  </svg>
+);
+
+const equipmentIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17a2 2 0 104 0m-7-3h10l1-9H5l1 9zm0 0l-1 4h12l-1-4" />
+  </svg>
+);
+
+const personalIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A7 7 0 0112 15a7 7 0 016.879 2.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+);
+
+const movementsIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4" />
+  </svg>
+);
+
+const settingsIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.607 2.296.07 2.572-1.065z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+);
+
+const navigationItems: NavEntry[] = [
+  { kind: "leaf", href: "/dashboard", label: "Dashboard", icon: dashboardIcon },
   {
-    href: "/dashboard",
-    label: "Dashboard",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-      </svg>
-    ),
-  },
-  {
-    href: "/produtos",
+    kind: "group",
+    id: "produto",
     label: "Produto",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7.5l-8-4-8 4m16 0l-8 4m8-4v9l-8 4m0-9l-8-4m8 4v9m-8-13v9l8 4" />
-      </svg>
-    ),
+    icon: productIcon,
+    children: [
+      { kind: "leaf", href: "/produtos", label: "Catálogo", icon: productIcon },
+      { kind: "leaf", href: "/aquisicoes", label: "Aquisição", icon: acquisitionIcon },
+      { kind: "leaf", href: "/baixas", label: "Baixa", icon: issueIcon },
+    ],
   },
   {
-    href: "/aquisicoes",
-    label: "Aquisição",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-      </svg>
-    ),
-  },
-  {
-    href: "/baixas",
-    label: "Baixa",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-      </svg>
-    ),
-  },
-  {
-    href: "/configuracoes/catalogo",
-    label: "Configurações",
-    adminOnly: true,
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.607 2.296.07 2.572-1.065z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    ),
+    kind: "group",
+    id: "equipamento",
+    label: "Equipamento",
+    icon: equipmentIcon,
+    children: [
+      { kind: "leaf", href: "/equipamentos", label: "Catálogo", icon: equipmentIcon },
+      { kind: "leaf", href: "/movimentacoes", label: "Movimentações", icon: movementsIcon },
+      { kind: "leaf", href: "/pessoal", label: "Pessoal", icon: personalIcon },
+    ],
   },
 ];
 
+const adminNavigationItems: NavLeaf[] = [
+  { kind: "leaf", href: "/configuracoes/catalogo", label: "Configurações", adminOnly: true, icon: settingsIcon },
+];
+
+const flatNavigationItems = [
+  ...navigationItems.flatMap((item) => item.kind === "group" ? item.children : [item]),
+  ...adminNavigationItems,
+];
+
+const mobileGroups = navigationItems.filter((item): item is NavGroup => item.kind === "group");
+
 function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function isGroupActive(pathname: string, group: NavGroup) {
+  return group.children.some((item) => isActivePath(pathname, item.href));
 }
 
 export function useStockSession() {
@@ -126,23 +177,20 @@ export function StockAppShell({ children }: { children: ReactNode }) {
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Record<NavGroup["id"], boolean>>({ produto: false, equipamento: false });
+  const [mobileGroupId, setMobileGroupId] = useState<NavGroup["id"] | null>(null);
   const [theme, setTheme] = useState<ColorTheme>(() => getStoredColorTheme());
   const [alertItems, setAlertItems] = useState<AlertItem[]>([]);
+  const [requestAlerts, setRequestAlerts] = useState<EquipmentRequest[]>([]);
 
   const isAdmin = canAdmin(role);
   const canMutateStock = canManageStock(role);
   const roleInfo = role ? roleConfigs[role] : null;
-  const visibleNavigationItems = useMemo(
-    () => navigationItems.filter((item) => !item.adminOnly || isAdmin),
-    [isAdmin]
-  );
-  const currentRoute =
-    navigationItems.find((item) => isActivePath(pathname, item.href)) ??
-    navigationItems[0];
+  const currentRoute = flatNavigationItems.find((item) => isActivePath(pathname, item.href)) ?? flatNavigationItems[0];
   const unavailableCount = alertItems.filter((item) => item.quantity === 0).length;
-  const belowMinCount = alertItems.filter(
-    (item) => item.status === "Abaixo do Mínimo"
-  ).length;
+  const belowMinCount = alertItems.filter((item) => item.status === "Abaixo do Mínimo").length;
+  const hasEnvironmentBanner = Boolean(process.env.NEXT_PUBLIC_ENVIRONMENT_LABEL?.trim());
+
 
   useEffect(() => {
     let active = true;
@@ -178,21 +226,10 @@ export function StockAppShell({ children }: { children: ReactNode }) {
 
     window.fetch = async (input, init) => {
       const response = await originalFetch(input, init);
-      const url =
-        typeof input === "string"
-          ? input
-          : input instanceof URL
-            ? input.toString()
-            : input.url;
-      const isInternalApi =
-        url.startsWith("/api/") || url.startsWith(`${window.location.origin}/api/`);
+      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+      const isInternalApi = url.startsWith("/api/") || url.startsWith(`${window.location.origin}/api/`);
 
-      if (
-        response.status === 401 &&
-        isInternalApi &&
-        !url.includes("/api/auth/logout") &&
-        !redirecting
-      ) {
+      if (response.status === 401 && isInternalApi && !url.includes("/api/auth/logout") && !redirecting) {
         redirecting = true;
         await originalFetch("/api/auth/logout", { method: "POST" }).catch(() => null);
         router.replace("/login");
@@ -208,26 +245,36 @@ export function StockAppShell({ children }: { children: ReactNode }) {
 
   const fetchAlerts = useCallback(async () => {
     try {
-      const res = await fetch("/api/items");
-      if (!res.ok) return;
-      const items: Item[] = await res.json();
-      setAlertItems(
-        items
-          .filter(
-            (item) =>
-              item.quantity === 0 ||
-              getStockStatus(item.quantity, item.minimumLimit, item.desiredLimit) === "Abaixo do Mínimo"
-          )
-          .map((item) => ({
-            id: item.id,
-            code: item.code,
-            name: item.name,
-            quantity: item.quantity,
-            minimumLimit: item.minimumLimit,
-            desiredLimit: item.desiredLimit,
-            status: getStockStatus(item.quantity, item.minimumLimit, item.desiredLimit),
-          }))
-      );
+      const [itemsRes, requestsRes] = await Promise.all([
+        fetch("/api/items"),
+        fetch("/api/equipment-requests?scope=notifications&status=pending"),
+      ]);
+
+      if (itemsRes.ok) {
+        const items: Item[] = await itemsRes.json();
+        setAlertItems(
+          items
+            .filter(
+              (item) =>
+                item.quantity === 0 ||
+                getStockStatus(item.quantity, item.minimumLimit, item.desiredLimit) === "Abaixo do Mínimo"
+            )
+            .map((item) => ({
+              id: item.id,
+              code: item.code,
+              name: item.name,
+              quantity: item.quantity,
+              minimumLimit: item.minimumLimit,
+              desiredLimit: item.desiredLimit,
+              status: getStockStatus(item.quantity, item.minimumLimit, item.desiredLimit),
+            }))
+        );
+      }
+
+      if (requestsRes.ok) {
+        const requests: EquipmentRequest[] = await requestsRes.json();
+        setRequestAlerts(Array.isArray(requests) ? requests : []);
+      }
     } catch {
       // ignore
     }
@@ -279,14 +326,20 @@ export function StockAppShell({ children }: { children: ReactNode }) {
     isAdmin,
   };
 
+  const toggleGroup = (groupId: NavGroup["id"]) => {
+    setOpenGroups((current) => ({ ...current, [groupId]: !current[groupId] }));
+  };
+
+  const navigateMobileChild = (href: string) => {
+    setMobileGroupId(null);
+    router.push(href);
+  };
+
   return (
     <StockSessionContext.Provider value={sessionValue}>
       <div className="min-h-screen flex">
         {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-black/60 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
+          <div className="fixed inset-0 z-40 bg-black/60 lg:hidden" onClick={() => setSidebarOpen(false)} />
         )}
 
         <aside
@@ -301,13 +354,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
               className="w-full flex items-center gap-3 px-5 py-5 border-b border-slate-800 text-left transition-colors hover:bg-slate-800/40"
               aria-label="Voltar para o Dashboard"
             >
-              <Image
-                src="/rarostock-logo.png"
-                alt="RaroStock"
-                width={44}
-                height={44}
-                className="w-11 h-11 rounded-xl bg-white object-contain"
-              />
+              <Image src="/rarostock-logo.png" alt="RaroStock" width={44} height={44} className="w-11 h-11 rounded-xl bg-white object-contain" />
               <div>
                 <h1 className="text-xl font-bold text-white tracking-tight">
                   Raro<span className="text-blue-400">Stock</span>
@@ -317,57 +364,32 @@ export function StockAppShell({ children }: { children: ReactNode }) {
             </Link>
 
             <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-              {visibleNavigationItems
-                .filter((item) => !item.adminOnly)
-                .map((item) => {
-                  const active = isActivePath(pathname, item.href);
-
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setSidebarOpen(false)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                        active
-                          ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
-                          : "text-slate-400 hover:text-white hover:bg-slate-800/50"
-                      }`}
-                    >
-                      {item.icon}
-                      {item.label}
-                    </Link>
-                  );
-                })}
+              {navigationItems.map((item) => (
+                <SidebarNavEntry
+                  key={item.kind === "group" ? item.id : item.href}
+                  item={item}
+                  pathname={pathname}
+                  expanded={item.kind === "group" ? openGroups[item.id] || isGroupActive(pathname, item) : false}
+                  onToggle={toggleGroup}
+                  onNavigate={() => setSidebarOpen(false)}
+                />
+              ))}
             </nav>
 
-            {visibleNavigationItems
-              .filter((item) => item.adminOnly)
-              .map((item) => {
-                const active = isActivePath(pathname, item.href);
+            {isAdmin ? (
+              <div className="mt-auto border-t border-slate-800 px-3 py-4">
+                {adminNavigationItems.map((item) => {
+                  const active = isActivePath(pathname, item.href);
 
-                return (
-                  <div key={item.href} className="mt-auto border-t border-slate-800 px-3 py-4">
-                    <Link
-                      href={item.href}
-                      onClick={() => setSidebarOpen(false)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                        active
-                          ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
-                          : "text-slate-400 hover:text-white hover:bg-slate-800/50"
-                      }`}
-                    >
-                      {item.icon}
-                      {item.label}
-                    </Link>
-                  </div>
-                );
-              })}
-
+                  return <SidebarLeafLink key={item.href} item={item} active={active} onNavigate={() => setSidebarOpen(false)} />;
+                })}
+              </div>
+            ) : null}
           </div>
         </aside>
 
         <div className="flex-1 flex flex-col min-h-screen lg:ml-64">
-          <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800">
+          <header className="sticky top-0 z-[45] bg-slate-900/95 backdrop-blur border-b border-slate-800">
             <div className="relative flex items-center justify-between px-4 sm:px-6 h-16">
               <div className="flex items-center gap-1 lg:hidden">
                 <button
@@ -391,6 +413,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
                 roleLabel={roleInfo.label}
                 theme={theme}
                 alerts={alertItems}
+                requestAlerts={requestAlerts}
                 unavailableCount={unavailableCount}
                 belowMinCount={belowMinCount}
                 onToggleTheme={toggleTheme}
@@ -399,36 +422,148 @@ export function StockAppShell({ children }: { children: ReactNode }) {
             </div>
           </header>
 
-          <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-6">
-            {children}
-          </main>
+          <main className="flex-1 px-4 py-5 pb-28 sm:px-6 lg:px-8 lg:py-6 lg:pb-6">{children}</main>
 
-          <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur border-t border-slate-800">
-            <div className="flex items-center justify-around h-16">
-              {visibleNavigationItems
-                .filter((item) => !item.adminOnly)
-                .map((item) => {
-                  const active = isActivePath(pathname, item.href);
+          {mobileGroupId ? <button type="button" aria-label="Fechar opções" className="fixed inset-0 z-30 bg-transparent lg:hidden" onClick={() => setMobileGroupId(null)} /> : null}
 
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                        active ? "text-blue-400" : "text-slate-500"
-                      }`}
-                    >
-                      {item.icon}
-                      {item.label}
-                    </Link>
-                  );
-                })}
-            </div>
+          <nav className="fixed left-0 right-0 bottom-0 z-40 border-t border-slate-800 bg-slate-900/95 backdrop-blur lg:hidden">
+            <MobileBottomNav
+              pathname={pathname}
+              openGroupId={mobileGroupId}
+              onOpenGroup={setMobileGroupId}
+              onNavigateChild={navigateMobileChild}
+            />
           </nav>
 
           <InstallPromptCard />
         </div>
       </div>
     </StockSessionContext.Provider>
+  );
+}
+
+function SidebarNavEntry({
+  item,
+  pathname,
+  expanded,
+  onToggle,
+  onNavigate,
+}: {
+  item: NavEntry;
+  pathname: string;
+  expanded: boolean;
+  onToggle: (groupId: NavGroup["id"]) => void;
+  onNavigate: () => void;
+}) {
+  if (item.kind === "leaf") {
+    return <SidebarLeafLink item={item} active={isActivePath(pathname, item.href)} onNavigate={onNavigate} />;
+  }
+
+  const active = isGroupActive(pathname, item);
+
+  return (
+    <div className="space-y-1">
+      <button
+        type="button"
+        onClick={() => onToggle(item.id)}
+        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+          active ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+        }`}
+      >
+        {item.icon}
+        <span className="flex-1 text-left">{item.label}</span>
+        <svg className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {expanded ? (
+        <div className="ml-4 space-y-1 border-l border-slate-800 pl-3">
+          {item.children.map((child) => (
+            <SidebarLeafLink key={child.href} item={child} active={isActivePath(pathname, child.href)} onNavigate={onNavigate} compact />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SidebarLeafLink({ item, active, onNavigate, compact = false }: { item: NavLeaf; active: boolean; onNavigate: () => void; compact?: boolean }) {
+  return (
+    <Link
+      href={item.href}
+      onClick={onNavigate}
+      className={`w-full flex items-center gap-3 rounded-xl text-sm font-medium transition-all ${compact ? "px-3 py-2.5" : "px-4 py-3"} ${
+        active ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+      }`}
+    >
+      {item.icon}
+      {item.label}
+    </Link>
+  );
+}
+
+function MobileBottomNav({
+  pathname,
+  openGroupId,
+  onOpenGroup,
+  onNavigateChild,
+}: {
+  pathname: string;
+  openGroupId: NavGroup["id"] | null;
+  onOpenGroup: (groupId: NavGroup["id"] | null) => void;
+  onNavigateChild: (href: string) => void;
+}) {
+  return (
+    <div className="flex min-h-16 items-center justify-around pb-[env(safe-area-inset-bottom)]">
+      <Link
+        href="/dashboard"
+        className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${isActivePath(pathname, "/dashboard") ? "text-blue-400" : "text-slate-500"}`}
+      >
+        {dashboardIcon}
+        Dashboard
+      </Link>
+      {mobileGroups.map((group) => {
+        const active = isGroupActive(pathname, group);
+        const open = openGroupId === group.id;
+
+        return (
+          <div key={group.id} className="relative flex flex-1 justify-center">
+            {open ? (
+              <div className="absolute bottom-16 left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-2 pb-2">
+                {group.children.map((child, index) => {
+                  const childActive = isActivePath(pathname, child.href);
+
+                  return (
+                    <button
+                      key={child.href}
+                      type="button"
+                      onClick={() => onNavigateChild(child.href)}
+                      className={`mobile-subnav-bubble flex h-14 w-14 flex-col items-center justify-center gap-0.5 rounded-full border text-[10px] font-medium shadow-2xl backdrop-blur transition-all ${
+                        childActive ? "border-blue-500/40 bg-blue-600/25 text-blue-300" : "border-slate-800 bg-slate-900/95 text-slate-400 hover:border-slate-700 hover:text-white"
+                      }`}
+                      style={{ animationDelay: `${index * 45}ms` }}
+                      title={child.label}
+                    >
+                      {child.icon}
+                      <span className="max-w-12 truncate">{child.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={() => onOpenGroup(open ? null : group.id)}
+              className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${active || open ? "text-blue-400" : "text-slate-500"}`}
+            >
+              {group.icon}
+              {group.label}
+            </button>
+          </div>
+        );
+      })}
+    </div>
   );
 }

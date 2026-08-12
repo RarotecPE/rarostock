@@ -13,6 +13,21 @@ const normalizeRemotePath = (value: string) => {
 const sanitizeFilename = (filename: string) =>
   filename.replace(/[^a-zA-Z0-9._-]/g, "_");
 
+const storageFolders = {
+  product: "notasProdutos",
+  equipment: "notasEquipamentos/notas",
+  equipmentTerm: "notasEquipamentos/termos",
+} as const;
+
+export type InvoiceStorageContext = keyof typeof storageFolders;
+
+const encodeUrlPath = (value: string) =>
+  value
+    .split("/")
+    .filter(Boolean)
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+
 const getAllowedFileExtension = (file: File) => {
   const extension = file.name.split(".").pop()?.toLowerCase();
 
@@ -91,7 +106,10 @@ const assertStoragePathInBaseDir = (storagePath: string) => {
   return normalized;
 };
 
-export const uploadInvoiceToFtp = async (file: File) => {
+export const uploadInvoiceToFtp = async (
+  file: File,
+  context: InvoiceStorageContext = "product",
+) => {
   const config = getFtpConfig();
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
@@ -99,20 +117,23 @@ export const uploadInvoiceToFtp = async (file: File) => {
   const baseName = path.posix
     .basename(file.name, path.posix.extname(file.name))
     .slice(0, 80);
-  const safeBaseName = sanitizeFilename(baseName) || "nota_fiscal";
+  const safeBaseName =
+    sanitizeFilename(baseName) ||
+    (context === "equipmentTerm" ? "termo_responsabilidade" : "nota_fiscal");
   const uniqueId = randomUUID().slice(0, 8);
   const storedFilename = `${Date.now()}-${uniqueId}-${safeBaseName}.${extension}`;
-  const storagePath = path.posix.join(config.baseDir, storedFilename);
+  const folder = storageFolders[context];
+  const storagePath = path.posix.join(config.baseDir, folder, storedFilename);
 
   await withFtpClient(async (client) => {
-    await client.ensureDir(config.baseDir);
+    await client.ensureDir(path.posix.join(config.baseDir, folder));
     await client.uploadFrom(Readable.from(buffer), storedFilename);
   });
 
   return {
     filename: storedFilename,
     storagePath,
-    url: `${config.publicBaseUrl}/${encodeURIComponent(storedFilename)}`,
+    url: `${config.publicBaseUrl}/${encodeUrlPath(`${folder}/${storedFilename}`)}`,
   };
 };
 

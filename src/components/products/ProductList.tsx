@@ -1,406 +1,279 @@
-"use client";
+﻿"use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import {
-  Item,
-  normalizeSearch,
-  getStockStatus,
-  formatLimit,
-} from "@/types/stock";
-import { StatusBadge, TypeBadge } from "@/components/ui/Badge";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Item, normalizeSearch, getStockStatus, formatLimit } from "@/types/stock";
+import { StatusBadge } from "@/components/ui/Badge";
 import { ItemDetailModal } from "@/components/modals/ItemDetailModal";
+import { FilterCheckbox, FilterDropdown, FilterSection, toggleFilterValue } from "@/components/ui/FilterDropdown";
+import { PaginationControls, getTotalPages, paginate } from "@/components/ui/PaginationControls";
+import { useActionCursor } from "@/lib/use-action-cursor";
 
-type SortField =
-  | "code"
-  | "name"
-  | "category"
-  | "type"
-  | "quantity"
-  | "minimumLimit"
-  | "desiredLimit"
-  | "status";
+type SortField = "code" | "name" | "category" | "quantity" | "minimumLimit" | "desiredLimit" | "status";
 type SortDir = "asc" | "desc";
+
+function getShoppingListFilename() {
+  const date = new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  })
+    .format(new Date())
+    .replace(/\//g, ".");
+
+  return `lista_de_compras_${date}.pdf`;
+}
 
 interface ProductListProps {
   refreshKey?: number;
   canManageStock: boolean;
+  isAdmin?: boolean;
 }
 
-export function ProductList({ refreshKey = 0, canManageStock }: ProductListProps) {
+export function ProductList({ refreshKey = 0, canManageStock, isAdmin = false }: ProductListProps) {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [categoryFilters, setCategoryFilters] = useState<string[]>([]);
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [shoppingListModalOpen, setShoppingListModalOpen] = useState(false);
+  const [shoppingListWarning, setShoppingListWarning] = useState("");
+  const [shoppingListDownloading, setShoppingListDownloading] = useState(false);
   const [sortField, setSortField] = useState<SortField>("code");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [page, setPage] = useState(1);
+  useActionCursor(shoppingListDownloading);
 
   const fetchItems = useCallback(async () => {
+    setLoading(true);
     const res = await fetch("/api/items");
-    const data = await res.json();
-    setItems(data);
+    const data = await res.json().catch(() => []);
+    setItems(res.ok && Array.isArray(data) ? data : []);
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    let active = true;
-
-    fetch("/api/items")
-      .then((res) => res.json())
-      .then((data) => {
-        if (!active) return;
-        setItems(data);
-        setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [refreshKey]);
-
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDir(sortDir === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDir("asc");
-    }
-  };
-
-  const renderSortIcon = (field: SortField) => {
-    if (sortField !== field) {
-      return (
-        <svg className="w-3.5 h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-        </svg>
-      );
-    }
-    return sortDir === "asc" ? (
-      <svg className="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-      </svg>
-    ) : (
-      <svg className="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-      </svg>
-    );
-  };
+    const timer = setTimeout(() => void fetchItems(), 0);
+    return () => clearTimeout(timer);
+  }, [fetchItems, refreshKey]);
 
   const filtered = useMemo(() => {
     let result = items;
-
     if (search) {
       const norm = normalizeSearch(search);
-      result = result.filter(
-        (i) =>
-          normalizeSearch(i.name).includes(norm) ||
-          normalizeSearch(i.code).includes(norm)
-      );
+      result = result.filter((i) => normalizeSearch(i.name).includes(norm) || normalizeSearch(i.code).includes(norm));
     }
-
-    if (typeFilter) result = result.filter((i) => i.type === typeFilter);
-    if (categoryFilter) result = result.filter((i) => i.category === categoryFilter);
-    if (statusFilter) {
-      result = result.filter(
-        (i) => getStockStatus(i.quantity, i.minimumLimit, i.desiredLimit) === statusFilter
-      );
-    }
+    if (categoryFilters.length) result = result.filter((i) => categoryFilters.includes(i.category));
+    if (statusFilters.length) result = result.filter((i) => statusFilters.includes(getStockStatus(i.quantity, i.minimumLimit, i.desiredLimit)));
 
     return [...result].sort((a, b) => {
       let cmp = 0;
-      switch (sortField) {
-        case "code":
-          cmp = a.code.localeCompare(b.code);
-          break;
-        case "name":
-          cmp = a.name.localeCompare(b.name);
-          break;
-        case "category":
-          cmp = a.category.localeCompare(b.category);
-          break;
-        case "type":
-          cmp = a.type.localeCompare(b.type);
-          break;
-        case "quantity":
-          cmp = a.quantity - b.quantity;
-          break;
-        case "minimumLimit": {
-          const aValue = a.minimumLimit ?? Number.POSITIVE_INFINITY;
-          const bValue = b.minimumLimit ?? Number.POSITIVE_INFINITY;
-          cmp = aValue - bValue;
-          break;
-        }
-        case "desiredLimit": {
-          const aValue = a.desiredLimit ?? Number.POSITIVE_INFINITY;
-          const bValue = b.desiredLimit ?? Number.POSITIVE_INFINITY;
-          cmp = aValue - bValue;
-          break;
-        }
-        case "status":
-          cmp = getStockStatus(a.quantity, a.minimumLimit, a.desiredLimit).localeCompare(
-            getStockStatus(b.quantity, b.minimumLimit, b.desiredLimit)
-          );
-          break;
-      }
+      if (sortField === "code") cmp = a.code.localeCompare(b.code);
+      if (sortField === "name") cmp = a.name.localeCompare(b.name);
+      if (sortField === "category") cmp = a.category.localeCompare(b.category);
+      if (sortField === "quantity") cmp = a.quantity - b.quantity;
+      if (sortField === "minimumLimit") cmp = a.minimumLimit - b.minimumLimit;
+      if (sortField === "desiredLimit") cmp = a.desiredLimit - b.desiredLimit;
+      if (sortField === "status") cmp = getStockStatus(a.quantity, a.minimumLimit, a.desiredLimit).localeCompare(getStockStatus(b.quantity, b.minimumLimit, b.desiredLimit));
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [items, search, typeFilter, categoryFilter, statusFilter, sortField, sortDir]);
+  }, [items, search, categoryFilters, statusFilters, sortField, sortDir]);
 
-  const categories = useMemo(() => {
-    const cats = [...new Set(items.map((i) => i.category))].filter(
-      (c) => c !== "Outro"
-    );
-    cats.sort();
-    if (items.some((i) => i.category === "Outro")) cats.push("Outro");
-    return cats;
-  }, [items]);
+  const currentPage = Math.min(page, getTotalPages(filtered.length));
+  const paginated = useMemo(() => paginate(filtered, currentPage), [filtered, currentPage]);
 
-  const activeFiltersCount = [typeFilter, categoryFilter, statusFilter].filter(Boolean).length;
+  const categories = useMemo(() => [...new Set(items.map((i) => i.category))].sort(), [items]);
+  const statusOptions = ["Em Estoque", "Abaixo do Desejável", "Abaixo do Mínimo", "Indisponível"];
+  const activeFiltersCount = categoryFilters.length + statusFilters.length;
+  const shoppingListItems = useMemo(
+    () =>
+      filtered
+        .map((item) => ({
+          item,
+          purchaseQuantity: Math.max(0, item.desiredLimit - item.quantity),
+        }))
+        .filter((entry) => entry.purchaseQuantity > 0),
+    [filtered],
+  );
 
-  const clearFilters = () => {
-    setTypeFilter("");
-    setCategoryFilter("");
-    setStatusFilter("");
+  const handleSort = (field: SortField) => {
+    setPage(1);
+    if (sortField === field) setSortDir(sortDir === "asc" ? "desc" : "asc");
+    else { setSortField(field); setSortDir("asc"); }
   };
 
-  const handleExport = () => {
+  const renderSortIcon = (field: SortField) => {
+    const active = sortField === field;
+    const descending = active && sortDir === "desc";
+
+    return (
+      <svg className={`h-3 w-3 transition-transform ${active ? "text-blue-400" : "text-slate-600"} ${descending ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+      </svg>
+    );
+  };
+
+  const buildShoppingListUrl = () => {
     const params = new URLSearchParams();
     if (search) params.set("search", search);
-    if (typeFilter) params.set("type", typeFilter);
-    if (categoryFilter) params.set("category", categoryFilter);
-    if (statusFilter) params.set("status", statusFilter);
-
-    const query = params.toString();
-    window.location.href = `/api/export${query ? `?${query}` : ""}`;
+    categoryFilters.forEach((category) => params.append("category", category));
+    statusFilters.forEach((status) => params.append("status", status));
+    return `/api/shopping-list${params.toString() ? `?${params}` : ""}`;
   };
 
-  return (
+  const handleOpenShoppingListModal = () => {
+    if (shoppingListItems.length === 0) {
+      setShoppingListWarning("Nenhum produto filtrado está abaixo do limite desejável.");
+      return;
+    }
+
+    setShoppingListWarning("");
+    setShoppingListModalOpen(true);
+  };
+
+  const handleDownloadShoppingList = async () => {
+    setShoppingListDownloading(true);
+    setShoppingListWarning("");
+
+    try {
+      const response = await fetch(buildShoppingListUrl(), { cache: "no-store" });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error ?? "Não foi possível gerar a lista de compras.");
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = getShoppingListFilename();
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setShoppingListModalOpen(false);
+    } catch (error) {
+      setShoppingListWarning(error instanceof Error ? error.message : "Não foi possível gerar a lista de compras.");
+    } finally {
+      setShoppingListDownloading(false);
+    }
+  };
+
+return (
     <div className="space-y-6">
-      <div className="text-center lg:text-left">
-        <h3 className="text-lg font-semibold text-white">
-          Produtos cadastrados
-        </h3>
-        <p className="text-slate-400 text-sm mt-1">
-          {canManageStock
-            ? "Consulte, filtre e edite os produtos do estoque"
-            : "Consulte e filtre os produtos do estoque"}
-        </p>
+      <div className="flex items-center gap-2 sm:gap-3">
+        <div className="relative min-w-0 flex-1">
+          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Buscar por nome ou código..." className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 pl-3 text-white placeholder-slate-500 outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <FilterDropdown
+          open={showFilters}
+          onOpenChange={setShowFilters}
+          activeCount={activeFiltersCount}
+          onClear={() => { setCategoryFilters([]); setStatusFilters([]); setPage(1); }}
+        >
+          <FilterSection title="Categorias" activeCount={categoryFilters.length}>
+            {categories.map((category) => (
+              <FilterCheckbox key={category} label={category} checked={categoryFilters.includes(category)} onChange={() => { setCategoryFilters((prev) => toggleFilterValue(prev, category)); setPage(1); }} />
+            ))}
+          </FilterSection>
+          <FilterSection title="Status" activeCount={statusFilters.length}>
+            {statusOptions.map((status) => (
+              <FilterCheckbox key={status} label={status} checked={statusFilters.includes(status)} onChange={() => { setStatusFilters((prev) => toggleFilterValue(prev, status)); setPage(1); }} />
+            ))}
+          </FilterSection>
+        </FilterDropdown>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nome ou codigo..."
-            className="w-full pl-9 pr-3 py-2.5 bg-slate-900/90 border border-slate-800 rounded-lg text-white text-sm placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none"
-          />
-        </div>
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors border ${
-            showFilters || activeFiltersCount > 0
-              ? "bg-blue-600/20 border-blue-500/30 text-blue-400"
-              : "bg-slate-900/90 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700"
-          }`}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-          </svg>
-          Filtros
-          {activeFiltersCount > 0 && (
-            <span className="w-5 h-5 bg-blue-500 rounded-full text-xs text-white flex items-center justify-center">
-              {activeFiltersCount}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={handleExport}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors border bg-slate-900/90 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m4 5H5a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2z" />
-          </svg>
-          Exportar CSV
-        </button>
-      </div>
-
-      {showFilters && (
-        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-medium text-slate-300">Filtros avancados</h4>
-            {activeFiltersCount > 0 && (
-              <button
-                onClick={clearFilters}
-                className="text-xs text-slate-400 hover:text-white transition-colors"
-              >
-                Limpar filtros
-              </button>
-            )}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            >
-              <option value="">Todos os Tipos</option>
-              <option value="Equipamento">Equipamento</option>
-              <option value="Item de Consumo">Item de Consumo</option>
-            </select>
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            >
-              <option value="">Todas as Categorias</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            >
-              <option value="">Todos os Status</option>
-              <option value="Em Estoque">Em Estoque</option>
-              <option value="Abaixo do Desejável">Abaixo do Desejável</option>
-              <option value={"Abaixo do M\u00EDnimo"}>Abaixo do Mínimo</option>
-              <option value={"Indispon\u00EDvel"}>Indisponivel</option>
-            </select>
-          </div>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-slate-500">
-          <p>Nenhum produto encontrado com os filtros aplicados</p>
-        </div>
-      ) : (
+      {loading ? <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" /></div> : filtered.length === 0 ? <div className="py-12 text-center text-slate-500">Nenhum produto encontrado</div> : (
         <>
-          <p className="text-sm text-slate-400">
-            {filtered.length} {filtered.length === 1 ? "produto encontrado" : "produtos encontrados"}
-          </p>
-
-          <div className="hidden lg:block overflow-x-auto bg-slate-900/90 border border-slate-800 rounded-xl">
+          <p className="text-sm text-slate-400">{filtered.length} {filtered.length === 1 ? "produto encontrado" : "produtos encontrados"}</p>
+          <div className="hidden overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/90 lg:block">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-800">
-                  {[
-                    ["code", "Codigo"],
-                    ["name", "Nome"],
-                    ["category", "Categoria"],
-                    ["type", "Tipo"],
-                    ["quantity", "Saldo"],
-                    ["minimumLimit", "Lim. Min."],
-                    ["desiredLimit", "Lim. Des."],
-                    ["status", "Status"],
-                  ].map(([field, label]) => (
-                    <th
-                      key={field}
-                      className={
-                        field === "quantity" || field === "minimumLimit" || field === "desiredLimit" || field === "status"
-                          ? "text-center px-4 py-3"
-                          : "text-left px-4 py-3"
-                      }
-                    >
-                      <button
-                        onClick={() => handleSort(field as SortField)}
-                        className={`flex items-center gap-1.5 text-xs text-slate-500 uppercase tracking-wider font-medium hover:text-slate-300 transition-colors ${
-                          field === "quantity" || field === "minimumLimit" || field === "desiredLimit" || field === "status"
-                            ? "mx-auto"
-                            : ""
-                        }`}
-                      >
-                        {label}
-                        {renderSortIcon(field as SortField)}
-                      </button>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((item) => (
-                  <tr
-                    key={item.id}
-                    onClick={() => setSelectedItem(item)}
-                    className="border-b border-slate-800/50 hover:bg-slate-800/50 cursor-pointer transition-colors"
-                  >
-                    <td className="px-4 py-3 font-mono text-blue-400 text-xs">{item.code}</td>
-                    <td className="px-4 py-3 text-white">{item.name}</td>
-                    <td className="px-4 py-3 text-slate-300">{item.category}</td>
-                    <td className="px-4 py-3 min-w-36">
-                      <TypeBadge type={item.type} />
-                    </td>
-                    <td className="px-4 py-3 text-center text-white">{item.quantity}</td>
-                    <td className="px-4 py-3 text-center text-slate-400">
-                      {formatLimit(item.minimumLimit)}
-                    </td>
-                    <td className="px-4 py-3 text-center text-slate-400">
-                      {formatLimit(item.desiredLimit)}
-                    </td>
-                    <td className="px-4 py-3 text-center min-w-40">
-                      <StatusBadge quantity={item.quantity} minimumLimit={item.minimumLimit} desiredLimit={item.desiredLimit} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
+              <thead><tr className="border-b border-slate-800">{[["name","Nome"],["code","Código"],["category","Categoria"],["quantity","Saldo"],["minimumLimit","Lim. Min."],["desiredLimit","Lim. Des."],["status","Status"]].map(([field,label]) => <th key={field} className={field === "name" || field === "category" || field === "code" ? "px-4 py-3 text-left" : "px-4 py-3 text-center"}><button onClick={() => handleSort(field as SortField)} className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wider text-slate-500 transition-colors hover:text-slate-300">{label}{renderSortIcon(field as SortField)}</button></th>)}</tr></thead>
+              <tbody>{paginated.map((item) => <tr key={item.id} onClick={() => setSelectedItem(item)} className="cursor-pointer border-b border-slate-800/50 transition-colors hover:bg-slate-800/50"><td className="px-4 py-3 text-white">{item.name}</td><td className="px-4 py-3 font-mono text-xs text-blue-400">{item.code}</td><td className="px-4 py-3 text-slate-300">{item.category}</td><td className="px-4 py-3 text-center text-white">{item.quantity}</td><td className="px-4 py-3 text-center text-slate-400">{formatLimit(item.minimumLimit)}</td><td className="px-4 py-3 text-center text-slate-400">{formatLimit(item.desiredLimit)}</td><td className="px-4 py-3 text-center"><StatusBadge quantity={item.quantity} minimumLimit={item.minimumLimit} desiredLimit={item.desiredLimit} /></td></tr>)}</tbody>
             </table>
           </div>
-
-          <div className="lg:hidden space-y-3">
-            {filtered.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setSelectedItem(item)}
-                className="w-full text-left bg-slate-900/90 border border-slate-800 rounded-xl p-4 hover:border-slate-600 transition-colors"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <p className="text-xs text-blue-400 font-mono">{item.code}</p>
-                    <h3 className="text-white font-semibold mt-0.5">{item.name}</h3>
-                  </div>
-                  <StatusBadge quantity={item.quantity} minimumLimit={item.minimumLimit} desiredLimit={item.desiredLimit} />
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <TypeBadge type={item.type} />
-                  <span className="text-xs text-slate-400">{item.category}</span>
-                  <span className="text-xs text-slate-500">-</span>
-                  <span className="text-xs text-slate-400">
-                    Saldo: {item.quantity} | Min: {formatLimit(item.minimumLimit)} | Desej: {formatLimit(item.desiredLimit)}
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-
+          <div className="space-y-3 lg:hidden">{paginated.map((item) => <button key={item.id} onClick={() => setSelectedItem(item)} className="w-full rounded-xl border border-slate-800 bg-slate-900/90 p-4 text-left transition-colors hover:border-slate-600"><div className="mb-3 flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="break-words font-semibold text-white">{item.name}</h3><p className="mt-0.5 font-mono text-xs text-blue-400">{item.code}</p></div><span className="shrink-0"><StatusBadge quantity={item.quantity} minimumLimit={item.minimumLimit} desiredLimit={item.desiredLimit} /></span></div><div className="grid grid-cols-2 gap-2 text-xs text-slate-400"><span className="col-span-2 truncate">{item.category}</span><span>Saldo: <strong className="text-slate-200">{item.quantity}</strong></span><span>Min: {formatLimit(item.minimumLimit)}</span><span>Desej: {formatLimit(item.desiredLimit)}</span></div></button>)}</div>
+          <PaginationControls page={currentPage} totalItems={filtered.length} onPageChange={setPage} itemLabel="produtos" />
         </>
       )}
+      {shoppingListWarning ? (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          {shoppingListWarning}
+        </div>
+      ) : null}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={handleOpenShoppingListModal}
+          className="shopping-list-button w-full rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors sm:w-auto"
+        >
+          Gerar Lista de Compras
+        </button>
+      </div>
+      {shoppingListModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onClick={() => setShoppingListModalOpen(false)}>
+          <div className="shopping-list-modal w-full max-w-lg rounded-2xl border p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="shopping-list-modal-title text-lg font-bold">Gerar lista de compras?</h3>
+                <p className="shopping-list-modal-description mt-1 text-sm">
+                  O PDF incluirá apenas produtos filtrados que estão abaixo do limite desejável.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShoppingListModalOpen(false)}
+                disabled={shoppingListDownloading}
+                className="rounded-lg p-2 text-2xl leading-none text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+                aria-label="Fechar"
+              >
+                ×
+              </button>
+            </div>
 
-      {selectedItem && (
-        <ItemDetailModal
-          item={selectedItem}
-          onClose={() => setSelectedItem(null)}
-          onUpdate={() => {
-            fetchItems();
-            setSelectedItem(null);
-          }}
-          canManageStock={canManageStock}
-        />
-      )}
+            {shoppingListWarning ? (
+              <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                {shoppingListWarning}
+              </div>
+            ) : null}
+
+            <div className="mt-4 max-h-56 space-y-2 overflow-y-auto pr-1">
+              {shoppingListItems.slice(0, 8).map(({ item, purchaseQuantity }) => (
+                <div key={item.id} className="shopping-list-preview-item flex items-center justify-between gap-3 rounded-lg px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="shopping-list-preview-name truncate text-sm font-medium">{item.name}</p>
+                    <p className="shopping-list-preview-code font-mono text-xs">{item.code}</p>
+                  </div>
+                  <span className="shopping-list-preview-quantity shrink-0 text-sm font-semibold">
+                    Comprar {purchaseQuantity}
+                  </span>
+                </div>
+              ))}
+              {shoppingListItems.length > 8 ? (
+                <p className="pt-1 text-center text-xs text-slate-500">
+                  + {shoppingListItems.length - 8} outros itens no PDF
+                </p>
+              ) : null}
+            </div>
+
+            <div className="mt-5 flex justify-center">
+              <button
+                type="button"
+                onClick={handleDownloadShoppingList}
+                disabled={shoppingListDownloading}
+                className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {shoppingListDownloading ? "Gerando..." : "Baixar PDF"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+{selectedItem ? <ItemDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} onUpdate={() => { void fetchItems(); setSelectedItem(null); }} canManageStock={canManageStock} isAdmin={isAdmin} /> : null}
     </div>
   );
 }
+
