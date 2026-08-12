@@ -11,7 +11,10 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const contextValue = formData.get("context");
-    const context = contextValue === "equipment" ? "equipment" : "product";
+    const context =
+      contextValue === "equipment" || contextValue === "equipmentTerm"
+        ? contextValue
+        : "product";
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });

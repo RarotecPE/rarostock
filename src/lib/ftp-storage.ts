@@ -15,7 +15,8 @@ const sanitizeFilename = (filename: string) =>
 
 const storageFolders = {
   product: "notasProdutos",
-  equipment: "notasEquipamentos",
+  equipment: "notasEquipamentos/notas",
+  equipmentTerm: "notasEquipamentos/termos",
 } as const;
 
 export type InvoiceStorageContext = keyof typeof storageFolders;
@@ -116,7 +117,9 @@ export const uploadInvoiceToFtp = async (
   const baseName = path.posix
     .basename(file.name, path.posix.extname(file.name))
     .slice(0, 80);
-  const safeBaseName = sanitizeFilename(baseName) || "nota_fiscal";
+  const safeBaseName =
+    sanitizeFilename(baseName) ||
+    (context === "equipmentTerm" ? "termo_responsabilidade" : "nota_fiscal");
   const uniqueId = randomUUID().slice(0, 8);
   const storedFilename = `${Date.now()}-${uniqueId}-${safeBaseName}.${extension}`;
   const folder = storageFolders[context];

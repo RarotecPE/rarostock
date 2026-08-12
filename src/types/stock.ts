@@ -97,6 +97,9 @@ export interface Equipment {
   invoiceUrl: string | null;
   invoiceFilename: string | null;
   invoiceStoragePath: string | null;
+  responsibilityTermUrl: string | null;
+  responsibilityTermFilename: string | null;
+  responsibilityTermStoragePath: string | null;
   observations: string | null;
   holderType: EquipmentHolderType;
   holderUserId: string | null;
