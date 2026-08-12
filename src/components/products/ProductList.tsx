@@ -80,15 +80,8 @@ export function ProductList({ refreshKey = 0, canManageStock, isAdmin = false }:
     });
   }, [items, search, categoryFilters, statusFilters, sortField, sortDir]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [search, categoryFilters, statusFilters, sortField, sortDir]);
-
-  useEffect(() => {
-    setPage((current) => Math.min(current, getTotalPages(filtered.length)));
-  }, [filtered.length]);
-
-  const paginated = useMemo(() => paginate(filtered, page), [filtered, page]);
+  const currentPage = Math.min(page, getTotalPages(filtered.length));
+  const paginated = useMemo(() => paginate(filtered, currentPage), [filtered, currentPage]);
 
   const categories = useMemo(() => [...new Set(items.map((i) => i.category))].sort(), [items]);
   const statusOptions = ["Em Estoque", "Abaixo do Desejável", "Abaixo do Mínimo", "Indisponível"];
@@ -105,6 +98,7 @@ export function ProductList({ refreshKey = 0, canManageStock, isAdmin = false }:
   );
 
   const handleSort = (field: SortField) => {
+    setPage(1);
     if (sortField === field) setSortDir(sortDir === "asc" ? "desc" : "asc");
     else { setSortField(field); setSortDir("asc"); }
   };
@@ -171,22 +165,22 @@ return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 sm:gap-3">
         <div className="relative min-w-0 flex-1">
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome ou código..." className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 pl-3 text-white placeholder-slate-500 outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500" />
+          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Buscar por nome ou código..." className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 pl-3 text-white placeholder-slate-500 outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500" />
         </div>
         <FilterDropdown
           open={showFilters}
           onOpenChange={setShowFilters}
           activeCount={activeFiltersCount}
-          onClear={() => { setCategoryFilters([]); setStatusFilters([]); }}
+          onClear={() => { setCategoryFilters([]); setStatusFilters([]); setPage(1); }}
         >
           <FilterSection title="Categorias" activeCount={categoryFilters.length}>
             {categories.map((category) => (
-              <FilterCheckbox key={category} label={category} checked={categoryFilters.includes(category)} onChange={() => setCategoryFilters((prev) => toggleFilterValue(prev, category))} />
+              <FilterCheckbox key={category} label={category} checked={categoryFilters.includes(category)} onChange={() => { setCategoryFilters((prev) => toggleFilterValue(prev, category)); setPage(1); }} />
             ))}
           </FilterSection>
           <FilterSection title="Status" activeCount={statusFilters.length}>
             {statusOptions.map((status) => (
-              <FilterCheckbox key={status} label={status} checked={statusFilters.includes(status)} onChange={() => setStatusFilters((prev) => toggleFilterValue(prev, status))} />
+              <FilterCheckbox key={status} label={status} checked={statusFilters.includes(status)} onChange={() => { setStatusFilters((prev) => toggleFilterValue(prev, status)); setPage(1); }} />
             ))}
           </FilterSection>
         </FilterDropdown>
@@ -202,7 +196,7 @@ return (
             </table>
           </div>
           <div className="space-y-3 lg:hidden">{paginated.map((item) => <button key={item.id} onClick={() => setSelectedItem(item)} className="w-full rounded-xl border border-slate-800 bg-slate-900/90 p-4 text-left transition-colors hover:border-slate-600"><div className="mb-3 flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="break-words font-semibold text-white">{item.name}</h3><p className="mt-0.5 font-mono text-xs text-blue-400">{item.code}</p></div><span className="shrink-0"><StatusBadge quantity={item.quantity} minimumLimit={item.minimumLimit} desiredLimit={item.desiredLimit} /></span></div><div className="grid grid-cols-2 gap-2 text-xs text-slate-400"><span className="col-span-2 truncate">{item.category}</span><span>Saldo: <strong className="text-slate-200">{item.quantity}</strong></span><span>Min: {formatLimit(item.minimumLimit)}</span><span>Desej: {formatLimit(item.desiredLimit)}</span></div></button>)}</div>
-          <PaginationControls page={page} totalItems={filtered.length} onPageChange={setPage} itemLabel="produtos" />
+          <PaginationControls page={currentPage} totalItems={filtered.length} onPageChange={setPage} itemLabel="produtos" />
         </>
       )}
       {shoppingListWarning ? (

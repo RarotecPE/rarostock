@@ -6,6 +6,7 @@ import { RefreshButton } from "@/components/ui/RefreshButton";
 import { Toast } from "@/components/ui/Toast";
 import { useStockSession } from "@/components/layout/StockAppShell";
 import { EquipmentDetailModal } from "@/components/equipment/EquipmentTab";
+import { PaginationControls, getTotalPages, paginate } from "@/components/ui/PaginationControls";
 
 type ToastState = { message: string; type?: "success" | "error" } | null;
 
@@ -33,6 +34,7 @@ export function PersonalEquipmentTab() {
   const [showRequestHistory, setShowRequestHistory] = useState(false);
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
+  const [equipmentPage, setEquipmentPage] = useState(1);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -89,6 +91,9 @@ export function PersonalEquipmentTab() {
     }
     return map;
   }, [movements, user?.id]);
+  const currentEquipmentPage = Math.min(equipmentPage, getTotalPages(equipments.length));
+  const paginatedEquipments = useMemo(() => paginate(equipments, currentEquipmentPage), [currentEquipmentPage, equipments]);
+
   const decide = async (id: number, approve: boolean) => {
     const res = await fetch(`/api/equipment-requests/${id}/${approve ? "approve" : "reject"}`, {
       method: "POST",
@@ -125,23 +130,26 @@ export function PersonalEquipmentTab() {
           <section className="space-y-3">
             <h3 className="font-semibold text-white">Equipamentos com você</h3>
             {equipments.length ? (
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                {equipments.map((equipment) => (
-                  <button
-                    key={equipment.id}
-                    type="button"
-                    onClick={() => setSelectedEquipment(equipment)}
-                    className="rounded-xl border border-slate-800 bg-slate-900/90 p-4 text-left transition-colors hover:border-slate-600 hover:bg-slate-800/70"
-                  >
-                    <p className="font-mono text-xs text-blue-400">{equipment.code}</p>
-                    <h4 className="font-semibold text-white">{equipment.name}</h4>
-                    <p className="mt-1 text-sm text-slate-400">
-                      {equipment.category} · {holderLabel(equipment)}
-                    </p>
-                    <p className="mt-3 text-xs text-slate-500">{equipmentSinceById.get(equipment.id) ? `Com você desde ${formatDateTime(equipmentSinceById.get(equipment.id)!)}` : "Com você desde data não identificada"}</p><p className="mt-1 text-xs text-slate-500">Clique para devolver ou transferir.</p>
-                  </button>
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {paginatedEquipments.map((equipment) => (
+                    <button
+                      key={equipment.id}
+                      type="button"
+                      onClick={() => setSelectedEquipment(equipment)}
+                      className="rounded-xl border border-slate-800 bg-slate-900/90 p-4 text-left transition-colors hover:border-slate-600 hover:bg-slate-800/70"
+                    >
+                      <p className="font-mono text-xs text-blue-400">{equipment.code}</p>
+                      <h4 className="font-semibold text-white">{equipment.name}</h4>
+                      <p className="mt-1 text-sm text-slate-400">
+                        {equipment.category} · {holderLabel(equipment)}
+                      </p>
+                      <p className="mt-3 text-xs text-slate-500">{equipmentSinceById.get(equipment.id) ? `Com você desde ${formatDateTime(equipmentSinceById.get(equipment.id)!)}` : "Com você desde data não identificada"}</p><p className="mt-1 text-xs text-slate-500">Clique para devolver ou transferir.</p>
+                    </button>
+                  ))}
+                </div>
+                <PaginationControls page={currentEquipmentPage} totalItems={equipments.length} onPageChange={setEquipmentPage} itemLabel="equipamentos" />
+              </>
             ) : (
               <p className="rounded-xl border border-slate-800 bg-slate-900/90 p-4 text-sm text-slate-500">
                 Nenhum equipamento associado a você.
@@ -192,13 +200,17 @@ export function PersonalEquipmentTab() {
 }
 
 function RequestList({ requests, users, userId, isAdmin, onDecide, emptyText }: { requests: EquipmentRequest[]; users: EquipmentUser[]; userId: string; isAdmin: boolean; onDecide: (id: number, approve: boolean) => Promise<void>; emptyText: string }) {
+  const [page, setPage] = useState(1);
+  const currentPage = Math.min(page, getTotalPages(requests.length));
+  const paginatedRequests = useMemo(() => paginate(requests, currentPage), [currentPage, requests]);
+
   if (!requests.length) {
     return <p className="rounded-xl border border-slate-800 bg-slate-900/90 p-4 text-sm text-slate-500">{emptyText}</p>;
   }
 
   return (
     <div className="space-y-3">
-      {requests.map((request) => {
+      {paginatedRequests.map((request) => {
         const responsibleUserId = request.type === "obtain" ? request.fromUserId : request.toUserId;
         const canDecide = request.status === "pending" && (isAdmin || responsibleUserId === userId);
         const requester = users.find((item) => item.id === request.requesterUserId) ?? null;
@@ -233,6 +245,7 @@ function RequestList({ requests, users, userId, isAdmin, onDecide, emptyText }: 
           </div>
         );
       })}
+      <PaginationControls page={currentPage} totalItems={requests.length} onPageChange={setPage} itemLabel="solicitações" />
     </div>
   );
 }

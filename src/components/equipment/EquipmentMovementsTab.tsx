@@ -71,6 +71,7 @@ export function EquipmentMovementsTab() {
     setEndDate("");
     setEquipmentIds([]);
     setUserIds([]);
+    setPage(1);
   };
 
   const load = useCallback(async () => {
@@ -125,17 +126,11 @@ export function EquipmentMovementsTab() {
     });
   }, [movements, search, sortDir, sortField]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [search, startDate, endDate, equipmentIds, userIds, sortField, sortDir]);
-
-  useEffect(() => {
-    setPage((current) => Math.min(current, getTotalPages(filtered.length)));
-  }, [filtered.length]);
-
-  const paginated = useMemo(() => paginate(filtered, page), [filtered, page]);
+  const currentPage = Math.min(page, getTotalPages(filtered.length));
+  const paginated = useMemo(() => paginate(filtered, currentPage), [filtered, currentPage]);
 
   const handleSort = (field: SortField) => {
+    setPage(1);
     if (sortField === field) setSortDir((dir) => dir === "asc" ? "desc" : "asc");
     else { setSortField(field); setSortDir(field === "createdAt" ? "desc" : "asc"); }
   };
@@ -165,20 +160,20 @@ export function EquipmentMovementsTab() {
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
-        <input value={search} onChange={(event) => setSearch(event.target.value)} className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Buscar por equipamento, código, usuário ou motivo..." />
+        <input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Buscar por equipamento, código, usuário ou motivo..." />
         <FilterDropdown open={showFilters} onOpenChange={setShowFilters} activeCount={activeFiltersCount} onClear={clearFilters}>
           <FilterSection title="Período" activeCount={(startDate ? 1 : 0) + (endDate ? 1 : 0)}>
             <div className="grid grid-cols-1 gap-2">
-              <label className="space-y-1 text-sm text-slate-300"><span className="block text-xs text-slate-500">Data inicial</span><input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-blue-500" /></label>
-              <label className="space-y-1 text-sm text-slate-300"><span className="block text-xs text-slate-500">Data final</span><input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-blue-500" /></label>
+              <label className="space-y-1 text-sm text-slate-300"><span className="block text-xs text-slate-500">Data inicial</span><input type="date" value={startDate} onChange={(event) => { setStartDate(event.target.value); setPage(1); }} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-blue-500" /></label>
+              <label className="space-y-1 text-sm text-slate-300"><span className="block text-xs text-slate-500">Data final</span><input type="date" value={endDate} onChange={(event) => { setEndDate(event.target.value); setPage(1); }} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-blue-500" /></label>
             </div>
           </FilterSection>
           <FilterSection title="Equipamentos" activeCount={equipmentIds.length}>
-            {equipments.map((equipment) => <FilterCheckbox key={equipment.id} label={`${equipment.name} (${equipment.code})`} checked={equipmentIds.includes(String(equipment.id))} onChange={() => setEquipmentIds((prev) => toggleFilterValue(prev, String(equipment.id)))} />)}
+            {equipments.map((equipment) => <FilterCheckbox key={equipment.id} label={`${equipment.name} (${equipment.code})`} checked={equipmentIds.includes(String(equipment.id))} onChange={() => { setEquipmentIds((prev) => toggleFilterValue(prev, String(equipment.id))); setPage(1); }} />)}
           </FilterSection>
           {isAdmin ? (
             <FilterSection title="Usuários" activeCount={userIds.length}>
-              {users.map((user) => <FilterCheckbox key={user.id} label={user.nome} checked={userIds.includes(user.id)} onChange={() => setUserIds((prev) => toggleFilterValue(prev, user.id))} />)}
+              {users.map((user) => <FilterCheckbox key={user.id} label={user.nome} checked={userIds.includes(user.id)} onChange={() => { setUserIds((prev) => toggleFilterValue(prev, user.id)); setPage(1); }} />)}
             </FilterSection>
           ) : null}
         </FilterDropdown>
@@ -194,7 +189,7 @@ export function EquipmentMovementsTab() {
             </table>
           </div>
           <div className="space-y-3 lg:hidden">{paginated.map((movement) => <div key={movement.id} className="rounded-xl border border-slate-800 bg-slate-900/90 p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-white">{movement.equipmentName}</p><p className="font-mono text-xs text-blue-400">{movement.equipmentCode}</p></div><span className="text-xs text-slate-500">{formatDateTime(movement.createdAt)}</span></div><div className="mt-3 flex flex-col gap-2 text-sm text-slate-300"><MovementHolder type={movement.fromHolderType} name={movement.fromUserName} userId={movement.fromUserId} users={users} /><span className="text-xs text-slate-500">para</span><MovementHolder type={movement.toHolderType} name={movement.toUserName} userId={movement.toUserId} users={users} /></div>{movement.reason ? <p className="mt-1 text-xs text-slate-500">{movement.reason}</p> : null}</div>)}</div>
-          <PaginationControls page={page} totalItems={filtered.length} onPageChange={setPage} itemLabel="movimentações" />
+          <PaginationControls page={currentPage} totalItems={filtered.length} onPageChange={setPage} itemLabel="movimentações" />
         </>
       )}
     </div>

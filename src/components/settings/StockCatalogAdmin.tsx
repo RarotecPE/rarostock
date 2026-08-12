@@ -1,8 +1,9 @@
 ﻿"use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { Children, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { RefreshButton } from "@/components/ui/RefreshButton";
 import { Toast } from "@/components/ui/Toast";
+import { PaginationControls, getTotalPages, paginate } from "@/components/ui/PaginationControls";
 import type { StockCatalog, StockCategoryOption, StockUnitOption } from "@/lib/stock-catalog";
 
 const emptyCategoryDraft = { name: "", active: true };
@@ -221,9 +222,19 @@ function UnitPanel({ draft, editing, saving, loading, units, onDraftChange, onCa
 }
 
 function CatalogList({ loading, emptyText, children }: { loading: boolean; emptyText: string; children: ReactNode }) {
+  const [page, setPage] = useState(1);
+  const rows = useMemo(() => Children.toArray(children), [children]);
+  const currentPage = Math.min(page, getTotalPages(rows.length));
+  const paginatedRows = useMemo(() => paginate(rows, currentPage), [currentPage, rows]);
+
   if (loading) return <p className="rounded-lg border border-slate-800 bg-slate-950/40 p-4 text-sm text-slate-400">Carregando...</p>;
-  if (!children || (Array.isArray(children) && children.length === 0)) return <p className="rounded-lg border border-slate-800 bg-slate-950/40 p-4 text-sm text-slate-400">{emptyText}</p>;
-  return <div className="divide-y divide-slate-800 rounded-lg border border-slate-800">{children}</div>;
+  if (rows.length === 0) return <p className="rounded-lg border border-slate-800 bg-slate-950/40 p-4 text-sm text-slate-400">{emptyText}</p>;
+  return (
+    <div className="space-y-3">
+      <div className="divide-y divide-slate-800 rounded-lg border border-slate-800">{paginatedRows}</div>
+      <PaginationControls page={currentPage} totalItems={rows.length} onPageChange={setPage} />
+    </div>
+  );
 }
 
 function CatalogRow({ title, subtitle, active, onEdit, onDelete, disabled }: { title: string; subtitle?: string; active: boolean; onEdit: () => void; onDelete: () => void; disabled: boolean }) {
