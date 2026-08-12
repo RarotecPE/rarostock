@@ -5,6 +5,7 @@ import { Item, normalizeSearch, getStockStatus, formatLimit } from "@/types/stoc
 import { StatusBadge } from "@/components/ui/Badge";
 import { ItemDetailModal } from "@/components/modals/ItemDetailModal";
 import { FilterCheckbox, FilterDropdown, FilterSection, toggleFilterValue } from "@/components/ui/FilterDropdown";
+import { PaginationControls, getTotalPages, paginate } from "@/components/ui/PaginationControls";
 import { useActionCursor } from "@/lib/use-action-cursor";
 
 type SortField = "code" | "name" | "category" | "quantity" | "minimumLimit" | "desiredLimit" | "status";
@@ -41,6 +42,7 @@ export function ProductList({ refreshKey = 0, canManageStock, isAdmin = false }:
   const [shoppingListDownloading, setShoppingListDownloading] = useState(false);
   const [sortField, setSortField] = useState<SortField>("code");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [page, setPage] = useState(1);
   useActionCursor(shoppingListDownloading);
 
   const fetchItems = useCallback(async () => {
@@ -77,6 +79,16 @@ export function ProductList({ refreshKey = 0, canManageStock, isAdmin = false }:
       return sortDir === "asc" ? cmp : -cmp;
     });
   }, [items, search, categoryFilters, statusFilters, sortField, sortDir]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, categoryFilters, statusFilters, sortField, sortDir]);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, getTotalPages(filtered.length)));
+  }, [filtered.length]);
+
+  const paginated = useMemo(() => paginate(filtered, page), [filtered, page]);
 
   const categories = useMemo(() => [...new Set(items.map((i) => i.category))].sort(), [items]);
   const statusOptions = ["Em Estoque", "Abaixo do Desejável", "Abaixo do Mínimo", "Indisponível"];
@@ -186,10 +198,11 @@ return (
           <div className="hidden overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/90 lg:block">
             <table className="w-full text-sm">
               <thead><tr className="border-b border-slate-800">{[["name","Nome"],["code","Código"],["category","Categoria"],["quantity","Saldo"],["minimumLimit","Lim. Min."],["desiredLimit","Lim. Des."],["status","Status"]].map(([field,label]) => <th key={field} className={field === "name" || field === "category" || field === "code" ? "px-4 py-3 text-left" : "px-4 py-3 text-center"}><button onClick={() => handleSort(field as SortField)} className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wider text-slate-500 transition-colors hover:text-slate-300">{label}{renderSortIcon(field as SortField)}</button></th>)}</tr></thead>
-              <tbody>{filtered.map((item) => <tr key={item.id} onClick={() => setSelectedItem(item)} className="cursor-pointer border-b border-slate-800/50 transition-colors hover:bg-slate-800/50"><td className="px-4 py-3 text-white">{item.name}</td><td className="px-4 py-3 font-mono text-xs text-blue-400">{item.code}</td><td className="px-4 py-3 text-slate-300">{item.category}</td><td className="px-4 py-3 text-center text-white">{item.quantity}</td><td className="px-4 py-3 text-center text-slate-400">{formatLimit(item.minimumLimit)}</td><td className="px-4 py-3 text-center text-slate-400">{formatLimit(item.desiredLimit)}</td><td className="px-4 py-3 text-center"><StatusBadge quantity={item.quantity} minimumLimit={item.minimumLimit} desiredLimit={item.desiredLimit} /></td></tr>)}</tbody>
+              <tbody>{paginated.map((item) => <tr key={item.id} onClick={() => setSelectedItem(item)} className="cursor-pointer border-b border-slate-800/50 transition-colors hover:bg-slate-800/50"><td className="px-4 py-3 text-white">{item.name}</td><td className="px-4 py-3 font-mono text-xs text-blue-400">{item.code}</td><td className="px-4 py-3 text-slate-300">{item.category}</td><td className="px-4 py-3 text-center text-white">{item.quantity}</td><td className="px-4 py-3 text-center text-slate-400">{formatLimit(item.minimumLimit)}</td><td className="px-4 py-3 text-center text-slate-400">{formatLimit(item.desiredLimit)}</td><td className="px-4 py-3 text-center"><StatusBadge quantity={item.quantity} minimumLimit={item.minimumLimit} desiredLimit={item.desiredLimit} /></td></tr>)}</tbody>
             </table>
           </div>
-          <div className="space-y-3 lg:hidden">{filtered.map((item) => <button key={item.id} onClick={() => setSelectedItem(item)} className="w-full rounded-xl border border-slate-800 bg-slate-900/90 p-4 text-left transition-colors hover:border-slate-600"><div className="mb-3 flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="break-words font-semibold text-white">{item.name}</h3><p className="mt-0.5 font-mono text-xs text-blue-400">{item.code}</p></div><span className="shrink-0"><StatusBadge quantity={item.quantity} minimumLimit={item.minimumLimit} desiredLimit={item.desiredLimit} /></span></div><div className="grid grid-cols-2 gap-2 text-xs text-slate-400"><span className="col-span-2 truncate">{item.category}</span><span>Saldo: <strong className="text-slate-200">{item.quantity}</strong></span><span>Min: {formatLimit(item.minimumLimit)}</span><span>Desej: {formatLimit(item.desiredLimit)}</span></div></button>)}</div>
+          <div className="space-y-3 lg:hidden">{paginated.map((item) => <button key={item.id} onClick={() => setSelectedItem(item)} className="w-full rounded-xl border border-slate-800 bg-slate-900/90 p-4 text-left transition-colors hover:border-slate-600"><div className="mb-3 flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="break-words font-semibold text-white">{item.name}</h3><p className="mt-0.5 font-mono text-xs text-blue-400">{item.code}</p></div><span className="shrink-0"><StatusBadge quantity={item.quantity} minimumLimit={item.minimumLimit} desiredLimit={item.desiredLimit} /></span></div><div className="grid grid-cols-2 gap-2 text-xs text-slate-400"><span className="col-span-2 truncate">{item.category}</span><span>Saldo: <strong className="text-slate-200">{item.quantity}</strong></span><span>Min: {formatLimit(item.minimumLimit)}</span><span>Desej: {formatLimit(item.desiredLimit)}</span></div></button>)}</div>
+          <PaginationControls page={page} totalItems={filtered.length} onPageChange={setPage} itemLabel="produtos" />
         </>
       )}
       {shoppingListWarning ? (

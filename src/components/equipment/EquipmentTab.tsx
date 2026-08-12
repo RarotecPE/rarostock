@@ -5,6 +5,7 @@ import { Equipment, EquipmentUser, holderLabel, normalizeSearch } from "@/types/
 import { RefreshButton } from "@/components/ui/RefreshButton";
 import { Toast } from "@/components/ui/Toast";
 import { FilterCheckbox, FilterDropdown, FilterSection, toggleFilterValue } from "@/components/ui/FilterDropdown";
+import { PaginationControls, getTotalPages, paginate } from "@/components/ui/PaginationControls";
 import { useStockSession } from "@/components/layout/StockAppShell";
 import { useActionCursor } from "@/lib/use-action-cursor";
 
@@ -29,6 +30,7 @@ export function EquipmentTab() {
   const [toast, setToast] = useState<ToastState>(null);
   const [sortField, setSortField] = useState<SortField>("code");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -78,6 +80,16 @@ export function EquipmentTab() {
       return sortDir === "asc" ? cmp : -cmp;
     });
   }, [equipments, search, holderFilters, categoryFilters, sortDir, sortField]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, holderFilters, categoryFilters, sortField, sortDir]);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, getTotalPages(filtered.length)));
+  }, [filtered.length]);
+
+  const paginated = useMemo(() => paginate(filtered, page), [filtered, page]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) setSortDir((dir) => dir === "asc" ? "desc" : "asc");
@@ -141,11 +153,12 @@ export function EquipmentTab() {
         <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/90">
           <table className="hidden w-full text-sm lg:table">
             <thead><tr className="border-b border-slate-800">{[["code","Código"],["name","Nome"],["category","Categoria"],["brand","Marca"],["holder","Portador"],["price","Preço"]].map(([field,label]) => <th key={field} className="px-4 py-3 text-left"><button onClick={() => handleSort(field as SortField)} className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wider text-slate-500 transition-colors hover:text-slate-300">{label}{renderSortIcon(field as SortField)}</button></th>)}</tr></thead>
-            <tbody>{filtered.map((equipment) => <tr key={equipment.id} onClick={() => setSelected(equipment)} className="cursor-pointer border-b border-slate-800/50 transition-colors hover:bg-slate-800/50"><td className="px-4 py-3 font-mono text-xs text-blue-400">{equipment.code}</td><td className="px-4 py-3 text-white">{equipment.name}</td><td className="px-4 py-3 text-slate-300">{equipment.category}</td><td className="px-4 py-3 text-slate-400">{equipment.brand || "—"}</td><td className="px-4 py-3 text-slate-300"><HolderCell equipment={equipment} users={users} /></td><td className="px-4 py-3 text-slate-400">{equipment.price ? `R$ ${Number(equipment.price).toFixed(2)}` : "—"}</td></tr>)}</tbody>
+            <tbody>{paginated.map((equipment) => <tr key={equipment.id} onClick={() => setSelected(equipment)} className="cursor-pointer border-b border-slate-800/50 transition-colors hover:bg-slate-800/50"><td className="px-4 py-3 font-mono text-xs text-blue-400">{equipment.code}</td><td className="px-4 py-3 text-white">{equipment.name}</td><td className="px-4 py-3 text-slate-300">{equipment.category}</td><td className="px-4 py-3 text-slate-400">{equipment.brand || "—"}</td><td className="px-4 py-3 text-slate-300"><HolderCell equipment={equipment} users={users} /></td><td className="px-4 py-3 text-slate-400">{equipment.price ? `R$ ${Number(equipment.price).toFixed(2)}` : "—"}</td></tr>)}</tbody>
           </table>
-          <div className="space-y-3 p-3 lg:hidden">{filtered.map((equipment) => <button key={equipment.id} type="button" onClick={() => setSelected(equipment)} className="w-full rounded-lg border border-slate-800 bg-slate-950/40 p-4 text-left"><div className="flex items-start justify-between gap-3"><div><p className="font-mono text-xs text-blue-400">{equipment.code}</p><h3 className="font-semibold text-white">{equipment.name}</h3></div></div><p className="mt-1 text-xs text-slate-400">{equipment.category}</p><div className="mt-3"><HolderCell equipment={equipment} users={users} /></div></button>)}</div>
+          <div className="space-y-3 p-3 lg:hidden">{paginated.map((equipment) => <button key={equipment.id} type="button" onClick={() => setSelected(equipment)} className="w-full rounded-lg border border-slate-800 bg-slate-950/40 p-4 text-left"><div className="flex items-start justify-between gap-3"><div><p className="font-mono text-xs text-blue-400">{equipment.code}</p><h3 className="font-semibold text-white">{equipment.name}</h3></div></div><p className="mt-1 text-xs text-slate-400">{equipment.category}</p><div className="mt-3"><HolderCell equipment={equipment} users={users} /></div></button>)}</div>
         </div>
       )}
+      {!loading ? <PaginationControls page={page} totalItems={filtered.length} onPageChange={setPage} itemLabel="equipamentos" /> : null}
       {modalOpen ? <EquipmentFormModal categories={categories} onClose={() => setModalOpen(false)} onDone={() => { setModalOpen(false); void load(); setToast({ message: "Equipamento cadastrado." }); }} /> : null}
       {editing ? <EquipmentFormModal equipment={editing} categories={categories} onClose={() => setEditing(null)} onDone={() => { setEditing(null); void load(); setToast({ message: "Equipamento atualizado." }); }} /> : null}
       {selected ? <EquipmentDetailModal equipment={selected} users={users} currentUserId={user?.id ?? ""} isAdmin={isAdmin} canEdit={canMutateStock} onEdit={() => openEdit(selected)} onClose={() => setSelected(null)} onDone={(message) => { setSelected(null); void load(); setToast({ message }); }} /> : null}

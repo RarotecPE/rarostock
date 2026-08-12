@@ -6,6 +6,7 @@ import { useStockSession } from "@/components/layout/StockAppShell";
 import { RefreshButton } from "@/components/ui/RefreshButton";
 import { Toast } from "@/components/ui/Toast";
 import { FilterCheckbox, FilterDropdown, FilterSection, toggleFilterValue } from "@/components/ui/FilterDropdown";
+import { PaginationControls, getTotalPages, paginate } from "@/components/ui/PaginationControls";
 
 type SortField = "createdAt" | "equipmentName" | "from" | "to" | "reason";
 type SortDir = "asc" | "desc";
@@ -61,6 +62,7 @@ export function EquipmentMovementsTab() {
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [toast, setToast] = useState<ToastState>(null);
+  const [page, setPage] = useState(1);
 
   const activeFiltersCount = (startDate ? 1 : 0) + (endDate ? 1 : 0) + equipmentIds.length + (isAdmin ? userIds.length : 0);
 
@@ -123,6 +125,16 @@ export function EquipmentMovementsTab() {
     });
   }, [movements, search, sortDir, sortField]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [search, startDate, endDate, equipmentIds, userIds, sortField, sortDir]);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, getTotalPages(filtered.length)));
+  }, [filtered.length]);
+
+  const paginated = useMemo(() => paginate(filtered, page), [filtered, page]);
+
   const handleSort = (field: SortField) => {
     if (sortField === field) setSortDir((dir) => dir === "asc" ? "desc" : "asc");
     else { setSortField(field); setSortDir(field === "createdAt" ? "desc" : "asc"); }
@@ -178,10 +190,11 @@ export function EquipmentMovementsTab() {
           <div className="hidden overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/90 lg:block">
             <table className="w-full text-sm">
               <thead><tr className="border-b border-slate-800">{[["createdAt", "Data"], ["equipmentName", "Equipamento"], ["from", "Origem"], ["to", "Destino"], ["reason", "Motivo"]].map(([field, label]) => <th key={field} className="px-4 py-3 text-left"><button onClick={() => handleSort(field as SortField)} className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wider text-slate-500 transition-colors hover:text-slate-300">{label}{renderSortIcon(field as SortField)}</button></th>)}</tr></thead>
-              <tbody>{filtered.map((movement) => <tr key={movement.id} className="border-b border-slate-800/50 transition-colors hover:bg-slate-800/50"><td className="px-4 py-3 text-slate-300">{formatDateTime(movement.createdAt)}</td><td className="px-4 py-3"><p className="font-medium text-white">{movement.equipmentName}</p><p className="font-mono text-xs text-blue-400">{movement.equipmentCode}</p></td><td className="px-4 py-3 text-slate-300"><MovementHolder type={movement.fromHolderType} name={movement.fromUserName} userId={movement.fromUserId} users={users} /></td><td className="px-4 py-3 text-slate-300"><MovementHolder type={movement.toHolderType} name={movement.toUserName} userId={movement.toUserId} users={users} /></td><td className="px-4 py-3 text-slate-400">{movement.reason || "—"}</td></tr>)}</tbody>
+              <tbody>{paginated.map((movement) => <tr key={movement.id} className="border-b border-slate-800/50 transition-colors hover:bg-slate-800/50"><td className="px-4 py-3 text-slate-300">{formatDateTime(movement.createdAt)}</td><td className="px-4 py-3"><p className="font-medium text-white">{movement.equipmentName}</p><p className="font-mono text-xs text-blue-400">{movement.equipmentCode}</p></td><td className="px-4 py-3 text-slate-300"><MovementHolder type={movement.fromHolderType} name={movement.fromUserName} userId={movement.fromUserId} users={users} /></td><td className="px-4 py-3 text-slate-300"><MovementHolder type={movement.toHolderType} name={movement.toUserName} userId={movement.toUserId} users={users} /></td><td className="px-4 py-3 text-slate-400">{movement.reason || "—"}</td></tr>)}</tbody>
             </table>
           </div>
-          <div className="space-y-3 lg:hidden">{filtered.map((movement) => <div key={movement.id} className="rounded-xl border border-slate-800 bg-slate-900/90 p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-white">{movement.equipmentName}</p><p className="font-mono text-xs text-blue-400">{movement.equipmentCode}</p></div><span className="text-xs text-slate-500">{formatDateTime(movement.createdAt)}</span></div><div className="mt-3 flex flex-col gap-2 text-sm text-slate-300"><MovementHolder type={movement.fromHolderType} name={movement.fromUserName} userId={movement.fromUserId} users={users} /><span className="text-xs text-slate-500">para</span><MovementHolder type={movement.toHolderType} name={movement.toUserName} userId={movement.toUserId} users={users} /></div>{movement.reason ? <p className="mt-1 text-xs text-slate-500">{movement.reason}</p> : null}</div>)}</div>
+          <div className="space-y-3 lg:hidden">{paginated.map((movement) => <div key={movement.id} className="rounded-xl border border-slate-800 bg-slate-900/90 p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-white">{movement.equipmentName}</p><p className="font-mono text-xs text-blue-400">{movement.equipmentCode}</p></div><span className="text-xs text-slate-500">{formatDateTime(movement.createdAt)}</span></div><div className="mt-3 flex flex-col gap-2 text-sm text-slate-300"><MovementHolder type={movement.fromHolderType} name={movement.fromUserName} userId={movement.fromUserId} users={users} /><span className="text-xs text-slate-500">para</span><MovementHolder type={movement.toHolderType} name={movement.toUserName} userId={movement.toUserId} users={users} /></div>{movement.reason ? <p className="mt-1 text-xs text-slate-500">{movement.reason}</p> : null}</div>)}</div>
+          <PaginationControls page={page} totalItems={filtered.length} onPageChange={setPage} itemLabel="movimentações" />
         </>
       )}
     </div>

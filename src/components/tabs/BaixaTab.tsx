@@ -58,7 +58,7 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
   const [historyEndDate, setHistoryEndDate] = useState("");
   const [showHistoryFilters, setShowHistoryFilters] = useState(false);
   const [historyPage, setHistoryPage] = useState(1);
-  const historyPerPage = 10;
+  const historyPerPage = 15;
 
   const fetchItems = useCallback(async () => {
     setLoading(true);

@@ -64,7 +64,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
   } | null>(null);
   const [selectedAcqId, setSelectedAcqId] = useState<number | null>(null);
   const [historyPage, setHistoryPage] = useState(1);
-  const historyPerPage = 10;
+  const historyPerPage = 15;
 
   // New acquisition state
   const [items, setItems] = useState<Item[]>([]);
