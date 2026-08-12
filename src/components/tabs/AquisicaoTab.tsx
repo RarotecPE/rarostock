@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, type FormEvent } from "react";
 import { Item, CartItem, normalizeSearch, Acquisition, pluralizeUnit } from "@/types/stock";
 import { InvoicePreviewModal } from "@/components/modals/InvoicePreviewModal";
 import { RefreshButton } from "@/components/ui/RefreshButton";
@@ -57,6 +57,7 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
   const [acquisitions, setAcquisitions] = useState<Acquisition[]>([]);
   const [loadingAcq, setLoadingAcq] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [productModalOpen, setProductModalOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [purchaseTypeFilters, setPurchaseTypeFilters] = useState<PurchaseType[]>([]);
@@ -138,6 +139,15 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
     setSelectedItem(item);
     setShowDropdown(false);
     setSearchItem("");
+  };
+
+  const handleProductCreated = async (item: Item) => {
+    setProductModalOpen(false);
+    setSelectedItem(item);
+    setShowDropdown(false);
+    setSearchItem("");
+    setToast({ message: `Produto ${item.code} cadastrado.`, type: "success" });
+    await fetchItems();
   };
 
   const clearSelectedItem = () => {
@@ -400,9 +410,22 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
 
         {/* Add item */}
         <div className="border-t border-slate-800 pt-4">
-          <h4 className="text-sm font-medium text-slate-300 mb-3">
-            Adicionar Item
-          </h4>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h4 className="text-sm font-medium text-slate-300">
+              Adicionar Item
+            </h4>
+            <button
+              type="button"
+              onClick={() => setProductModalOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-400 transition-colors hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-300"
+              title="Cadastrar produto sem sair da aquisição"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Novo cadastro
+            </button>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {/* Item Selection */}
             <div className="relative sm:col-span-2 lg:col-span-1">
@@ -555,6 +578,12 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
           </div>
         )}
       </div>
+      {productModalOpen ? (
+        <QuickProductCreateModal
+          onClose={() => setProductModalOpen(false)}
+          onCreated={(item) => void handleProductCreated(item)}
+        />
+      ) : null}
       </div>
       ) : null}
 
@@ -716,5 +745,111 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
       )}
     </div>
   );
+}
+
+function QuickProductCreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (item: Item) => void }) {
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("");
+  const [unit, setUnit] = useState("");
+  const [minimumLimit, setMinimumLimit] = useState<number | "">("");
+  const [desiredLimit, setDesiredLimit] = useState<number | "">("");
+  const [observations, setObservations] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const { catalog, loading: loadingCatalog, error: catalogError } = useStockCatalog();
+  useActionCursor(submitting);
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setError("");
+
+    if (minimumLimit === "" || desiredLimit === "" || Number(desiredLimit) < Number(minimumLimit)) {
+      setError("O limite desejável deve ser maior ou igual ao limite mínimo.");
+      return;
+    }
+
+    setSubmitting(true);
+    const res = await fetch("/api/items", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name,
+        category,
+        unit,
+        minimumLimit,
+        desiredLimit,
+        observations: observations || null,
+      }),
+    });
+    const payload = await res.json().catch(() => null);
+    setSubmitting(false);
+
+    if (!res.ok) {
+      setError(payload?.error ?? "Não foi possível cadastrar o produto.");
+      return;
+    }
+
+    onCreated(payload as Item);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-4" onClick={onClose}>
+      <div className="max-h-[86dvh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-2xl sm:p-6" onClick={(event) => event.stopPropagation()}>
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-white">Novo cadastro</h3>
+            <p className="text-sm text-slate-400">Cadastre o produto e continue a aquisição.</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-2xl leading-none text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">×</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {catalogError || error ? (
+            <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+              {error || catalogError}
+            </p>
+          ) : null}
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <QuickField label="Nome *">
+              <input required value={name} onChange={(event) => setName(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nome do produto" />
+            </QuickField>
+            <QuickField label="Categoria *">
+              <select required value={category} onChange={(event) => setCategory(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Selecione...</option>
+                {catalog.categories.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}
+              </select>
+            </QuickField>
+            <QuickField label="Unidade de Medida *">
+              <select required value={unit} onChange={(event) => setUnit(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Selecione...</option>
+                {catalog.units.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}
+              </select>
+            </QuickField>
+            <QuickField label="Limite Mínimo *">
+              <input type="number" required min={0} value={minimumLimit} onChange={(event) => setMinimumLimit(event.target.value ? parseInt(event.target.value, 10) : "")} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Quantidade mínima" />
+            </QuickField>
+            <QuickField label="Limite Desejável *">
+              <input type="number" required min={minimumLimit === "" ? 0 : minimumLimit} value={desiredLimit} onChange={(event) => setDesiredLimit(event.target.value ? parseInt(event.target.value, 10) : "")} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Quantidade desejável" />
+            </QuickField>
+          </div>
+
+          <QuickField label="Observações">
+            <textarea value={observations} onChange={(event) => setObservations(event.target.value)} rows={3} className="w-full resize-none rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Informações adicionais..." />
+          </QuickField>
+
+          <div className="flex justify-center border-t border-slate-800 pt-4">
+            <button type="submit" disabled={submitting || loadingCatalog} className="w-full rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-50 sm:w-auto">
+              {submitting ? "Cadastrando..." : "Cadastrar e selecionar"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function QuickField({ label, children }: { label: string; children: React.ReactNode }) {
+  return <label className="block text-sm font-medium text-slate-300"><span className="mb-1 block">{label}</span>{children}</label>;
 }
 
