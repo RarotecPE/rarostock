@@ -324,12 +324,17 @@ export function StockHeaderActions({
                 <a
                   key={application.client_id}
                   href={application.homepage_url}
+                  target="_blank"
+                  rel="noreferrer"
                   className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-slate-800/50"
                 >
                   <ApplicationLogo application={application} />
-                  <span className="min-w-0">
+                  <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium text-white">{application.nome}</span>
                   </span>
+                  <svg className="h-4 w-4 shrink-0 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.5 6H18m0 0v4.5M18 6l-7.5 7.5M6 6h4.5M6 6v12h12v-4.5" />
+                  </svg>
                 </a>
               ))
             )}
