@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Item, normalizeSearch, pluralizeUnit } from "@/types/stock";
 import { StatusBadge } from "@/components/ui/Badge";
 import { RefreshButton } from "@/components/ui/RefreshButton";
@@ -10,6 +10,7 @@ import { useStockCatalog } from "@/lib/use-stock-catalog";
 import { useActionCursor } from "@/lib/use-action-cursor";
 
 type BaixaMode = "unidade" | "saldo";
+type DropdownPosition = { top: number; left: number; width: number; maxHeight: number };
 
 function getDateKey(value: string | Date) {
   const d = new Date(value);
@@ -43,6 +44,8 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
   const [search, setSearch] = useState("");
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const itemSearchRef = useRef<HTMLInputElement | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<DropdownPosition | null>(null);
   const [mode, setMode] = useState<BaixaMode>("unidade");
   const [quantity, setQuantity] = useState<number | "">("");
   const [newBalance, setNewBalance] = useState<number | "">("");
@@ -97,6 +100,32 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
         normalizeSearch(i.code).includes(norm)
     );
   }, [items, search]);
+
+  const updateDropdownPosition = useCallback(() => {
+    const input = itemSearchRef.current;
+    if (!input) return;
+    const rect = input.getBoundingClientRect();
+    const maxHeight = Math.min(window.innerHeight * 0.42, 320);
+    const spaceBelow = window.innerHeight - rect.bottom - 12;
+    const opensUp = spaceBelow < 180 && rect.top > spaceBelow;
+    setDropdownPosition({
+      top: opensUp ? Math.max(12, rect.top - maxHeight - 4) : rect.bottom + 4,
+      left: Math.max(12, Math.min(rect.left, window.innerWidth - rect.width - 12)),
+      width: Math.min(rect.width, window.innerWidth - 24),
+      maxHeight,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!showDropdown || !search) return undefined;
+    updateDropdownPosition();
+    window.addEventListener("resize", updateDropdownPosition);
+    window.addEventListener("scroll", updateDropdownPosition, true);
+    return () => {
+      window.removeEventListener("resize", updateDropdownPosition);
+      window.removeEventListener("scroll", updateDropdownPosition, true);
+    };
+  }, [search, showDropdown, updateDropdownPosition]);
 
   const calculatedQuantity = useMemo(() => {
     if (!selectedItem) return 0;
@@ -263,18 +292,26 @@ export function BaixaTab({ canManageStock }: BaixaTabProps) {
           ) : (
             <div className="relative">
               <input
+                ref={itemSearchRef}
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
                   setShowDropdown(true);
+                  requestAnimationFrame(updateDropdownPosition);
                 }}
-                onFocus={() => setShowDropdown(true)}
+                onFocus={() => {
+                  setShowDropdown(true);
+                  requestAnimationFrame(updateDropdownPosition);
+                }}
                 placeholder="Digite o código ou nome do item..."
                 className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none"
               />
 
               {showDropdown && search && (
-                <div className="relative z-[70] mt-1 max-h-[42dvh] w-full overflow-y-auto rounded-lg border border-slate-700 bg-slate-800 shadow-xl sm:absolute">
+                <div
+                  className="fixed z-[90] overflow-y-auto rounded-lg border border-slate-700 bg-slate-800 shadow-2xl"
+                  style={dropdownPosition ? { top: dropdownPosition.top, left: dropdownPosition.left, width: dropdownPosition.width, maxHeight: dropdownPosition.maxHeight } : undefined}
+                >
                   {loading ? (
                     <div className="px-3 py-4 flex justify-center">
                       <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />

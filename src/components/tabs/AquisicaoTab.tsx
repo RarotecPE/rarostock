@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect, useCallback, useMemo, type FormEvent } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, type FormEvent } from "react";
 import { Item, CartItem, normalizeSearch, Acquisition, pluralizeUnit } from "@/types/stock";
 import { InvoicePreviewModal } from "@/components/modals/InvoicePreviewModal";
 import { RefreshButton } from "@/components/ui/RefreshButton";
@@ -11,6 +11,7 @@ import { useStockCatalog } from "@/lib/use-stock-catalog";
 import { useActionCursor } from "@/lib/use-action-cursor";
 
 type PurchaseType = "physical_store" | "online";
+type DropdownPosition = { top: number; left: number; width: number; maxHeight: number };
 
 function nowDateTimeLocal() {
   const d = new Date();
@@ -84,6 +85,8 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
   const [searchItem, setSearchItem] = useState("");
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const itemSearchRef = useRef<HTMLInputElement | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<DropdownPosition | null>(null);
   const [addQty, setAddQty] = useState<number | "">("");
   const [addPrice, setAddPrice] = useState<number | "">("");
   
@@ -134,6 +137,32 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
         normalizeSearch(i.code).includes(norm)
     );
   }, [items, searchItem]);
+
+  const updateDropdownPosition = useCallback(() => {
+    const input = itemSearchRef.current;
+    if (!input) return;
+    const rect = input.getBoundingClientRect();
+    const maxHeight = Math.min(window.innerHeight * 0.42, 320);
+    const spaceBelow = window.innerHeight - rect.bottom - 12;
+    const opensUp = spaceBelow < 180 && rect.top > spaceBelow;
+    setDropdownPosition({
+      top: opensUp ? Math.max(12, rect.top - maxHeight - 4) : rect.bottom + 4,
+      left: Math.max(12, Math.min(rect.left, window.innerWidth - rect.width - 12)),
+      width: Math.min(rect.width, window.innerWidth - 24),
+      maxHeight,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!showDropdown || !searchItem) return undefined;
+    updateDropdownPosition();
+    window.addEventListener("resize", updateDropdownPosition);
+    window.addEventListener("scroll", updateDropdownPosition, true);
+    return () => {
+      window.removeEventListener("resize", updateDropdownPosition);
+      window.removeEventListener("scroll", updateDropdownPosition, true);
+    };
+  }, [searchItem, showDropdown, updateDropdownPosition]);
 
   const handleSelectItem = (item: Item) => {
     setSelectedItem(item);
@@ -447,17 +476,25 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
               ) : (
                 <>
                   <input
+                    ref={itemSearchRef}
                     value={searchItem}
                     onChange={(e) => {
                       setSearchItem(e.target.value);
                       setShowDropdown(true);
+                      requestAnimationFrame(updateDropdownPosition);
                     }}
-                    onFocus={() => setShowDropdown(true)}
+                    onFocus={() => {
+                      setShowDropdown(true);
+                      requestAnimationFrame(updateDropdownPosition);
+                    }}
                     placeholder="Buscar item..."
                     className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                   {showDropdown && searchItem && (
-                    <div className="relative z-[70] mt-1 max-h-[42dvh] w-full overflow-y-auto rounded-lg border border-slate-700 bg-slate-800 shadow-xl sm:absolute">
+                    <div
+                      className="fixed z-[90] overflow-y-auto rounded-lg border border-slate-700 bg-slate-800 shadow-2xl"
+                      style={dropdownPosition ? { top: dropdownPosition.top, left: dropdownPosition.left, width: dropdownPosition.width, maxHeight: dropdownPosition.maxHeight } : undefined}
+                    >
                       {loadingItems ? (
                         <div className="px-3 py-4 flex justify-center">
                           <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
