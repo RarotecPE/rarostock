@@ -173,7 +173,6 @@ function EquipmentFormModal({ equipment, categories, onClose, onDone }: { equipm
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
-  const [termFile, setTermFile] = useState<File | null>(null);
   const isEditing = Boolean(equipment);
   useActionCursor(saving);
 
@@ -185,12 +184,11 @@ function EquipmentFormModal({ equipment, categories, onClose, onDone }: { equipm
     }
     setSaving(true);
     let invoicePayload = {};
-    let responsibilityTermPayload = {};
 
-    const uploadAttachment = async (file: File, context: "equipment" | "equipmentTerm", fallbackMessage: string) => {
+    const uploadAttachment = async (file: File, fallbackMessage: string) => {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("context", context);
+      formData.append("context", "equipment");
 
       const uploadRes = await fetch("/api/upload", {
         method: "POST",
@@ -207,23 +205,13 @@ function EquipmentFormModal({ equipment, categories, onClose, onDone }: { equipm
 
     try {
       if (invoiceFile) {
-        const uploadData = await uploadAttachment(invoiceFile, "equipment", "Não foi possível enviar a nota fiscal.");
+        const uploadData = await uploadAttachment(invoiceFile, "Não foi possível enviar a nota fiscal.");
 
       invoicePayload = {
         invoiceUrl: uploadData.url,
         invoiceFilename: uploadData.filename,
         invoiceStoragePath: uploadData.storagePath,
       };
-      }
-
-      if (termFile) {
-        const uploadData = await uploadAttachment(termFile, "equipmentTerm", "Não foi possível enviar o termo de responsabilidade.");
-
-        responsibilityTermPayload = {
-          responsibilityTermUrl: uploadData.url,
-          responsibilityTermFilename: uploadData.filename,
-          responsibilityTermStoragePath: uploadData.storagePath,
-        };
       }
     } catch (uploadError) {
       setSaving(false);
@@ -234,7 +222,7 @@ function EquipmentFormModal({ equipment, categories, onClose, onDone }: { equipm
     const res = await fetch("/api/equipments", {
       method: isEditing ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(isEditing ? { ...draft, ...invoicePayload, ...responsibilityTermPayload, id: equipment?.id } : { ...draft, ...invoicePayload, ...responsibilityTermPayload }),
+      body: JSON.stringify(isEditing ? { ...draft, ...invoicePayload, id: equipment?.id } : { ...draft, ...invoicePayload }),
     });
     const payload = await res.json().catch(() => null);
     setSaving(false);
@@ -265,7 +253,7 @@ function EquipmentFormModal({ equipment, categories, onClose, onDone }: { equipm
           {isEditing ? <label className="flex items-center gap-2 self-end rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2.5 text-sm font-medium text-slate-300"><input type="checkbox" checked={draft.active} onChange={(event) => setDraft({ ...draft, active: event.target.checked })} className="h-4 w-4 rounded border-slate-700 bg-slate-800" />Equipamento ativo</label> : null}
         </div>
         <label className="mt-4 block text-sm font-medium text-slate-300"><span className="mb-1 block">Observações</span><textarea value={draft.observations} onChange={(event) => setDraft({ ...draft, observations: event.target.value })} rows={3} className="w-full resize-none rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white" /></label>
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-3">
           <EquipmentAttachmentField
             title="Nota fiscal"
             filename={invoiceFile?.name ?? equipment?.invoiceFilename ?? null}
@@ -274,15 +262,6 @@ function EquipmentFormModal({ equipment, categories, onClose, onDone }: { equipm
             openLabel="Abrir nota fiscal"
             uploadLabel={equipment?.invoiceUrl ? "Substituir nota fiscal" : "Anexar nota fiscal"}
             onFileChange={setInvoiceFile}
-          />
-          <EquipmentAttachmentField
-            title="Termo de responsabilidade"
-            filename={termFile?.name ?? equipment?.responsibilityTermFilename ?? null}
-            emptyText="Sem termo anexado"
-            url={equipment?.responsibilityTermUrl ?? null}
-            openLabel="Abrir termo"
-            uploadLabel={equipment?.responsibilityTermUrl ? "Substituir termo" : "Anexar termo"}
-            onFileChange={setTermFile}
           />
         </div>
         <div className="mt-6 flex justify-center border-t border-slate-800 pt-4"><button disabled={saving} className="w-full rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-60 sm:w-auto" onClick={save}>{saving ? "Salvando..." : isEditing ? "Salvar alterações" : "Salvar"}</button></div>
@@ -408,9 +387,8 @@ export function EquipmentDetailModal({ equipment, users, currentUserId, isAdmin,
 
 function EquipmentAttachmentsInfo({ equipment }: { equipment: Equipment }) {
   return (
-    <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div className="mt-4 grid grid-cols-1 gap-3">
       <EquipmentAttachmentLink title="Nota fiscal" filename={equipment.invoiceFilename} url={equipment.invoiceUrl} emptyText="Sem nota fiscal anexada" />
-      <EquipmentAttachmentLink title="Termo de responsabilidade" filename={equipment.responsibilityTermFilename} url={equipment.responsibilityTermUrl} emptyText="Sem termo anexado" />
     </div>
   );
 }
@@ -493,6 +471,9 @@ function HolderCell({ equipment, users }: { equipment: Equipment; users: Equipme
 
 function Input({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (value: string) => void; type?: string }) { return <label className="text-sm font-medium text-slate-300"><span className="mb-1 block">{label}</span><input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white" /></label>; }
 function Info({ label, children }: { label: string; children: React.ReactNode }) { return <div><p className="text-xs uppercase tracking-wider text-slate-500">{label}</p><div className="mt-1 text-slate-300">{children}</div></div>; }
+
+
+
 
 
 

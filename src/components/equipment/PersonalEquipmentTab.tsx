@@ -31,7 +31,8 @@ export function PersonalEquipmentTab() {
   const [requests, setRequests] = useState<EquipmentRequest[]>([]);
   const [movements, setMovements] = useState<EquipmentMovement[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showRequestHistory, setShowRequestHistory] = useState(false);
+  const [showReceivedHistory, setShowReceivedHistory] = useState(false);
+  const [showSentHistory, setShowSentHistory] = useState(false);
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
   const [equipmentPage, setEquipmentPage] = useState(1);
@@ -71,13 +72,29 @@ export function PersonalEquipmentTab() {
     return () => clearTimeout(timer);
   }, [load]);
 
-  const pendingRequests = useMemo(
-    () => requests.filter((request) => request.status === "pending"),
-    [requests],
+  const receivedRequests = useMemo(
+    () => requests.filter((request) => request.requesterUserId !== user?.id),
+    [requests, user?.id],
   );
-  const historicalRequests = useMemo(
-    () => requests.filter((request) => request.status !== "pending"),
-    [requests],
+  const sentRequests = useMemo(
+    () => requests.filter((request) => request.requesterUserId === user?.id),
+    [requests, user?.id],
+  );
+  const pendingReceivedRequests = useMemo(
+    () => receivedRequests.filter((request) => request.status === "pending"),
+    [receivedRequests],
+  );
+  const historicalReceivedRequests = useMemo(
+    () => receivedRequests.filter((request) => request.status !== "pending"),
+    [receivedRequests],
+  );
+  const pendingSentRequests = useMemo(
+    () => sentRequests.filter((request) => request.status === "pending"),
+    [sentRequests],
+  );
+  const historicalSentRequests = useMemo(
+    () => sentRequests.filter((request) => request.status !== "pending"),
+    [sentRequests],
   );
 
   const equipmentSinceById = useMemo(() => {
@@ -159,24 +176,33 @@ export function PersonalEquipmentTab() {
 
           <section className="space-y-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h3 className="font-semibold text-white">Solicitações pendentes</h3>
+              <h3 className="font-semibold text-white">Solicitações Recebidas</h3>
               <button
                 type="button"
-                onClick={() => setShowRequestHistory((value) => !value)}
+                onClick={() => setShowReceivedHistory((value) => !value)}
                 className="self-start rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-400 transition-colors hover:border-slate-700 hover:text-white sm:self-auto"
               >
-                {showRequestHistory ? "Ocultar histórico" : `Ver histórico (${historicalRequests.length})`}
+                {showReceivedHistory ? "Ocultar histórico" : `Ver histórico (${historicalReceivedRequests.length})`}
               </button>
             </div>
-            <RequestList requests={pendingRequests} users={users} userId={user?.id ?? ""} isAdmin={isAdmin} onDecide={decide} emptyText="Nenhuma solicitação pendente." />
+            <RequestList requests={pendingReceivedRequests} users={users} userId={user?.id ?? ""} onDecide={decide} emptyText="Nenhuma solicitação recebida pendente." />
+            {showReceivedHistory ? <RequestList requests={historicalReceivedRequests} users={users} userId={user?.id ?? ""} onDecide={decide} emptyText="Nenhuma solicitação recebida concluída." /> : null}
           </section>
 
-          {showRequestHistory ? (
-            <section className="space-y-3">
-              <h3 className="text-sm font-semibold text-slate-300">Histórico de solicitações</h3>
-              <RequestList requests={historicalRequests} users={users} userId={user?.id ?? ""} isAdmin={isAdmin} onDecide={decide} emptyText="Nenhuma solicitação concluída." />
-            </section>
-          ) : null}
+          <section className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="font-semibold text-white">Solicitações Enviadas</h3>
+              <button
+                type="button"
+                onClick={() => setShowSentHistory((value) => !value)}
+                className="self-start rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-400 transition-colors hover:border-slate-700 hover:text-white sm:self-auto"
+              >
+                {showSentHistory ? "Ocultar histórico" : `Ver histórico (${historicalSentRequests.length})`}
+              </button>
+            </div>
+            <RequestList requests={pendingSentRequests} users={users} userId={user?.id ?? ""} onDecide={decide} emptyText="Nenhuma solicitação enviada pendente." />
+            {showSentHistory ? <RequestList requests={historicalSentRequests} users={users} userId={user?.id ?? ""} onDecide={decide} emptyText="Nenhuma solicitação enviada concluída." /> : null}
+          </section>
         </>
       )}
 
@@ -199,7 +225,7 @@ export function PersonalEquipmentTab() {
   );
 }
 
-function RequestList({ requests, users, userId, isAdmin, onDecide, emptyText }: { requests: EquipmentRequest[]; users: EquipmentUser[]; userId: string; isAdmin: boolean; onDecide: (id: number, approve: boolean) => Promise<void>; emptyText: string }) {
+function RequestList({ requests, users, userId, onDecide, emptyText }: { requests: EquipmentRequest[]; users: EquipmentUser[]; userId: string; onDecide: (id: number, approve: boolean) => Promise<void>; emptyText: string }) {
   const [page, setPage] = useState(1);
   const currentPage = Math.min(page, getTotalPages(requests.length));
   const paginatedRequests = useMemo(() => paginate(requests, currentPage), [currentPage, requests]);
@@ -212,7 +238,7 @@ function RequestList({ requests, users, userId, isAdmin, onDecide, emptyText }: 
     <div className="space-y-3">
       {paginatedRequests.map((request) => {
         const responsibleUserId = request.type === "obtain" ? request.fromUserId : request.toUserId;
-        const canDecide = request.status === "pending" && (isAdmin || responsibleUserId === userId);
+        const canDecide = request.status === "pending" && responsibleUserId === userId && request.requesterUserId !== userId;
         const requester = users.find((item) => item.id === request.requesterUserId) ?? null;
         return (
           <div key={request.id} className="rounded-xl border border-slate-800 bg-slate-900/90 p-4">
@@ -271,3 +297,5 @@ function statusLabel(status: EquipmentRequest["status"]) {
   if (status === "rejected") return "Rejeitada";
   return "Cancelada";
 }
+
+

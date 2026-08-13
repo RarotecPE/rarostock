@@ -31,9 +31,6 @@ export async function POST(req: NextRequest) {
     invoiceUrl: body.invoiceUrl ? String(body.invoiceUrl).trim() : null,
     invoiceFilename: body.invoiceFilename ? String(body.invoiceFilename).trim() : null,
     invoiceStoragePath: body.invoiceStoragePath ? String(body.invoiceStoragePath).trim() : null,
-    responsibilityTermUrl: body.responsibilityTermUrl ? String(body.responsibilityTermUrl).trim() : null,
-    responsibilityTermFilename: body.responsibilityTermFilename ? String(body.responsibilityTermFilename).trim() : null,
-    responsibilityTermStoragePath: body.responsibilityTermStoragePath ? String(body.responsibilityTermStoragePath).trim() : null,
     observations: body.observations ? String(body.observations) : null,
     holderType: "company",
   }).returning();
@@ -60,9 +57,6 @@ export async function PUT(req: NextRequest) {
   const nextInvoiceUrl = body.invoiceUrl === undefined ? current.invoiceUrl : body.invoiceUrl ? String(body.invoiceUrl).trim() : null;
   const nextInvoiceFilename = body.invoiceFilename === undefined ? current.invoiceFilename : body.invoiceFilename ? String(body.invoiceFilename).trim() : null;
   const nextInvoiceStoragePath = body.invoiceStoragePath === undefined ? current.invoiceStoragePath : body.invoiceStoragePath ? String(body.invoiceStoragePath).trim() : null;
-  const nextResponsibilityTermUrl = body.responsibilityTermUrl === undefined ? current.responsibilityTermUrl : body.responsibilityTermUrl ? String(body.responsibilityTermUrl).trim() : null;
-  const nextResponsibilityTermFilename = body.responsibilityTermFilename === undefined ? current.responsibilityTermFilename : body.responsibilityTermFilename ? String(body.responsibilityTermFilename).trim() : null;
-  const nextResponsibilityTermStoragePath = body.responsibilityTermStoragePath === undefined ? current.responsibilityTermStoragePath : body.responsibilityTermStoragePath ? String(body.responsibilityTermStoragePath).trim() : null;
 
   if (
     current.invoiceStoragePath &&
@@ -76,18 +70,6 @@ export async function PUT(req: NextRequest) {
     }
   }
 
-  if (
-    current.responsibilityTermStoragePath &&
-    nextResponsibilityTermStoragePath &&
-    current.responsibilityTermStoragePath !== nextResponsibilityTermStoragePath
-  ) {
-    try {
-      await deleteInvoiceFromFtp(current.responsibilityTermStoragePath);
-    } catch (error) {
-      console.error("Failed to delete old equipment responsibility term", error);
-    }
-  }
-
   const [row] = await db.update(equipments).set({
     code: String(body.code || "").trim(),
     name: String(body.name || "").trim(),
@@ -97,9 +79,6 @@ export async function PUT(req: NextRequest) {
     invoiceUrl: nextInvoiceUrl,
     invoiceFilename: nextInvoiceFilename,
     invoiceStoragePath: nextInvoiceStoragePath,
-    responsibilityTermUrl: nextResponsibilityTermUrl,
-    responsibilityTermFilename: nextResponsibilityTermFilename,
-    responsibilityTermStoragePath: nextResponsibilityTermStoragePath,
     observations: body.observations ? String(body.observations) : null,
     active: typeof body.active === "boolean" ? body.active : true,
     updatedAt: new Date(),
@@ -125,4 +104,6 @@ export async function DELETE(req: NextRequest) {
 
   return NextResponse.json({ ok: true });
 }
+
+
 

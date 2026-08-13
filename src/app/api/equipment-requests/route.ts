@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { equipmentRequests, equipments } from "@/db/schema";
-import { and, desc, eq, or } from "drizzle-orm";
+import { and, desc, eq, ne, or } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canAdmin, canView } from "@/lib/roles";
 import { autoMatchEquipmentRequest } from "@/lib/equipment-request-matching";
@@ -16,19 +16,21 @@ export async function GET(req: NextRequest) {
   const conditions = [];
   if (status !== "all") conditions.push(eq(equipmentRequests.status, status as "pending" | "approved" | "rejected" | "cancelled"));
   if (scope === "notifications") {
-    if (!canAdmin(auth.role)) {
-      conditions.push(or(
-        eq(equipmentRequests.requesterUserId, auth.user.id),
-        eq(equipmentRequests.fromUserId, auth.user.id),
-        eq(equipmentRequests.toUserId, auth.user.id),
-      )!);
-    }
+    conditions.push(and(
+      or(
+        and(eq(equipmentRequests.type, "obtain"), eq(equipmentRequests.fromUserId, auth.user.id)),
+        and(ne(equipmentRequests.type, "obtain"), eq(equipmentRequests.toUserId, auth.user.id)),
+      )!,
+      ne(equipmentRequests.requesterUserId, auth.user.id),
+    )!);
   } else if (scope === "received") {
     conditions.push(or(eq(equipmentRequests.toUserId, auth.user.id), eq(equipmentRequests.fromUserId, auth.user.id))!);
   } else if (scope === "sent") {
     conditions.push(eq(equipmentRequests.requesterUserId, auth.user.id));
   } else if (scope === "mine") {
-    conditions.push(or(eq(equipmentRequests.requesterUserId, auth.user.id), eq(equipmentRequests.toUserId, auth.user.id), eq(equipmentRequests.fromUserId, auth.user.id))!);
+    if (!canAdmin(auth.role)) {
+      conditions.push(or(eq(equipmentRequests.requesterUserId, auth.user.id), eq(equipmentRequests.toUserId, auth.user.id), eq(equipmentRequests.fromUserId, auth.user.id))!);
+    }
   }
 
   const rows = await db.select({
@@ -69,12 +71,12 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const equipmentId = Number(body.equipmentId);
   const [equipment] = await db.select().from(equipments).where(eq(equipments.id, equipmentId)).limit(1);
-  if (!equipment) return NextResponse.json({ error: "Equipamento não encontrado." }, { status: 404 });
+  if (!equipment) return NextResponse.json({ error: "Equipamento nÃ£o encontrado." }, { status: 404 });
   if (equipment.holderType !== "user" || !equipment.holderUserId) {
-    return NextResponse.json({ error: "Este equipamento está disponível para obtenção direta." }, { status: 400 });
+    return NextResponse.json({ error: "Este equipamento estÃ¡ disponÃ­vel para obtenÃ§Ã£o direta." }, { status: 400 });
   }
   if (equipment.holderUserId === auth.user.id) {
-    return NextResponse.json({ error: "Use a ação de devolver ou transferir para equipamentos que estão com você." }, { status: 400 });
+    return NextResponse.json({ error: "Use a aÃ§Ã£o de devolver ou transferir para equipamentos que estÃ£o com vocÃª." }, { status: 400 });
   }
 
   const [pendingRequest] = await db.select({ id: equipmentRequests.id }).from(equipmentRequests).where(and(
@@ -83,7 +85,7 @@ export async function POST(req: NextRequest) {
     eq(equipmentRequests.status, "pending"),
   )).limit(1);
   if (pendingRequest) {
-    return NextResponse.json({ error: "Você já possui uma solicitação pendente para este equipamento." }, { status: 409 });
+    return NextResponse.json({ error: "VocÃª jÃ¡ possui uma solicitaÃ§Ã£o pendente para este equipamento." }, { status: 409 });
   }
 
   try {
@@ -110,8 +112,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(request, { status: 201 });
   } catch (error) {
     if ((error as { code?: string }).code === "23505") {
-      return NextResponse.json({ error: "Você já possui uma solicitação pendente para este equipamento." }, { status: 409 });
+      return NextResponse.json({ error: "VocÃª jÃ¡ possui uma solicitaÃ§Ã£o pendente para este equipamento." }, { status: 409 });
     }
     throw error;
   }
 }
+

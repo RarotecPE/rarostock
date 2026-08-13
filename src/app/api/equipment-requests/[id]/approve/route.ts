@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { equipmentMovements, equipmentRequests, equipments } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
-import { canAdmin, canView } from "@/lib/roles";
+import { canView } from "@/lib/roles";
 import { cancelPendingEquipmentRequestsForHolderChange } from "@/lib/equipment-request-cancellation";
 
 const APPROVE = true;
@@ -15,13 +15,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const requestId = Number(id);
   const body = await req.json().catch(() => ({}));
   const [request] = await db.select().from(equipmentRequests).where(eq(equipmentRequests.id, requestId)).limit(1);
-  if (!request) return NextResponse.json({ error: "Solicitação não encontrada." }, { status: 404 });
-  if (request.status !== "pending") return NextResponse.json({ error: "Solicitação já foi concluída." }, { status: 400 });
+  if (!request) return NextResponse.json({ error: "SolicitaÃ§Ã£o nÃ£o encontrada." }, { status: 404 });
+  if (request.status !== "pending") return NextResponse.json({ error: "SolicitaÃ§Ã£o jÃ¡ foi concluÃ­da." }, { status: 400 });
 
-  const isAdmin = canAdmin(auth.role);
   const responsibleUserId = request.type === "obtain" ? request.fromUserId : request.toUserId;
-  const canDecide = isAdmin || responsibleUserId === auth.user.id;
-  if (!canDecide) return NextResponse.json({ error: "Você não pode decidir esta solicitação." }, { status: 403 });
+  const canDecide = responsibleUserId === auth.user.id && request.requesterUserId !== auth.user.id;
+  if (!canDecide) return NextResponse.json({ error: "VocÃª nÃ£o pode decidir esta solicitaÃ§Ã£o." }, { status: 403 });
 
   const [updatedRequest] = await db.update(equipmentRequests).set({
     status: APPROVE ? "approved" : "rejected",
@@ -59,7 +58,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         previousHolderUserId: request.fromUserId,
         decidedByUserId: auth.user.id,
         exceptRequestIds: [request.id],
-        note: "Anulada automaticamente porque outra solicitação movimentou este equipamento.",
+        note: "Anulada automaticamente porque outra solicitaÃ§Ã£o movimentou este equipamento.",
       });
     }
     return NextResponse.json({ request: updatedRequest, equipment });
@@ -67,3 +66,4 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   return NextResponse.json({ request: updatedRequest });
 }
+

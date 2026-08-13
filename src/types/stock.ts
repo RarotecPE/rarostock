@@ -1,4 +1,4 @@
-export { pluralizeUnit } from "@/lib/stock-catalog";
+﻿export { pluralizeUnit } from "@/lib/stock-catalog";
 export type { StockCatalog, StockCategoryOption, StockUnitOption } from "@/lib/stock-catalog";
 
 export type StockStatus =
@@ -97,9 +97,6 @@ export interface Equipment {
   invoiceUrl: string | null;
   invoiceFilename: string | null;
   invoiceStoragePath: string | null;
-  responsibilityTermUrl: string | null;
-  responsibilityTermFilename: string | null;
-  responsibilityTermStoragePath: string | null;
   observations: string | null;
   holderType: EquipmentHolderType;
   holderUserId: string | null;
@@ -167,7 +164,7 @@ export function getStockStatus(
 }
 
 export function formatLimit(limit: number | null): string {
-  return limit === null ? "—" : String(limit);
+  return limit === null ? "â€”" : String(limit);
 }
 
 export const formatMinimumLimit = formatLimit;
@@ -181,5 +178,8 @@ export function normalizeSearch(text: string): string {
 
 export function holderLabel(equipment: Pick<Equipment, "holderType" | "holderUserName" | "holderUserEmail">) {
   if (equipment.holderType === "company") return "RAROTEC";
-  return equipment.holderUserName || equipment.holderUserEmail || "Usuário";
+  return equipment.holderUserName || equipment.holderUserEmail || "UsuÃ¡rio";
 }
+
+
+
