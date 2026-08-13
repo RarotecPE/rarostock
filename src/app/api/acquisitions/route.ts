@@ -49,30 +49,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "A aquisição só pode conter produtos cadastrados." }, { status: 400 });
   }
 
-  const totalValue = cartItems.reduce((sum, ci) => sum + ci.quantity * ci.unitPrice, 0);
-  const [acq] = await db.insert(acquisitions).values({
-    date: new Date(date),
-    totalValue: totalValue.toFixed(2),
-    purchaseType,
-    invoiceUrl: invoiceUrl || null,
-    invoiceFilename: invoiceFilename || null,
-    invoiceStoragePath: invoiceStoragePath || null,
-  }).returning();
+  const acq = await db.transaction(async (tx) => {
+    const totalValue = cartItems.reduce((sum, ci) => sum + ci.quantity * ci.unitPrice, 0);
+    const [createdAcquisition] = await tx.insert(acquisitions).values({
+      date: new Date(date),
+      totalValue: totalValue.toFixed(2),
+      purchaseType,
+      invoiceUrl: invoiceUrl || null,
+      invoiceFilename: invoiceFilename || null,
+      invoiceStoragePath: invoiceStoragePath || null,
+    }).returning();
 
-  for (const ci of cartItems) {
-    const lineTotal = ci.quantity * ci.unitPrice;
-    await db.insert(acquisitionItems).values({
-      acquisitionId: acq.id,
-      productId: ci.itemId,
-      quantity: ci.quantity,
-      unitPrice: ci.unitPrice.toFixed(2),
-      totalPrice: lineTotal.toFixed(2),
-    });
-    await db.update(products).set({
-      quantity: sql`${products.quantity} + ${ci.quantity}`,
-      updatedAt: new Date(),
-    }).where(eq(products.id, ci.itemId));
-  }
+    for (const ci of cartItems) {
+      const lineTotal = ci.quantity * ci.unitPrice;
+      await tx.insert(acquisitionItems).values({
+        acquisitionId: createdAcquisition.id,
+        productId: ci.itemId,
+        quantity: ci.quantity,
+        unitPrice: ci.unitPrice.toFixed(2),
+        totalPrice: lineTotal.toFixed(2),
+      });
+      await tx.update(products).set({
+        quantity: sql`${products.quantity} + ${ci.quantity}`,
+        updatedAt: new Date(),
+      }).where(eq(products.id, ci.itemId));
+    }
+
+    return createdAcquisition;
+  });
 
   return NextResponse.json(acq, { status: 201 });
 }

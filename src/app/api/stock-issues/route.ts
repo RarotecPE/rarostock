@@ -88,7 +88,11 @@ export async function POST(req: NextRequest) {
   if (!Number.isInteger(quantity) || quantity <= 0) return NextResponse.json({ error: "Quantidade deve ser maior que zero." }, { status: 400 });
   if (quantity > product[0].quantity) return NextResponse.json({ error: "Quantidade de baixa superior ao saldo atual." }, { status: 400 });
 
-  const [issue] = await db.insert(stockIssues).values({ productId: itemId, quantity, date: new Date(), reason }).returning();
-  await db.update(products).set({ quantity: sql`${products.quantity} - ${quantity}`, updatedAt: new Date() }).where(eq(products.id, itemId));
+  const issue = await db.transaction(async (tx) => {
+    const [createdIssue] = await tx.insert(stockIssues).values({ productId: itemId, quantity, date: new Date(), reason }).returning();
+    await tx.update(products).set({ quantity: sql`${products.quantity} - ${quantity}`, updatedAt: new Date() }).where(eq(products.id, itemId));
+    return createdIssue;
+  });
+
   return NextResponse.json(issue, { status: 201 });
 }
