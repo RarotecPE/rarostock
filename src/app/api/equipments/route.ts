@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
     invoiceUrl: body.invoiceUrl ? String(body.invoiceUrl).trim() : null,
     invoiceFilename: body.invoiceFilename ? String(body.invoiceFilename).trim() : null,
     invoiceStoragePath: body.invoiceStoragePath ? String(body.invoiceStoragePath).trim() : null,
+    requiresResponsibilityTerm: body.requiresResponsibilityTerm === true,
     observations: body.observations ? String(body.observations) : null,
     holderType: "company",
   }).returning();
@@ -79,6 +80,7 @@ export async function PUT(req: NextRequest) {
     invoiceUrl: nextInvoiceUrl,
     invoiceFilename: nextInvoiceFilename,
     invoiceStoragePath: nextInvoiceStoragePath,
+    requiresResponsibilityTerm: body.requiresResponsibilityTerm === undefined ? current.requiresResponsibilityTerm : body.requiresResponsibilityTerm === true,
     observations: body.observations ? String(body.observations) : null,
     active: typeof body.active === "boolean" ? body.active : true,
     updatedAt: new Date(),
@@ -104,6 +106,7 @@ export async function DELETE(req: NextRequest) {
 
   return NextResponse.json({ ok: true });
 }
+
 
 
 

@@ -139,6 +139,7 @@ export const equipments = pgTable("equipments", {
   invoiceUrl: text("invoice_url"),
   invoiceFilename: varchar("invoice_filename", { length: 255 }),
   invoiceStoragePath: text("invoice_storage_path"),
+  requiresResponsibilityTerm: boolean("requires_responsibility_term").notNull().default(false),
   observations: text("observations"),
   holderType: equipmentHolderTypeEnum("holder_type").notNull().default("company"),
   holderUserId: uuid("holder_user_id"),
@@ -189,5 +190,6 @@ export const equipmentMovements = pgTable("equipment_movements", {
   createdByUserId: uuid("created_by_user_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
 
 

@@ -97,6 +97,7 @@ export interface Equipment {
   invoiceUrl: string | null;
   invoiceFilename: string | null;
   invoiceStoragePath: string | null;
+  requiresResponsibilityTerm: boolean;
   observations: string | null;
   holderType: EquipmentHolderType;
   holderUserId: string | null;
@@ -164,7 +165,7 @@ export function getStockStatus(
 }
 
 export function formatLimit(limit: number | null): string {
-  return limit === null ? "â€”" : String(limit);
+  return limit === null ? "—" : String(limit);
 }
 
 export const formatMinimumLimit = formatLimit;
@@ -178,8 +179,10 @@ export function normalizeSearch(text: string): string {
 
 export function holderLabel(equipment: Pick<Equipment, "holderType" | "holderUserName" | "holderUserEmail">) {
   if (equipment.holderType === "company") return "RAROTEC";
-  return equipment.holderUserName || equipment.holderUserEmail || "UsuÃ¡rio";
+  return equipment.holderUserName || equipment.holderUserEmail || "Usuário";
 }
+
+
 
 
 
