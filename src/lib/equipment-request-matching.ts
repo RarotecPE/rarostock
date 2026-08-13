@@ -60,6 +60,9 @@ export async function autoMatchEquipmentRequest(
       updatedAt: now,
     }).where(eq(equipments.id, request.equipmentId)).returning();
 
+    const obtainRequest = request.type === "obtain" ? request : counterpart;
+    const transferRequest = request.type === "transfer" ? request : counterpart;
+
     await tx.insert(equipmentMovements).values({
       equipmentId: request.equipmentId,
       fromHolderType: request.fromHolderType,
@@ -73,6 +76,12 @@ export async function autoMatchEquipmentRequest(
       reason: request.reason || counterpart.reason || note,
       requestId: request.id,
       createdByUserId: decidedByUserId,
+      responsibilityTermUrl: obtainRequest.responsibilityTermUrl,
+      responsibilityTermFilename: obtainRequest.responsibilityTermFilename,
+      responsibilityTermStoragePath: obtainRequest.responsibilityTermStoragePath,
+      devolutionTermUrl: transferRequest.devolutionTermUrl,
+      devolutionTermFilename: transferRequest.devolutionTermFilename,
+      devolutionTermStoragePath: transferRequest.devolutionTermStoragePath,
     });
 
     return {
@@ -82,3 +91,4 @@ export async function autoMatchEquipmentRequest(
     };
   });
 }
+

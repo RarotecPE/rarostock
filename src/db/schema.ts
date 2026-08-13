@@ -167,6 +167,12 @@ export const equipmentRequests = pgTable("equipment_requests", {
   toUserName: varchar("to_user_name", { length: 255 }),
   toUserEmail: varchar("to_user_email", { length: 255 }),
   reason: text("reason"),
+  responsibilityTermUrl: text("responsibility_term_url"),
+  responsibilityTermFilename: varchar("responsibility_term_filename", { length: 255 }),
+  responsibilityTermStoragePath: text("responsibility_term_storage_path"),
+  devolutionTermUrl: text("devolution_term_url"),
+  devolutionTermFilename: varchar("devolution_term_filename", { length: 255 }),
+  devolutionTermStoragePath: text("devolution_term_storage_path"),
   decidedByUserId: uuid("decided_by_user_id"),
   decidedAt: timestamp("decided_at"),
   decisionNote: text("decision_note"),
@@ -186,10 +192,17 @@ export const equipmentMovements = pgTable("equipment_movements", {
   toUserName: varchar("to_user_name", { length: 255 }),
   toUserEmail: varchar("to_user_email", { length: 255 }),
   reason: text("reason"),
+  responsibilityTermUrl: text("responsibility_term_url"),
+  responsibilityTermFilename: varchar("responsibility_term_filename", { length: 255 }),
+  responsibilityTermStoragePath: text("responsibility_term_storage_path"),
+  devolutionTermUrl: text("devolution_term_url"),
+  devolutionTermFilename: varchar("devolution_term_filename", { length: 255 }),
+  devolutionTermStoragePath: text("devolution_term_storage_path"),
   requestId: integer("request_id"),
   createdByUserId: uuid("created_by_user_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
 
 
 

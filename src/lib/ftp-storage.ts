@@ -1,4 +1,4 @@
-import { Client } from "basic-ftp";
+﻿import { Client } from "basic-ftp";
 import { randomUUID } from "crypto";
 import path from "path";
 import { Readable } from "stream";
@@ -17,6 +17,8 @@ const storageFolders = {
   product: "notasProdutos",
   equipment: "notasEquipamentos/notas",
   equipmentTerm: "notasEquipamentos/termos",
+  equipmentResponsibilityTerm: "notasEquipamentos/termos/responsabilidade",
+  equipmentDevolutionTerm: "notasEquipamentos/termos/devolucao",
 } as const;
 
 export type InvoiceStorageContext = keyof typeof storageFolders;
@@ -119,7 +121,7 @@ export const uploadInvoiceToFtp = async (
     .slice(0, 80);
   const safeBaseName =
     sanitizeFilename(baseName) ||
-    (context === "equipmentTerm" ? "termo_responsabilidade" : "nota_fiscal");
+    ((context === "equipmentTerm" || context === "equipmentResponsibilityTerm") ? "termo_responsabilidade" : context === "equipmentDevolutionTerm" ? "termo_devolucao" : "nota_fiscal");
   const uniqueId = randomUUID().slice(0, 8);
   const storedFilename = `${Date.now()}-${uniqueId}-${safeBaseName}.${extension}`;
   const folder = storageFolders[context];
@@ -144,3 +146,4 @@ export const deleteInvoiceFromFtp = async (storagePath: string) => {
     await client.remove(safePath);
   });
 };
+

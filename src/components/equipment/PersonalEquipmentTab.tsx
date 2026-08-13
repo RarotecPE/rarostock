@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Equipment, EquipmentMovement, EquipmentRequest, EquipmentUser, holderLabel } from "@/types/stock";
+import { Equipment, EquipmentMovement, EquipmentRequest, EquipmentTermPendency, EquipmentUser, holderLabel } from "@/types/stock";
 import { RefreshButton } from "@/components/ui/RefreshButton";
 import { Toast } from "@/components/ui/Toast";
 import { useStockSession } from "@/components/layout/StockAppShell";
@@ -30,6 +30,7 @@ export function PersonalEquipmentTab() {
   const [users, setUsers] = useState<EquipmentUser[]>([]);
   const [requests, setRequests] = useState<EquipmentRequest[]>([]);
   const [movements, setMovements] = useState<EquipmentMovement[]>([]);
+  const [termPendencies, setTermPendencies] = useState<EquipmentTermPendency[]>([]);
   const [loading, setLoading] = useState(true);
   const [showReceivedHistory, setShowReceivedHistory] = useState(false);
   const [showSentHistory, setShowSentHistory] = useState(false);
@@ -39,19 +40,21 @@ export function PersonalEquipmentTab() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [equipmentRes, requestsRes, usersRes, movementsRes] = await Promise.all([
+    const [equipmentRes, requestsRes, usersRes, movementsRes, pendenciesRes] = await Promise.all([
       fetch("/api/equipments"),
       fetch("/api/equipment-requests?scope=mine&status=all"),
       fetch("/api/equipment-users"),
       fetch("/api/equipment-movements"),
+      fetch("/api/equipment-term-pendencies"),
     ]);
-    const [equipmentData, requestData, usersData, movementData] = await Promise.all([
+    const [equipmentData, requestData, usersData, movementData, pendencyData] = await Promise.all([
       equipmentRes.json().catch(() => []),
       requestsRes.json().catch(() => []),
       usersRes.json().catch(() => ({ users: [] })),
       movementsRes.json().catch(() => []),
+      pendenciesRes.json().catch(() => []),
     ]);
-    if (!equipmentRes.ok || !requestsRes.ok || !movementsRes.ok) {
+    if (!equipmentRes.ok || !requestsRes.ok || !movementsRes.ok || !pendenciesRes.ok) {
       setToast({ message: "Não foi possível carregar os dados pessoais.", type: "error" });
     }
     setEquipments(
@@ -63,6 +66,7 @@ export function PersonalEquipmentTab() {
     );
     setRequests(Array.isArray(requestData) ? requestData : []);
     setMovements(Array.isArray(movementData) ? movementData : []);
+    setTermPendencies(Array.isArray(pendencyData) ? pendencyData : []);
     setUsers(Array.isArray(usersData?.users) ? usersData.users : []);
     setLoading(false);
   }, [user?.id]);
@@ -111,9 +115,13 @@ export function PersonalEquipmentTab() {
   const currentEquipmentPage = Math.min(equipmentPage, getTotalPages(equipments.length));
   const paginatedEquipments = useMemo(() => paginate(equipments, currentEquipmentPage), [currentEquipmentPage, equipments]);
 
-  const decide = async (id: number, approve: boolean) => {
+  const decide = async (id: number, approve: boolean, termFile?: File | null, confirmMissingTerm?: boolean) => {
+    const formData = new FormData();
+    if (termFile) formData.append("termFile", termFile);
+    if (confirmMissingTerm) formData.append("confirmMissingTerm", "true");
     const res = await fetch(`/api/equipment-requests/${id}/${approve ? "approve" : "reject"}`, {
       method: "POST",
+      body: formData,
     });
     const payload = await res.json().catch(() => null);
     if (!res.ok) {
@@ -124,6 +132,20 @@ export function PersonalEquipmentTab() {
       return;
     }
     setToast({ message: approve ? "Solicitação aprovada." : "Solicitação rejeitada." });
+    void load();
+  };
+
+  const uploadMovementTerm = async (pendency: EquipmentTermPendency, file: File) => {
+    const formData = new FormData();
+    formData.append("termType", pendency.termType);
+    formData.append("termFile", file);
+    const res = await fetch(`/api/equipment-movements/${pendency.movementId}/terms`, { method: "PUT", body: formData });
+    const payload = await res.json().catch(() => null);
+    if (!res.ok) {
+      setToast({ message: payload?.error ?? "Não foi possível anexar o termo.", type: "error" });
+      return;
+    }
+    setToast({ message: "Termo anexado." });
     void load();
   };
 
@@ -173,6 +195,8 @@ export function PersonalEquipmentTab() {
               </p>
             )}
           </section>
+
+          <TermPendencySection pendencies={termPendencies} currentUserId={user?.id ?? ""} isAdmin={isAdmin} onUpload={uploadMovementTerm} />
 
           <section className="space-y-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -225,8 +249,35 @@ export function PersonalEquipmentTab() {
   );
 }
 
-function RequestList({ requests, users, userId, onDecide, emptyText }: { requests: EquipmentRequest[]; users: EquipmentUser[]; userId: string; onDecide: (id: number, approve: boolean) => Promise<void>; emptyText: string }) {
+function TermPendencySection({ pendencies, currentUserId, isAdmin, onUpload }: { pendencies: EquipmentTermPendency[]; currentUserId: string; isAdmin: boolean; onUpload: (pendency: EquipmentTermPendency, file: File) => Promise<void> }) {
+  if (!pendencies.length) return null;
+  return (
+    <section className="space-y-3">
+      <h3 className="font-semibold text-white">Termos Pendentes</h3>
+      <div className="space-y-3">
+        {pendencies.map((pendency) => {
+          const canUpload = pendency.responsibleUserId === currentUserId;
+          const title = pendency.termType === "responsibility" ? "Termo de responsabilidade" : "Termo de devolução";
+          return (
+            <div key={`${pendency.movementId}-${pendency.termType}`} className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-xs uppercase tracking-wider text-amber-300/80">{title}</p>
+                  <h4 className="mt-1 font-semibold text-white">{pendency.equipmentName} <span className="font-mono text-xs text-blue-400">{pendency.equipmentCode}</span></h4>
+                  <p className="mt-1 text-xs text-slate-500">Responsável: {pendency.responsibleUserName}{isAdmin && pendency.responsibleUserEmail ? ` · ${pendency.responsibleUserEmail}` : ""}</p>
+                </div>
+                {canUpload ? <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs font-medium text-slate-300 transition-colors hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-300"><input type="file" accept="image/*,application/pdf" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) void onUpload(pendency, file); }} />Anexar termo</label> : null}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+function RequestList({ requests, users, userId, onDecide, emptyText }: { requests: EquipmentRequest[]; users: EquipmentUser[]; userId: string; onDecide: (id: number, approve: boolean, termFile?: File | null, confirmMissingTerm?: boolean) => Promise<void>; emptyText: string }) {
   const [page, setPage] = useState(1);
+  const [selectedRequest, setSelectedRequest] = useState<EquipmentRequest | null>(null);
   const currentPage = Math.min(page, getTotalPages(requests.length));
   const paginatedRequests = useMemo(() => paginate(requests, currentPage), [currentPage, requests]);
 
@@ -237,13 +288,17 @@ function RequestList({ requests, users, userId, onDecide, emptyText }: { request
   return (
     <div className="space-y-3">
       {paginatedRequests.map((request) => {
-        const responsibleUserId = request.type === "obtain" ? request.fromUserId : request.toUserId;
-        const canDecide = request.status === "pending" && responsibleUserId === userId && request.requesterUserId !== userId;
         const requester = users.find((item) => item.id === request.requesterUserId) ?? null;
         return (
-          <div key={request.id} className="rounded-xl border border-slate-800 bg-slate-900/90 p-4">
+          <button
+            key={request.id}
+            type="button"
+            onClick={() => setSelectedRequest(request)}
+            className="group w-full cursor-pointer rounded-xl border border-slate-800 bg-slate-900/90 p-4 text-left transition-colors hover:border-blue-500/40 hover:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+            aria-label={`Abrir solicitação de ${request.equipmentName}`}
+          >
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs uppercase tracking-wider text-slate-500">{statusLabel(request.status)}</p>
                 <h4 className="font-semibold text-white">
                   {request.equipmentName} <span className="font-mono text-xs text-blue-400">{request.equipmentCode}</span>
@@ -255,27 +310,62 @@ function RequestList({ requests, users, userId, onDecide, emptyText }: { request
                 {request.reason ? <p className="mt-1 text-xs text-slate-500">{request.reason}</p> : null}
               </div>
               <div className="flex flex-col items-start gap-3 lg:items-end">
-                {canDecide ? (
-                  <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
-                    <button onClick={() => void onDecide(request.id, false)} className="rounded-lg border border-rose-500/30 px-3 py-2 text-sm text-rose-300 hover:bg-rose-500/10">
-                      Rejeitar
-                    </button>
-                    <button onClick={() => void onDecide(request.id, true)} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500">
-                      Aprovar
-                    </button>
-                  </div>
-                ) : null}
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700/70 text-slate-500 transition-colors group-hover:border-blue-500/40 group-hover:text-blue-300" aria-hidden="true">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </span>
                 <RequesterBadge user={requester} name={request.requesterName} />
               </div>
             </div>
-          </div>
+          </button>
         );
       })}
       <PaginationControls page={currentPage} totalItems={requests.length} onPageChange={setPage} itemLabel="solicitações" />
+      {selectedRequest ? <RequestDecisionModal request={selectedRequest} userId={userId} onClose={() => setSelectedRequest(null)} onDecide={async (id, approve, termFile, confirmMissingTerm) => { await onDecide(id, approve, termFile, confirmMissingTerm); setSelectedRequest(null); }} /> : null}
     </div>
   );
 }
 
+function RequestDecisionModal({ request, userId, onClose, onDecide }: { request: EquipmentRequest; userId: string; onClose: () => void; onDecide: (id: number, approve: boolean, termFile?: File | null, confirmMissingTerm?: boolean) => Promise<void> }) {
+  const [termFile, setTermFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+  const responsibleUserId = request.type === "obtain" ? request.fromUserId : request.toUserId;
+  const canDecide = request.status === "pending" && responsibleUserId === userId && request.requesterUserId !== userId;
+  const termType = request.type === "obtain" ? "devolution" : "responsibility";
+  const termTitle = termType === "responsibility" ? "Termo de responsabilidade" : "Termo de devolução";
+  const existingDecisionTerm = termType === "responsibility" ? request.responsibilityTermUrl : request.devolutionTermUrl;
+
+  const decide = async (approve: boolean) => {
+    if (saving) return;
+    if (approve && request.equipmentRequiresResponsibilityTerm && !termFile && !existingDecisionTerm) {
+      const confirmed = window.confirm(`${termTitle} não anexado. Deseja aprovar mesmo assim?`);
+      if (!confirmed) return;
+      setSaving(true);
+      await onDecide(request.id, approve, null, true);
+      setSaving(false);
+      return;
+    }
+    setSaving(true);
+    await onDecide(request.id, approve, termFile, false);
+    setSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-4" onClick={onClose}>
+      <div className="w-full max-w-xl rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-2xl sm:p-6" onClick={(event) => event.stopPropagation()}>
+        <div className="mb-5 flex items-start justify-between gap-3"><div><p className="text-xs uppercase tracking-wider text-slate-500">Solicitação</p><h3 className="text-xl font-bold text-white">{request.equipmentName} <span className="font-mono text-sm text-blue-400">{request.equipmentCode}</span></h3></div><button onClick={onClose} className="text-2xl leading-none text-slate-400 transition-colors hover:text-white">×</button></div>
+        <div className="space-y-2 text-sm text-slate-400"><p>De {request.fromUserName || "RAROTEC"} para {request.toUserName || "RAROTEC"}</p><p>Solicitação por {request.requesterName}</p>{request.reason ? <p>Motivo: {request.reason}</p> : null}</div>
+        {canDecide && request.equipmentRequiresResponsibilityTerm ? <ActionRequestTermUpload title={termTitle} subtitle={`Insira aqui seu ${termTitle.toLowerCase()}`} file={termFile} onFileChange={setTermFile} /> : null}
+        {canDecide ? <div className="mt-6 flex justify-center gap-3"><button disabled={saving} onClick={() => void decide(false)} className="rounded-lg border border-rose-500/30 px-4 py-2 text-sm text-rose-300 transition-colors hover:bg-rose-500/10 disabled:opacity-60">Rejeitar transferência</button><button disabled={saving} onClick={() => void decide(true)} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-60">Aprovar transferência</button></div> : null}
+      </div>
+    </div>
+  );
+}
+
+function ActionRequestTermUpload({ title, subtitle, file, onFileChange }: { title: string; subtitle: string; file: File | null; onFileChange: (file: File | null) => void }) {
+  return <div className="mt-5 rounded-lg border border-slate-800 bg-slate-950/35 px-3 py-3"><div className="flex items-center justify-between gap-3"><div className="min-w-0"><p className="text-sm font-medium text-slate-300">{title}</p><p className="mt-0.5 truncate text-xs text-slate-500">{file?.name ?? subtitle}</p></div><label className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-700 text-slate-400 transition-colors hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-300" title={title}><input type="file" accept="image/*,application/pdf" className="sr-only" onChange={(event) => onFileChange(event.target.files?.[0] ?? null)} /><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94a3 3 0 114.243 4.243L8.56 18.31a1.5 1.5 0 11-2.121-2.121l9.192-9.193" /></svg></label></div></div>;
+}
 function RequesterBadge({ user, name }: { user: EquipmentUser | null; name: string }) {
   const initials = name.split(" ").filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "?";
   return (
@@ -297,5 +387,11 @@ function statusLabel(status: EquipmentRequest["status"]) {
   if (status === "rejected") return "Rejeitada";
   return "Cancelada";
 }
+
+
+
+
+
+
 
 

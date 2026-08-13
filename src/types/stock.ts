@@ -123,6 +123,12 @@ export interface EquipmentMovement {
   toUserName: string | null;
   toUserEmail: string | null;
   reason: string | null;
+  responsibilityTermUrl: string | null;
+  responsibilityTermFilename: string | null;
+  responsibilityTermStoragePath: string | null;
+  devolutionTermUrl: string | null;
+  devolutionTermFilename: string | null;
+  devolutionTermStoragePath: string | null;
   requestId: number | null;
   createdByUserId: string | null;
   createdAt: string | Date;
@@ -144,6 +150,13 @@ export interface EquipmentRequest {
   toUserName: string | null;
   toUserEmail: string | null;
   reason: string | null;
+  responsibilityTermUrl: string | null;
+  responsibilityTermFilename: string | null;
+  responsibilityTermStoragePath: string | null;
+  devolutionTermUrl: string | null;
+  devolutionTermFilename: string | null;
+  devolutionTermStoragePath: string | null;
+  equipmentRequiresResponsibilityTerm?: boolean;
   decidedByUserId: string | null;
   decidedAt: Date | null;
   decisionNote: string | null;
@@ -153,6 +166,17 @@ export interface EquipmentRequest {
   equipmentName?: string;
 }
 
+export interface EquipmentTermPendency {
+  movementId: number;
+  equipmentId: number;
+  equipmentCode: string;
+  equipmentName: string;
+  termType: "responsibility" | "devolution";
+  responsibleUserId: string;
+  responsibleUserName: string;
+  responsibleUserEmail: string | null;
+  createdAt: string | Date;
+}
 export function getStockStatus(
   quantity: number,
   minimumLimit: number | null,
@@ -181,6 +205,8 @@ export function holderLabel(equipment: Pick<Equipment, "holderType" | "holderUse
   if (equipment.holderType === "company") return "RAROTEC";
   return equipment.holderUserName || equipment.holderUserEmail || "Usuário";
 }
+
+
 
 
 

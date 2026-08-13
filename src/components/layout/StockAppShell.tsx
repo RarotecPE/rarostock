@@ -21,7 +21,7 @@ import {
   type ColorTheme,
 } from "@/components/theme/ThemeBootstrap";
 import { AppRole, canAdmin, canManageStock, roleConfigs } from "@/lib/roles";
-import { EquipmentRequest, getStockStatus, Item, StockStatus } from "@/types/stock";
+import { EquipmentRequest, EquipmentTermPendency, getStockStatus, Item, StockStatus } from "@/types/stock";
 
 type SessionUser = {
   id: string;
@@ -182,6 +182,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<ColorTheme>(() => getStoredColorTheme());
   const [alertItems, setAlertItems] = useState<AlertItem[]>([]);
   const [requestAlerts, setRequestAlerts] = useState<EquipmentRequest[]>([]);
+  const [termPendencies, setTermPendencies] = useState<EquipmentTermPendency[]>([]);
 
   const isAdmin = canAdmin(role);
   const canMutateStock = canManageStock(role);
@@ -245,9 +246,10 @@ export function StockAppShell({ children }: { children: ReactNode }) {
 
   const fetchAlerts = useCallback(async () => {
     try {
-      const [itemsRes, requestsRes] = await Promise.all([
+      const [itemsRes, requestsRes, termPendenciesRes] = await Promise.all([
         fetch("/api/items"),
         fetch("/api/equipment-requests?scope=notifications&status=pending"),
+        fetch("/api/equipment-term-pendencies"),
       ]);
 
       if (itemsRes.ok) {
@@ -274,6 +276,11 @@ export function StockAppShell({ children }: { children: ReactNode }) {
       if (requestsRes.ok) {
         const requests: EquipmentRequest[] = await requestsRes.json();
         setRequestAlerts(Array.isArray(requests) ? requests : []);
+      }
+
+      if (termPendenciesRes.ok) {
+        const pendencies: EquipmentTermPendency[] = await termPendenciesRes.json();
+        setTermPendencies(Array.isArray(pendencies) ? pendencies : []);
       }
     } catch {
       // ignore
@@ -414,6 +421,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
                 theme={theme}
                 alerts={alertItems}
                 requestAlerts={requestAlerts}
+                termPendencyCount={termPendencies.length}
                 unavailableCount={unavailableCount}
                 belowMinCount={belowMinCount}
                 onToggleTheme={toggleTheme}
@@ -567,3 +575,4 @@ function MobileBottomNav({
     </div>
   );
 }
+

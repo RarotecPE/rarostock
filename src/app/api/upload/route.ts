@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const file = formData.get("file") as File | null;
     const contextValue = formData.get("context");
     const context =
-      contextValue === "equipment" || contextValue === "equipmentTerm"
+      contextValue === "equipment" || contextValue === "equipmentTerm" || contextValue === "equipmentResponsibilityTerm" || contextValue === "equipmentDevolutionTerm"
         ? contextValue
         : "product";
 
@@ -35,4 +35,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message }, { status });
   }
 }
+
 

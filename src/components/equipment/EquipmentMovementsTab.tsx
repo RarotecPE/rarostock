@@ -37,6 +37,26 @@ function MovementHolder({ type, name, userId, users }: { type: string; name: str
   );
 }
 
+function MovementTermLink({ label, url }: { label: string; url: string | null }) {
+  if (!url) return <span className="text-xs text-slate-600">-</span>;
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 text-slate-400 transition-colors hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-300"
+      title={label}
+      aria-label={label}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5A3.375 3.375 0 0010.125 2.25H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+      </svg>
+    </a>
+  );
+}
+
 function formatDateTime(value: string | Date) {
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
@@ -184,14 +204,70 @@ export function EquipmentMovementsTab() {
           <p className="text-sm text-slate-400">{filtered.length} {filtered.length === 1 ? "movimentação encontrada" : "movimentações encontradas"}</p>
           <div className="hidden overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/90 lg:block">
             <table className="w-full text-sm">
-              <thead><tr className="border-b border-slate-800">{[["createdAt", "Data"], ["equipmentName", "Equipamento"], ["from", "Origem"], ["to", "Destino"], ["reason", "Motivo"]].map(([field, label]) => <th key={field} className="px-4 py-3 text-left"><button onClick={() => handleSort(field as SortField)} className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wider text-slate-500 transition-colors hover:text-slate-300">{label}{renderSortIcon(field as SortField)}</button></th>)}</tr></thead>
-              <tbody>{paginated.map((movement) => <tr key={movement.id} className="border-b border-slate-800/50 transition-colors hover:bg-slate-800/50"><td className="px-4 py-3 text-slate-300">{formatDateTime(movement.createdAt)}</td><td className="px-4 py-3"><p className="font-medium text-white">{movement.equipmentName}</p><p className="font-mono text-xs text-blue-400">{movement.equipmentCode}</p></td><td className="px-4 py-3 text-slate-300"><MovementHolder type={movement.fromHolderType} name={movement.fromUserName} userId={movement.fromUserId} users={users} /></td><td className="px-4 py-3 text-slate-300"><MovementHolder type={movement.toHolderType} name={movement.toUserName} userId={movement.toUserId} users={users} /></td><td className="px-4 py-3 text-slate-400">{movement.reason || "—"}</td></tr>)}</tbody>
+              <thead>
+                <tr className="border-b border-slate-800">
+                  {[["createdAt", "Data"], ["equipmentName", "Equipamento"], ["from", "Origem"], ["to", "Destino"], ["reason", "Motivo"]].map(([field, label]) => (
+                    <th key={field} className="px-4 py-3 text-left">
+                      <button onClick={() => handleSort(field as SortField)} className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wider text-slate-500 transition-colors hover:text-slate-300">
+                        {label}{renderSortIcon(field as SortField)}
+                      </button>
+                    </th>
+                  ))}
+                  <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-slate-500">Termo responsabilidade</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-slate-500">Termo devolução</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginated.map((movement) => (
+                  <tr key={movement.id} className="border-b border-slate-800/50 transition-colors hover:bg-slate-800/50">
+                    <td className="px-4 py-3 text-slate-300">{formatDateTime(movement.createdAt)}</td>
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-white">{movement.equipmentName}</p>
+                      <p className="font-mono text-xs text-blue-400">{movement.equipmentCode}</p>
+                    </td>
+                    <td className="px-4 py-3 text-slate-300"><MovementHolder type={movement.fromHolderType} name={movement.fromUserName} userId={movement.fromUserId} users={users} /></td>
+                    <td className="px-4 py-3 text-slate-300"><MovementHolder type={movement.toHolderType} name={movement.toUserName} userId={movement.toUserId} users={users} /></td>
+                    <td className="px-4 py-3 text-slate-400">{movement.reason || "-"}</td>
+                    <td className="px-4 py-3 text-center"><MovementTermLink label="Termo de responsabilidade" url={movement.responsibilityTermUrl} /></td>
+                    <td className="px-4 py-3 text-center"><MovementTermLink label="Termo de devolução" url={movement.devolutionTermUrl} /></td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
           </div>
-          <div className="space-y-3 lg:hidden">{paginated.map((movement) => <div key={movement.id} className="rounded-xl border border-slate-800 bg-slate-900/90 p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-white">{movement.equipmentName}</p><p className="font-mono text-xs text-blue-400">{movement.equipmentCode}</p></div><span className="text-xs text-slate-500">{formatDateTime(movement.createdAt)}</span></div><div className="mt-3 flex flex-col gap-2 text-sm text-slate-300"><MovementHolder type={movement.fromHolderType} name={movement.fromUserName} userId={movement.fromUserId} users={users} /><span className="text-xs text-slate-500">para</span><MovementHolder type={movement.toHolderType} name={movement.toUserName} userId={movement.toUserId} users={users} /></div>{movement.reason ? <p className="mt-1 text-xs text-slate-500">{movement.reason}</p> : null}</div>)}</div>
+          <div className="space-y-3 lg:hidden">
+            {paginated.map((movement) => (
+              <div key={movement.id} className="rounded-xl border border-slate-800 bg-slate-900/90 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-white">{movement.equipmentName}</p>
+                    <p className="font-mono text-xs text-blue-400">{movement.equipmentCode}</p>
+                  </div>
+                  <span className="text-xs text-slate-500">{formatDateTime(movement.createdAt)}</span>
+                </div>
+                <div className="mt-3 flex flex-col gap-2 text-sm text-slate-300">
+                  <MovementHolder type={movement.fromHolderType} name={movement.fromUserName} userId={movement.fromUserId} users={users} />
+                  <span className="text-xs text-slate-500">para</span>
+                  <MovementHolder type={movement.toHolderType} name={movement.toUserName} userId={movement.toUserId} users={users} />
+                </div>
+                {movement.reason ? <p className="mt-1 text-xs text-slate-500">{movement.reason}</p> : null}
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500">
+                  <div>
+                    <span className="mb-1 block">Responsabilidade</span>
+                    <MovementTermLink label="Termo de responsabilidade" url={movement.responsibilityTermUrl} />
+                  </div>
+                  <div>
+                    <span className="mb-1 block">Devolução</span>
+                    <MovementTermLink label="Termo de devolução" url={movement.devolutionTermUrl} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
           <PaginationControls page={currentPage} totalItems={filtered.length} onPageChange={setPage} itemLabel="movimentações" />
         </>
       )}
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { equipments, equipmentMovements, equipmentRequests } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -6,16 +6,21 @@ import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canView } from "@/lib/roles";
 import { cancelPendingEquipmentRequestsForHolderChange } from "@/lib/equipment-request-cancellation";
 import { autoMatchEquipmentRequest } from "@/lib/equipment-request-matching";
+import { assignMovementTermPayload, hasConfirmedMissingTerm, parseRequestWithOptionalEquipmentTerm } from "@/lib/equipment-terms";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requirePermission(req, canView);
   if (hasAuthError(auth)) return auth.response;
   const { id } = await params;
   const equipmentId = Number(id);
-  const body = await req.json().catch(() => ({}));
+  const { body, termPayload } = await parseRequestWithOptionalEquipmentTerm(req, "devolution");
   const [equipment] = await db.select().from(equipments).where(eq(equipments.id, equipmentId)).limit(1);
   if (!equipment) return NextResponse.json({ error: "Equipamento não encontrado." }, { status: 404 });
   if (equipment.holderUserId !== auth.user.id) return NextResponse.json({ error: "Você só pode devolver equipamentos que estão com você." }, { status: 403 });
+
+  if (equipment.requiresResponsibilityTerm && !termPayload && !hasConfirmedMissingTerm(body.confirmMissingTerm)) {
+    return NextResponse.json({ code: "TERM_CONFIRMATION_REQUIRED", error: "Este equipamento exige termo de devolução. Confirme para continuar sem anexo." }, { status: 409 });
+  }
 
   if (body.toUserId && body.toUserId !== "company") {
     const target = { id: String(body.toUserId), nome: String(body.toUserName || "Usuário"), email: String(body.toUserEmail || "") };
@@ -44,6 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         toUserName: target.nome,
         toUserEmail: target.email,
         reason: typeof body.reason === "string" ? body.reason : null,
+        ...assignMovementTermPayload("devolution", termPayload),
       }).returning();
       const match = await autoMatchEquipmentRequest(request, auth.user.id);
       if (match) {
@@ -81,6 +87,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     toHolderType: "company",
     reason: typeof body.reason === "string" ? body.reason : "Devolução para RAROTEC",
     createdByUserId: auth.user.id,
+    ...assignMovementTermPayload("devolution", termPayload),
   });
   await cancelPendingEquipmentRequestsForHolderChange({
     equipmentId,

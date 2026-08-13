@@ -4,16 +4,20 @@ import { equipments, equipmentMovements } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canView } from "@/lib/roles";
+import { assignMovementTermPayload, hasConfirmedMissingTerm, parseRequestWithOptionalEquipmentTerm } from "@/lib/equipment-terms";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requirePermission(req, canView);
   if (hasAuthError(auth)) return auth.response;
   const { id } = await params;
   const equipmentId = Number(id);
-  const body = await req.json().catch(() => ({}));
+  const { body, termPayload } = await parseRequestWithOptionalEquipmentTerm(req, "responsibility");
   const [equipment] = await db.select().from(equipments).where(eq(equipments.id, equipmentId)).limit(1);
   if (!equipment) return NextResponse.json({ error: "Equipamento não encontrado." }, { status: 404 });
   if (equipment.holderType !== "company") return NextResponse.json({ error: "Equipamento já está alocado. Solicite uma transferência." }, { status: 400 });
+  if (equipment.requiresResponsibilityTerm && !termPayload && !hasConfirmedMissingTerm(body.confirmMissingTerm)) {
+    return NextResponse.json({ code: "TERM_CONFIRMATION_REQUIRED", error: "Este equipamento exige termo de responsabilidade. Confirme para continuar sem anexo." }, { status: 409 });
+  }
 
   const [updated] = await db.update(equipments).set({
     holderType: "user",
@@ -31,6 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     toUserEmail: auth.user.email,
     reason: typeof body.reason === "string" ? body.reason : null,
     createdByUserId: auth.user.id,
+    ...assignMovementTermPayload("responsibility", termPayload),
   });
   return NextResponse.json(updated);
 }

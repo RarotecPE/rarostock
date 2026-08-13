@@ -5,6 +5,7 @@ import { and, desc, eq, ne, or } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canAdmin, canView } from "@/lib/roles";
 import { autoMatchEquipmentRequest } from "@/lib/equipment-request-matching";
+import { assignMovementTermPayload, hasConfirmedMissingTerm, parseRequestWithOptionalEquipmentTerm } from "@/lib/equipment-terms";
 
 export async function GET(req: NextRequest) {
   const auth = await requirePermission(req, canView);
@@ -50,6 +51,13 @@ export async function GET(req: NextRequest) {
     toUserName: equipmentRequests.toUserName,
     toUserEmail: equipmentRequests.toUserEmail,
     reason: equipmentRequests.reason,
+    responsibilityTermUrl: equipmentRequests.responsibilityTermUrl,
+    responsibilityTermFilename: equipmentRequests.responsibilityTermFilename,
+    responsibilityTermStoragePath: equipmentRequests.responsibilityTermStoragePath,
+    devolutionTermUrl: equipmentRequests.devolutionTermUrl,
+    devolutionTermFilename: equipmentRequests.devolutionTermFilename,
+    devolutionTermStoragePath: equipmentRequests.devolutionTermStoragePath,
+    equipmentRequiresResponsibilityTerm: equipments.requiresResponsibilityTerm,
     decidedByUserId: equipmentRequests.decidedByUserId,
     decidedAt: equipmentRequests.decidedAt,
     decisionNote: equipmentRequests.decisionNote,
@@ -68,15 +76,19 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const auth = await requirePermission(req, canView);
   if (hasAuthError(auth)) return auth.response;
-  const body = await req.json();
+  const { body, termPayload } = await parseRequestWithOptionalEquipmentTerm(req, "responsibility");
   const equipmentId = Number(body.equipmentId);
   const [equipment] = await db.select().from(equipments).where(eq(equipments.id, equipmentId)).limit(1);
-  if (!equipment) return NextResponse.json({ error: "Equipamento nÃ£o encontrado." }, { status: 404 });
+  if (!equipment) return NextResponse.json({ error: "Equipamento não encontrado." }, { status: 404 });
   if (equipment.holderType !== "user" || !equipment.holderUserId) {
-    return NextResponse.json({ error: "Este equipamento estÃ¡ disponÃ­vel para obtenÃ§Ã£o direta." }, { status: 400 });
+    return NextResponse.json({ error: "Este equipamento está disponível para obtenção direta." }, { status: 400 });
   }
   if (equipment.holderUserId === auth.user.id) {
-    return NextResponse.json({ error: "Use a aÃ§Ã£o de devolver ou transferir para equipamentos que estÃ£o com vocÃª." }, { status: 400 });
+    return NextResponse.json({ error: "Use a ação de devolver ou transferir para equipamentos que estão com você." }, { status: 400 });
+  }
+
+  if (equipment.requiresResponsibilityTerm && !termPayload && !hasConfirmedMissingTerm(body.confirmMissingTerm)) {
+    return NextResponse.json({ code: "TERM_CONFIRMATION_REQUIRED", error: "Este equipamento exige termo de responsabilidade. Confirme para continuar sem anexo." }, { status: 409 });
   }
 
   const [pendingRequest] = await db.select({ id: equipmentRequests.id }).from(equipmentRequests).where(and(
@@ -85,7 +97,7 @@ export async function POST(req: NextRequest) {
     eq(equipmentRequests.status, "pending"),
   )).limit(1);
   if (pendingRequest) {
-    return NextResponse.json({ error: "VocÃª jÃ¡ possui uma solicitaÃ§Ã£o pendente para este equipamento." }, { status: 409 });
+    return NextResponse.json({ error: "Você já possui uma solicitação pendente para este equipamento." }, { status: 409 });
   }
 
   try {
@@ -104,6 +116,7 @@ export async function POST(req: NextRequest) {
       toUserName: auth.user.nome,
       toUserEmail: auth.user.email,
       reason: typeof body.reason === "string" ? body.reason : null,
+      ...assignMovementTermPayload("responsibility", termPayload),
     }).returning();
     const match = await autoMatchEquipmentRequest(request, auth.user.id);
     if (match) {
@@ -112,9 +125,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(request, { status: 201 });
   } catch (error) {
     if ((error as { code?: string }).code === "23505") {
-      return NextResponse.json({ error: "VocÃª jÃ¡ possui uma solicitaÃ§Ã£o pendente para este equipamento." }, { status: 409 });
+      return NextResponse.json({ error: "Você já possui uma solicitação pendente para este equipamento." }, { status: 409 });
     }
     throw error;
   }
 }
+
+
 

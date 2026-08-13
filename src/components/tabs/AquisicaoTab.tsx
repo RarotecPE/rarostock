@@ -409,16 +409,16 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
           </div>
         </div>
 
-        <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
+        <div className="purchase-type-card rounded-xl border border-slate-800 bg-slate-950/30 p-3">
           <p className="mb-2 text-sm font-medium text-slate-300">Tipo de compra</p>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => setPurchaseType("physical_store")}
-              className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
+              className={`purchase-type-option rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
                 purchaseType === "physical_store"
-                  ? "border-blue-500/40 bg-blue-600/20 text-blue-300"
-                  : "border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600 hover:text-white"
+                  ? "purchase-type-option-active border-blue-500/40 bg-blue-600/20 text-blue-300"
+                  : "purchase-type-option-inactive border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600 hover:text-white"
               }`}
             >
               Loja física
@@ -426,10 +426,10 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
             <button
               type="button"
               onClick={() => setPurchaseType("online")}
-              className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
+              className={`purchase-type-option rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
                 purchaseType === "online"
-                  ? "border-blue-500/40 bg-blue-600/20 text-blue-300"
-                  : "border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600 hover:text-white"
+                  ? "purchase-type-option-active border-blue-500/40 bg-blue-600/20 text-blue-300"
+                  : "purchase-type-option-inactive border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600 hover:text-white"
               }`}
             >
               Compra online
