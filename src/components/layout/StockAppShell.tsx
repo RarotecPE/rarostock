@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -191,6 +191,10 @@ export function StockAppShell({ children }: { children: ReactNode }) {
   const unavailableCount = alertItems.filter((item) => item.quantity === 0).length;
   const belowMinCount = alertItems.filter((item) => item.status === "Abaixo do Mínimo").length;
   const hasEnvironmentBanner = Boolean(process.env.NEXT_PUBLIC_ENVIRONMENT_LABEL?.trim());
+  const loginRedirectUrl = useCallback(() => {
+    const currentPath = `${window.location.pathname}${window.location.search}`;
+    return `/login?next=${encodeURIComponent(currentPath)}`;
+  }, []);
 
 
   useEffect(() => {
@@ -202,7 +206,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
         if (!active) return;
 
         if (!session.authenticated || !session.role) {
-          router.replace("/login");
+          router.replace(loginRedirectUrl());
           return;
         }
 
@@ -210,7 +214,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
         setSessionUser(session.user ?? null);
       })
       .catch(() => {
-        if (active) router.replace("/login");
+        if (active) router.replace(loginRedirectUrl());
       })
       .finally(() => {
         if (active) setCheckingSession(false);
@@ -219,7 +223,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, [router]);
+  }, [loginRedirectUrl, router]);
 
   useEffect(() => {
     const originalFetch = window.fetch.bind(window);
@@ -233,7 +237,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
       if (response.status === 401 && isInternalApi && !url.includes("/api/auth/logout") && !redirecting) {
         redirecting = true;
         await originalFetch("/api/auth/logout", { method: "POST" }).catch(() => null);
-        router.replace("/login");
+        router.replace(loginRedirectUrl());
       }
 
       return response;
@@ -242,7 +246,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
     return () => {
       window.fetch = originalFetch;
     };
-  }, [router]);
+  }, [loginRedirectUrl, router]);
 
   const fetchAlerts = useCallback(async () => {
     try {
@@ -311,7 +315,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
-    router.replace("/login");
+    router.replace(loginRedirectUrl());
   }
 
   if (checkingSession || !role || !roleInfo) {

@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "node:crypto";
-import { SSO_STATE_COOKIE_NAME } from "@/lib/auth-server";
+import { SSO_NEXT_COOKIE_NAME, SSO_STATE_COOKIE_NAME } from "@/lib/auth-server";
 
 function getEnv(name: string, fallback?: string) {
   const value = process.env[name] || fallback;
   if (!value) throw new Error(`${name} is required`);
+  return value;
+}
+
+function sanitizeNextPath(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/api/")) return "/dashboard";
   return value;
 }
 
@@ -13,6 +18,7 @@ export async function GET(request: NextRequest) {
   const stockBaseUrl = getEnv("RAROSTOCK_BASE_URL", request.nextUrl.origin);
   const clientId = getEnv("RARONEXUS_CLIENT_ID", "rarostock");
   const mode = request.nextUrl.searchParams.get("mode") === "silent" ? "silent" : "interactive";
+  const nextPath = sanitizeNextPath(request.nextUrl.searchParams.get("next"));
   const state = `${mode}.${crypto.randomBytes(24).toString("base64url")}`;
   const redirectUri = `${stockBaseUrl}/api/auth/raronexus/callback`;
 
@@ -30,6 +36,12 @@ export async function GET(request: NextRequest) {
     path: "/",
     maxAge: 5 * 60,
   });
+  response.cookies.set(SSO_NEXT_COOKIE_NAME, nextPath, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 5 * 60,
+  });
   return response;
 }
-

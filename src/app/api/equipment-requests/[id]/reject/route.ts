@@ -14,12 +14,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const body = await req.json().catch(() => ({}));
   const [request] = await db.select().from(equipmentRequests).where(eq(equipmentRequests.id, requestId)).limit(1);
 
-  if (!request) return NextResponse.json({ error: "Solicita??o n?o encontrada." }, { status: 404 });
-  if (request.status !== "pending") return NextResponse.json({ error: "Solicita??o j? foi conclu?da." }, { status: 400 });
+  if (!request) return NextResponse.json({ error: "SolicitaÃ§Ã£o nÃ£o encontrada." }, { status: 404 });
+  if (request.status !== "pending") return NextResponse.json({ error: "SolicitaÃ§Ã£o jÃ¡ foi concluÃ­da." }, { status: 400 });
 
   const responsibleUserId = request.type === "obtain" ? request.fromUserId : request.toUserId;
   const canDecide = responsibleUserId === auth.user.id && request.requesterUserId !== auth.user.id;
-  if (!canDecide) return NextResponse.json({ error: "Voc? n?o pode decidir esta solicita??o." }, { status: 403 });
+  if (!canDecide) return NextResponse.json({ error: "VocÃª nÃ£o pode decidir esta solicitaÃ§Ã£o." }, { status: 403 });
 
   const [updatedRequest] = await db.update(equipmentRequests).set({
     status: "rejected",

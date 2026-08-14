@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { equipments, equipmentMovements, equipmentRequests } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -7,6 +7,7 @@ import { canView } from "@/lib/roles";
 import { cancelPendingEquipmentRequestsForHolderChange } from "@/lib/equipment-request-cancellation";
 import { autoMatchEquipmentRequest } from "@/lib/equipment-request-matching";
 import { assignMovementTermPayload, hasConfirmedMissingTerm, parseRequestWithOptionalEquipmentTerm } from "@/lib/equipment-terms";
+import { notifyEquipmentRequestByEmail } from "@/lib/raronexus-email";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requirePermission(req, canView);
@@ -62,6 +63,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         exceptRequestIds: [request.id],
         note: "Anulada automaticamente porque o portador iniciou transferência para outro usuário.",
       });
+      await notifyEquipmentRequestByEmail(request, equipment);
       return NextResponse.json(request, { status: 201 });
     } catch (error) {
       if ((error as { code?: string }).code === "23505") {

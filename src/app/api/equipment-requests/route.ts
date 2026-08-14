@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { equipmentRequests, equipments } from "@/db/schema";
 import { and, desc, eq, ne, or } from "drizzle-orm";
@@ -6,6 +6,7 @@ import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canAdmin, canView } from "@/lib/roles";
 import { autoMatchEquipmentRequest } from "@/lib/equipment-request-matching";
 import { assignMovementTermPayload, hasConfirmedMissingTerm, parseRequestWithOptionalEquipmentTerm } from "@/lib/equipment-terms";
+import { notifyEquipmentRequestByEmail } from "@/lib/raronexus-email";
 
 export async function GET(req: NextRequest) {
   const auth = await requirePermission(req, canView);
@@ -122,6 +123,7 @@ export async function POST(req: NextRequest) {
     if (match) {
       return NextResponse.json({ ...match, autoApproved: true }, { status: 201 });
     }
+    await notifyEquipmentRequestByEmail(request, equipment);
     return NextResponse.json(request, { status: 201 });
   } catch (error) {
     if ((error as { code?: string }).code === "23505") {

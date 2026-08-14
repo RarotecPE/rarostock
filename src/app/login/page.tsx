@@ -1,7 +1,7 @@
-﻿"use client";
+"use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   applyColorTheme,
   getStoredColorTheme,
@@ -21,8 +21,14 @@ function subscribeToThemeChanges(onStoreChange: () => void) {
   };
 }
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = useMemo(() => {
+    const value = searchParams.get("next");
+    if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/api/")) return "/dashboard";
+    return value;
+  }, [searchParams]);
   const [ssoLoading, setSsoLoading] = useState(false);
   const [checkingNexusSession, setCheckingNexusSession] = useState(true);
   const [silentSsoUrl, setSilentSsoUrl] = useState("");
@@ -59,7 +65,7 @@ export default function LoginPage() {
       setCheckingNexusSession(false);
 
       if (event.data.status === "success") {
-        router.replace("/dashboard");
+        router.replace(event.data.redirectTo || nextPath);
         return;
       }
 
@@ -73,11 +79,11 @@ export default function LoginPage() {
       const session = response?.ok ? await response.json().catch(() => null) : null;
 
       if (session?.authenticated && session.role) {
-        router.replace("/dashboard");
+        router.replace(nextPath);
         return;
       }
 
-      setSilentSsoUrl(`/api/auth/raronexus/start?mode=silent&attempt=${Date.now()}`);
+      setSilentSsoUrl(`/api/auth/raronexus/start?mode=silent&next=${encodeURIComponent(nextPath)}&attempt=${Date.now()}`);
       window.setTimeout(() => setCheckingNexusSession(false), 4500);
     }
 
@@ -87,7 +93,7 @@ export default function LoginPage() {
       window.removeEventListener("message", handleMessage);
       stopPopupCheck();
     };
-  }, [router]);
+  }, [nextPath, router]);
 
   const startRaroNexusLogin = () => {
     setError("");
@@ -95,7 +101,7 @@ export default function LoginPage() {
     setSsoLoading(true);
 
     const popup = window.open(
-      "/api/auth/raronexus/start",
+      `/api/auth/raronexus/start?next=${encodeURIComponent(nextPath)}`,
       "raronexus-login",
       "width=520,height=720,menubar=no,toolbar=no,location=no,status=no"
     );
@@ -181,5 +187,13 @@ export default function LoginPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-slate-950 text-white flex items-center justify-center">Carregando...</main>}>
+      <LoginContent />
+    </Suspense>
   );
 }
