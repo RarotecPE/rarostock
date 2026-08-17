@@ -1,4 +1,4 @@
-import "server-only";
+﻿import "server-only";
 import PDFDocument from "pdfkit/js/pdfkit.standalone";
 import { db } from "@/db";
 import { products } from "@/db/schema";
@@ -21,9 +21,9 @@ export function normalizeShoppingListText(value: string) {
 }
 
 function getStatus(quantity: number, minimumLimit: number, desiredLimit: number) {
-  if (quantity === 0) return "Indisponível";
-  if (quantity < minimumLimit) return "Abaixo do Mínimo";
-  if (quantity < desiredLimit) return "Abaixo do Desejável";
+  if (quantity === 0) return "Indispon\u00edvel";
+  if (quantity < minimumLimit) return "Abaixo do M\u00ednimo";
+  if (quantity < desiredLimit) return "Abaixo do Desej\u00e1vel";
   return "Em Estoque";
 }
 
@@ -66,7 +66,7 @@ function fitText(text: string, maxLength: number) {
 
 function drawTableHeader(doc: PDFKit.PDFDocument, y: number) {
   doc.roundedRect(42, y, 512, 24, 5).fill("#10233f").fillColor("#dbeafe").font("Helvetica-Bold").fontSize(8);
-  doc.text("Código", 52, y + 8, { width: 54 });
+  doc.text("C\u00f3digo", 52, y + 8, { width: 54 });
   doc.text("Produto", 112, y + 8, { width: 132 });
   doc.text("Categoria", 250, y + 8, { width: 92 });
   doc.text("Estoque", 348, y + 8, { width: 46, align: "right" });
@@ -78,9 +78,9 @@ function drawTableHeader(doc: PDFKit.PDFDocument, y: number) {
 function drawPageFooter(doc: PDFKit.PDFDocument, page: number) {
   const previousX = doc.x;
   const previousY = doc.y;
-  const bottom = doc.page.height - 36;
+  const bottom = doc.page.height - 54;
   doc.strokeColor("#dbeafe").lineWidth(0.5).moveTo(42, bottom - 10).lineTo(554, bottom - 10).stroke();
-  doc.fillColor("#64748b").font("Helvetica").fontSize(8).text(`RaroStock | Página ${page}`, 42, bottom, { width: 512, align: "right", lineBreak: false });
+  doc.fillColor("#64748b").font("Helvetica").fontSize(8).text(`RaroStock | P\u00e1gina ${page}`, 42, bottom, { width: 512, height: 10, align: "right", lineBreak: false });
   doc.x = previousX;
   doc.y = previousY;
 }
@@ -131,7 +131,7 @@ export async function renderShoppingListPdf(items: ShoppingListItem[], filtersLa
   doc.fillColor("#475569").font("Helvetica").fontSize(10).text(`Gerado em ${formatGeneratedAt(new Date())}`, 42, 72);
 
   doc.roundedRect(42, 98, 512, 58, 8).fill("#eff6ff").fillColor("#0f172a").font("Helvetica-Bold").fontSize(11);
-  doc.text(`${items.length} ${items.length === 1 ? "item para reposição" : "itens para reposição"}`, 58, 114);
+  doc.text(`${items.length} ${items.length === 1 ? "item para reposi\u00e7\u00e3o" : "itens para reposi\u00e7\u00e3o"}`, 58, 114);
   doc.fillColor("#475569").font("Helvetica").fontSize(9).text(filtersLabel, 58, 134, { width: 480 });
 
   let y = 178;
@@ -170,3 +170,4 @@ export async function renderShoppingListPdf(items: ShoppingListItem[], filtersLa
   doc.end();
   return finished;
 }
+
