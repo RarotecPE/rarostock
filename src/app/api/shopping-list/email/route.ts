@@ -36,8 +36,8 @@ export async function POST(req: NextRequest) {
 
   const payload = await req.json().catch(() => ({}));
   const search = typeof payload.search === "string" ? payload.search : null;
-  const categories = Array.isArray(payload.categories) ? payload.categories.filter((item): item is string => typeof item === "string") : [];
-  const statuses = Array.isArray(payload.statuses) ? payload.statuses.filter((item): item is string => typeof item === "string") : [];
+  const categories = Array.isArray(payload.categories) ? payload.categories.filter((item: unknown): item is string => typeof item === "string") : [];
+  const statuses = Array.isArray(payload.statuses) ? payload.statuses.filter((item: unknown): item is string => typeof item === "string") : [];
   const productIds = parseProductIds(payload.productIds);
 
   if (productIds.length === 0) {
