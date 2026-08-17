@@ -30,7 +30,16 @@ function getResponsibleRecipient(request: EquipmentRequestRow) {
 
 function formatHolder(name: string | null, holderType: string | null) {
   if (holderType === "company") return "RAROTEC";
-  return name || "Usuario";
+  return name || "Usuário";
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 export async function notifyEquipmentRequestByEmail(request: EquipmentRequestRow, equipment: EquipmentRow) {
@@ -45,13 +54,22 @@ export async function notifyEquipmentRequestByEmail(request: EquipmentRequestRow
   const actionUrl = buildStockUrl(`/solicitacoes/${request.id}`);
   const nexusBaseUrl = getEnv("RARONEXUS_BASE_URL", "http://localhost:3001");
 
-  const message = [
-    `${request.requesterName} abriu uma solicitacao para o equipamento ${equipment.name} (${equipment.code}).`,
-    `Movimentacao solicitada: de ${from} para ${to}.`,
-    request.reason ? `Motivo informado: ${request.reason}.` : null,
-    requiresTerm ? "Este equipamento exige termo, e a tela de decisao permitira anexar o arquivo antes da aprovacao." : null,
-    "Acesse o RaroStock para aprovar ou rejeitar a solicitacao.",
-  ].filter(Boolean).join("\n\n");
+  const body = `
+    <p>${escapeHtml(request.requesterName)} abriu uma solicitação para o equipamento <strong>${escapeHtml(equipment.name)} (${escapeHtml(equipment.code)})</strong>.</p>
+    <p>Movimentação solicitada: de <strong>${escapeHtml(from)}</strong> para <strong>${escapeHtml(to)}</strong>.</p>
+    ${request.reason ? `<p>Motivo informado: ${escapeHtml(request.reason)}.</p>` : ""}
+    ${requiresTerm ? "<p>Este equipamento exige termo, e a tela de decisão permitirá anexar o arquivo antes da aprovação.</p>" : ""}
+    <p>Acesse o RaroStock para aprovar ou rejeitar a solicitação.</p>
+    <p style="margin: 28px 0;">
+      <a href="${escapeHtml(actionUrl)}" style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 12px 18px; border-radius: 8px; font-weight: 700;">
+        Abrir solicitação
+      </a>
+    </p>
+    <p style="font-size: 13px; line-height: 1.5; color: #64748b;">
+      Se o botão não funcionar, copie e cole este link no navegador:<br />
+      <span style="word-break: break-all;">${escapeHtml(actionUrl)}</span>
+    </p>
+  `;
 
   try {
     const response = await fetch(new URL("/api/email/equipment-transfer-request", nexusBaseUrl), {
@@ -63,11 +81,8 @@ export async function notifyEquipmentRequestByEmail(request: EquipmentRequestRow
       },
       body: JSON.stringify({
         to: recipient.email,
-        subject: "Nova solicitacao de equipamento no RaroStock",
-        title: "Voce recebeu uma solicitacao de equipamento",
-        message,
-        action_label: "Abrir solicitacao",
-        action_url: actionUrl,
+        subject: "Nova solicitação de equipamento no RaroStock",
+        body,
         metadata: {
           request_id: request.id,
           equipment_id: request.equipmentId,
