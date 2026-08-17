@@ -1,5 +1,6 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import {
+  SSO_NEXT_COOKIE_NAME,
   SSO_STATE_COOKIE_NAME,
   buildSessionPayload,
   clearSessionCookies,
@@ -31,22 +32,27 @@ function getEnv(name: string, fallback?: string) {
   return value;
 }
 
-function popupResponse(status: "success" | "error", message: string, mode: "interactive" | "silent" = "interactive") {
-  const redirectTo = status === "success" ? "/dashboard" : "/login";
+function sanitizeNextPath(value: string | undefined) {
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/api/")) return "/dashboard";
+  return value;
+}
+
+function popupResponse(status: "success" | "error", message: string, mode: "interactive" | "silent" = "interactive", redirectTo = "/dashboard") {
+  const safeRedirectTo = status === "success" ? sanitizeNextPath(redirectTo) : "/login";
   const html = `<!doctype html>
 <html lang="pt-BR">
 <head><meta charset="utf-8"><title>RaroNexus</title></head>
 <body style="background:#020617;color:#e2e8f0;font-family:Arial,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center">
   <p>${message}</p>
   <script>
-    const payload = { type: "raronexus:sso", status: "${status}", mode: "${mode}", message: ${JSON.stringify(message)} };
+    const payload = { type: "raronexus:sso", status: "${status}", mode: "${mode}", message: ${JSON.stringify(message)}, redirectTo: ${JSON.stringify(safeRedirectTo)} };
     if (window.opener) {
       window.opener.postMessage(payload, window.location.origin);
       window.close();
     } else if (window.parent && window.parent !== window) {
       window.parent.postMessage(payload, window.location.origin);
     } else {
-      window.location.replace(${JSON.stringify(redirectTo)});
+      window.location.replace(${JSON.stringify(safeRedirectTo)});
     }
   </script>
 </body>
@@ -62,19 +68,22 @@ export async function GET(request: NextRequest) {
   const state = request.nextUrl.searchParams.get("state");
   const error = request.nextUrl.searchParams.get("error");
   const expectedState = request.cookies.get(SSO_STATE_COOKIE_NAME)?.value;
+  const nextPath = sanitizeNextPath(request.cookies.get(SSO_NEXT_COOKIE_NAME)?.value);
   const mode: "interactive" | "silent" = expectedState?.startsWith("silent.") ? "silent" : "interactive";
 
   if (error) {
     const response = popupResponse("error", error === "login_required" ? "Login necessario no RaroNexus." : "Acesso negado pelo RaroNexus.", mode);
     clearSessionCookies(response);
     response.cookies.delete(SSO_STATE_COOKIE_NAME);
+    response.cookies.delete(SSO_NEXT_COOKIE_NAME);
     return response;
   }
 
   if (!code || !state || !expectedState || state !== expectedState) {
-    const response = popupResponse("error", "Resposta SSO inválida.", mode);
+    const response = popupResponse("error", "Resposta SSO invalida.", mode);
     clearSessionCookies(response);
     response.cookies.delete(SSO_STATE_COOKIE_NAME);
+    response.cookies.delete(SSO_NEXT_COOKIE_NAME);
     return response;
   }
 
@@ -107,28 +116,32 @@ export async function GET(request: NextRequest) {
     );
     clearSessionCookies(response);
     response.cookies.delete(SSO_STATE_COOKIE_NAME);
+    response.cookies.delete(SSO_NEXT_COOKIE_NAME);
     return response;
   }
 
   if (!tokenResponse.ok || !payload?.success || !payload.data) {
-    const response = popupResponse("error", payload?.message ?? "Não foi possível concluir o login.", mode);
+    const response = popupResponse("error", payload?.message ?? "Nao foi possivel concluir o login.", mode);
     clearSessionCookies(response);
     response.cookies.delete(SSO_STATE_COOKIE_NAME);
+    response.cookies.delete(SSO_NEXT_COOKIE_NAME);
     return response;
   }
 
   const role = parseAppRole(payload.data.role.chave);
   if (!role || !canAccessApp(role)) {
-    const response = popupResponse("error", "Usuário não autorizado para acessar o RaroStock.", mode);
+    const response = popupResponse("error", "Usuario nao autorizado para acessar o RaroStock.", mode);
     clearSessionCookies(response);
     response.cookies.delete(SSO_STATE_COOKIE_NAME);
+    response.cookies.delete(SSO_NEXT_COOKIE_NAME);
     return response;
   }
 
   const session = { role, user: payload.data.user };
-  const response = popupResponse("success", "Login concluido.", mode);
+  const response = popupResponse("success", "Login concluido.", mode, nextPath);
   setSessionCookie(response, payload.data.global_session_token);
   response.cookies.delete(SSO_STATE_COOKIE_NAME);
+  response.cookies.delete(SSO_NEXT_COOKIE_NAME);
   response.headers.set("X-RaroStock-Session", JSON.stringify(buildSessionPayload(role, session)));
   return response;
 }

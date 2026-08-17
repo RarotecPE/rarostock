@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -21,7 +21,7 @@ import {
   type ColorTheme,
 } from "@/components/theme/ThemeBootstrap";
 import { AppRole, canAdmin, canManageStock, roleConfigs } from "@/lib/roles";
-import { EquipmentRequest, getStockStatus, Item, StockStatus } from "@/types/stock";
+import { EquipmentRequest, EquipmentTermPendency, getStockStatus, Item, StockStatus } from "@/types/stock";
 
 type SessionUser = {
   id: string;
@@ -182,6 +182,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<ColorTheme>(() => getStoredColorTheme());
   const [alertItems, setAlertItems] = useState<AlertItem[]>([]);
   const [requestAlerts, setRequestAlerts] = useState<EquipmentRequest[]>([]);
+  const [termPendencies, setTermPendencies] = useState<EquipmentTermPendency[]>([]);
 
   const isAdmin = canAdmin(role);
   const canMutateStock = canManageStock(role);
@@ -190,6 +191,10 @@ export function StockAppShell({ children }: { children: ReactNode }) {
   const unavailableCount = alertItems.filter((item) => item.quantity === 0).length;
   const belowMinCount = alertItems.filter((item) => item.status === "Abaixo do Mínimo").length;
   const hasEnvironmentBanner = Boolean(process.env.NEXT_PUBLIC_ENVIRONMENT_LABEL?.trim());
+  const loginRedirectUrl = useCallback(() => {
+    const currentPath = `${window.location.pathname}${window.location.search}`;
+    return `/login?next=${encodeURIComponent(currentPath)}`;
+  }, []);
 
 
   useEffect(() => {
@@ -201,7 +206,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
         if (!active) return;
 
         if (!session.authenticated || !session.role) {
-          router.replace("/login");
+          router.replace(loginRedirectUrl());
           return;
         }
 
@@ -209,7 +214,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
         setSessionUser(session.user ?? null);
       })
       .catch(() => {
-        if (active) router.replace("/login");
+        if (active) router.replace(loginRedirectUrl());
       })
       .finally(() => {
         if (active) setCheckingSession(false);
@@ -218,7 +223,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, [router]);
+  }, [loginRedirectUrl, router]);
 
   useEffect(() => {
     const originalFetch = window.fetch.bind(window);
@@ -232,7 +237,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
       if (response.status === 401 && isInternalApi && !url.includes("/api/auth/logout") && !redirecting) {
         redirecting = true;
         await originalFetch("/api/auth/logout", { method: "POST" }).catch(() => null);
-        router.replace("/login");
+        router.replace(loginRedirectUrl());
       }
 
       return response;
@@ -241,13 +246,14 @@ export function StockAppShell({ children }: { children: ReactNode }) {
     return () => {
       window.fetch = originalFetch;
     };
-  }, [router]);
+  }, [loginRedirectUrl, router]);
 
   const fetchAlerts = useCallback(async () => {
     try {
-      const [itemsRes, requestsRes] = await Promise.all([
+      const [itemsRes, requestsRes, termPendenciesRes] = await Promise.all([
         fetch("/api/items"),
         fetch("/api/equipment-requests?scope=notifications&status=pending"),
+        fetch("/api/equipment-term-pendencies"),
       ]);
 
       if (itemsRes.ok) {
@@ -274,6 +280,11 @@ export function StockAppShell({ children }: { children: ReactNode }) {
       if (requestsRes.ok) {
         const requests: EquipmentRequest[] = await requestsRes.json();
         setRequestAlerts(Array.isArray(requests) ? requests : []);
+      }
+
+      if (termPendenciesRes.ok) {
+        const pendencies: EquipmentTermPendency[] = await termPendenciesRes.json();
+        setTermPendencies(Array.isArray(pendencies) ? pendencies : []);
       }
     } catch {
       // ignore
@@ -304,7 +315,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
-    router.replace("/login");
+    router.replace(loginRedirectUrl());
   }
 
   if (checkingSession || !role || !roleInfo) {
@@ -414,6 +425,7 @@ export function StockAppShell({ children }: { children: ReactNode }) {
                 theme={theme}
                 alerts={alertItems}
                 requestAlerts={requestAlerts}
+                termPendencyCount={termPendencies.length}
                 unavailableCount={unavailableCount}
                 belowMinCount={belowMinCount}
                 onToggleTheme={toggleTheme}
@@ -567,3 +579,4 @@ function MobileBottomNav({
     </div>
   );
 }
+

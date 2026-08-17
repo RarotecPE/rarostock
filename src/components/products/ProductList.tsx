@@ -40,6 +40,8 @@ export function ProductList({ refreshKey = 0, canManageStock, isAdmin = false }:
   const [shoppingListModalOpen, setShoppingListModalOpen] = useState(false);
   const [shoppingListWarning, setShoppingListWarning] = useState("");
   const [shoppingListDownloading, setShoppingListDownloading] = useState(false);
+  const [selectedShoppingItemIds, setSelectedShoppingItemIds] = useState<number[]>([]);
+  const [sendShoppingListEmail, setSendShoppingListEmail] = useState(false);
   const [sortField, setSortField] = useState<SortField>("code");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [page, setPage] = useState(1);
@@ -114,11 +116,17 @@ export function ProductList({ refreshKey = 0, canManageStock, isAdmin = false }:
     );
   };
 
-  const buildShoppingListUrl = () => {
+  const selectedShoppingItems = useMemo(() => {
+    const selected = new Set(selectedShoppingItemIds);
+    return shoppingListItems.filter(({ item }) => selected.has(item.id));
+  }, [selectedShoppingItemIds, shoppingListItems]);
+
+  const buildShoppingListUrl = (productIds = selectedShoppingItemIds) => {
     const params = new URLSearchParams();
     if (search) params.set("search", search);
     categoryFilters.forEach((category) => params.append("category", category));
     statusFilters.forEach((status) => params.append("status", status));
+    productIds.forEach((id) => params.append("productId", String(id)));
     return `/api/shopping-list${params.toString() ? `?${params}` : ""}`;
   };
 
@@ -129,14 +137,41 @@ export function ProductList({ refreshKey = 0, canManageStock, isAdmin = false }:
     }
 
     setShoppingListWarning("");
+    setSelectedShoppingItemIds(shoppingListItems.map(({ item }) => item.id));
+    setSendShoppingListEmail(false);
     setShoppingListModalOpen(true);
   };
 
   const handleDownloadShoppingList = async () => {
+    if (selectedShoppingItemIds.length === 0) {
+      setShoppingListWarning("Selecione ao menos um produto para gerar a lista de compras.");
+      return;
+    }
+
     setShoppingListDownloading(true);
     setShoppingListWarning("");
+    let emailError = "";
 
     try {
+      if (sendShoppingListEmail) {
+        const emailResponse = await fetch("/api/shopping-list/email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            search,
+            categories: categoryFilters,
+            statuses: statusFilters,
+            productIds: selectedShoppingItemIds,
+          }),
+          cache: "no-store",
+        });
+
+        if (!emailResponse.ok) {
+          const payload = await emailResponse.json().catch(() => null);
+          emailError = payload?.error ?? "Não foi possível enviar a lista por e-mail.";
+        }
+      }
+
       const response = await fetch(buildShoppingListUrl(), { cache: "no-store" });
 
       if (!response.ok) {
@@ -153,12 +188,20 @@ export function ProductList({ refreshKey = 0, canManageStock, isAdmin = false }:
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-      setShoppingListModalOpen(false);
+      if (emailError) {
+        setShoppingListWarning(`${emailError} O PDF foi baixado normalmente.`);
+      } else {
+        setShoppingListModalOpen(false);
+      }
     } catch (error) {
       setShoppingListWarning(error instanceof Error ? error.message : "Não foi possível gerar a lista de compras.");
     } finally {
       setShoppingListDownloading(false);
     }
+  };
+
+  const toggleShoppingItem = (id: number) => {
+    setSelectedShoppingItemIds((current) => (current.includes(id) ? current.filter((itemId) => itemId !== id) : [...current, id]));
   };
 
 return (
@@ -215,12 +258,13 @@ return (
       </div>
       {shoppingListModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onClick={() => setShoppingListModalOpen(false)}>
-          <div className="shopping-list-modal w-full max-w-lg rounded-2xl border p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
-            <div className="flex items-start justify-between gap-4">
+          <div className="shopping-list-modal flex max-h-[86vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="p-5 pb-3">
+              <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="shopping-list-modal-title text-lg font-bold">Gerar lista de compras?</h3>
                 <p className="shopping-list-modal-description mt-1 text-sm">
-                  O PDF incluirá apenas produtos filtrados que estão abaixo do limite desejável.
+                  Escolha os produtos que devem entrar no PDF.
                 </p>
               </div>
               <button
@@ -232,34 +276,53 @@ return (
               >
                 ×
               </button>
+              </div>
             </div>
 
             {shoppingListWarning ? (
-              <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+              <div className="mx-5 mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
                 {shoppingListWarning}
               </div>
             ) : null}
 
-            <div className="mt-4 max-h-56 space-y-2 overflow-y-auto pr-1">
-              {shoppingListItems.slice(0, 8).map(({ item, purchaseQuantity }) => (
-                <div key={item.id} className="shopping-list-preview-item flex items-center justify-between gap-3 rounded-lg px-3 py-2">
+            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-5 py-2">
+              {shoppingListItems.map(({ item, purchaseQuantity }) => {
+                const checked = selectedShoppingItemIds.includes(item.id);
+                return (
+                <label key={item.id} className="shopping-list-preview-item flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition-colors">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-600"
+                    checked={checked}
+                    onChange={() => toggleShoppingItem(item.id)}
+                  />
                   <div className="min-w-0">
                     <p className="shopping-list-preview-name truncate text-sm font-medium">{item.name}</p>
-                    <p className="shopping-list-preview-code font-mono text-xs">{item.code}</p>
+                    <p className="shopping-list-preview-code font-mono text-xs">
+                      {item.code} · Estoque {item.quantity} · Desejável {item.desiredLimit}
+                    </p>
                   </div>
-                  <span className="shopping-list-preview-quantity shrink-0 text-sm font-semibold">
+                  <span className="shopping-list-preview-quantity ml-auto shrink-0 text-sm font-semibold">
                     Comprar {purchaseQuantity}
                   </span>
-                </div>
-              ))}
-              {shoppingListItems.length > 8 ? (
-                <p className="pt-1 text-center text-xs text-slate-500">
-                  + {shoppingListItems.length - 8} outros itens no PDF
-                </p>
-              ) : null}
+                </label>
+                );
+              })}
             </div>
 
-            <div className="mt-5 flex justify-center">
+            <div className="border-t border-slate-800/80 p-5">
+              <label className="mb-4 flex cursor-pointer items-center justify-center gap-2 text-sm font-medium text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={sendShoppingListEmail}
+                  onChange={(event) => setSendShoppingListEmail(event.target.checked)}
+                />
+                Enviar também para meu e-mail
+              </label>
+              <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <p className="text-xs text-slate-500">
+                  {selectedShoppingItems.length} de {shoppingListItems.length} {shoppingListItems.length === 1 ? "item selecionado" : "itens selecionados"}
+                </p>
               <button
                 type="button"
                 onClick={handleDownloadShoppingList}
@@ -268,6 +331,7 @@ return (
               >
                 {shoppingListDownloading ? "Gerando..." : "Baixar PDF"}
               </button>
+              </div>
             </div>
           </div>
         </div>

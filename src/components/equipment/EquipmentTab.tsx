@@ -341,11 +341,15 @@ export function EquipmentDetailModal({ equipment, users, currentUserId, isAdmin,
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [actionTermFile, setActionTermFile] = useState<File | null>(null);
   useActionCursor(submitting || deleting);
   const isMine = equipment.holderType === "user" && equipment.holderUserId === currentUserId;
   const isAvailable = equipment.holderType === "company";
   const selectedUser = users.find((item) => item.id === targetUserId);
   const actionLabel = isAvailable ? "Obter" : isMine ? (targetUserId === "company" ? "Devolver" : "Transferir") : "Solicitar transferência";
+  const actionTermType = isAvailable || !isMine ? "responsibility" : "devolution";
+  const actionTermTitle = actionTermType === "responsibility" ? "Termo de responsabilidade" : "Termo de devolução";
+  const actionTermSubtitle = actionTermType === "responsibility" ? "Insira aqui seu termo de responsabilidade" : "Insira aqui seu termo de devolução";
   const actionButtonClass = actionLabel === "Obter"
     ? "bg-emerald-600 hover:bg-emerald-500"
     : actionLabel === "Devolver"
@@ -356,9 +360,25 @@ export function EquipmentDetailModal({ equipment, users, currentUserId, isAdmin,
     setSubmitting(true);
     setError("");
     try {
+      const missingRequiredTerm = equipment.requiresResponsibilityTerm && !actionTermFile;
+      if (missingRequiredTerm) {
+        const confirmed = window.confirm(`${actionTermTitle} não anexado. Deseja continuar mesmo assim?`);
+        if (!confirmed) return;
+      }
+
       const url = isAvailable ? `/api/equipments/${equipment.id}/obtain` : isMine ? `/api/equipments/${equipment.id}/return` : "/api/equipment-requests";
-      const body = isAvailable ? { reason } : isMine ? { reason, toUserId: targetUserId, toUserName: selectedUser?.nome, toUserEmail: selectedUser?.email } : { equipmentId: equipment.id, reason };
-      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const formData = new FormData();
+      formData.append("reason", reason);
+      if (missingRequiredTerm) formData.append("confirmMissingTerm", "true");
+      if (actionTermFile) formData.append("termFile", actionTermFile);
+      if (isMine) {
+        formData.append("toUserId", targetUserId);
+        if (selectedUser?.nome) formData.append("toUserName", selectedUser.nome);
+        if (selectedUser?.email) formData.append("toUserEmail", selectedUser.email);
+      } else if (!isAvailable) {
+        formData.append("equipmentId", String(equipment.id));
+      }
+      const res = await fetch(url, { method: "POST", body: formData });
       const payload = await res.json().catch(() => null);
       if (!res.ok) { setError(payload?.error ?? "Não foi possível concluir a ação."); return; }
       onDone(payload?.autoApproved ? "Solicitações confrontadas e transferência realizada." : isAvailable ? "Equipamento associado a você." : isMine && targetUserId === "company" ? "Equipamento devolvido para RAROTEC." : "Solicitação enviada.");
@@ -390,9 +410,26 @@ export function EquipmentDetailModal({ equipment, users, currentUserId, isAdmin,
       setDeleting(false);
     }
   };
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-4" onClick={onClose}><div className="max-h-[88dvh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl sm:max-h-[94dvh] sm:p-6" onClick={(event) => event.stopPropagation()}><div className="mb-5 flex justify-between"><div><p className="font-mono text-sm text-blue-400">{equipment.code}</p><div className="flex flex-wrap items-center gap-2"><h3 className="text-xl font-bold text-white">{equipment.name}</h3>{equipment.requiresResponsibilityTerm ? <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[11px] font-semibold text-amber-200">Exige termo</span> : null}{canEdit ? <button type="button" onClick={onEdit} aria-label="Editar equipamento" title="Editar equipamento" className="rounded-lg border border-slate-700 p-2 text-slate-400 transition-colors hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-300"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.5 7.125L16.875 4.5" /></svg></button> : null}{isAdmin ? <button type="button" onClick={handleDelete} disabled={deleting} aria-label="Excluir equipamento" title="Excluir equipamento" className="rounded-lg border border-slate-700 p-2 text-slate-400 transition-colors hover:border-rose-500/50 hover:bg-rose-500/10 hover:text-rose-300 disabled:opacity-60"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673A2.25 2.25 0 0115.916 21.75H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg></button> : null}</div></div><button onClick={onClose} className="text-2xl leading-none text-slate-400 transition-colors hover:text-white">×</button></div>{error ? <p className="mb-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">{error}</p> : null}<div className="grid grid-cols-1 gap-4 text-sm min-[420px]:grid-cols-2"><Info label="Categoria">{equipment.category}</Info><Info label="Marca">{equipment.brand || "—"}</Info><Info label="Portador atual">{holderLabel(equipment)}</Info><Info label="Preço">{equipment.price ? `R$ ${Number(equipment.price).toFixed(2)}` : "—"}</Info></div><EquipmentAttachmentsInfo equipment={equipment} />{equipment.observations ? <div className="mt-4"><Info label="Observações">{equipment.observations}</Info></div> : null}{!isMine ? <label className="mt-5 block text-sm font-medium text-slate-300"><span className="mb-1 block">Motivo</span><textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={3} className="w-full resize-none rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white" /></label> : <label className="mt-5 block text-sm font-medium text-slate-300"><span className="mb-1 block">Destino</span><select value={targetUserId} onChange={(event) => setTargetUserId(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white"><option value="company">RAROTEC</option>{users.filter((item) => item.id !== currentUserId).map((item) => <option key={item.id} value={item.id}>{item.nome}</option>)}</select><TransferTargetPreview targetUserId={targetUserId} user={selectedUser ?? null} /></label>}<div className="mt-6 flex justify-center"><button disabled={submitting} className={`rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-70 ${actionButtonClass}`} onClick={submit}>{submitting ? "Enviando..." : actionLabel}</button></div>{isAdmin ? null : null}</div></div>;
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-4" onClick={onClose}><div className="max-h-[88dvh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl sm:max-h-[94dvh] sm:p-6" onClick={(event) => event.stopPropagation()}><div className="mb-5 flex justify-between"><div><p className="font-mono text-sm text-blue-400">{equipment.code}</p><div className="flex flex-wrap items-center gap-2"><h3 className="text-xl font-bold text-white">{equipment.name}</h3>{canEdit ? <button type="button" onClick={onEdit} aria-label="Editar equipamento" title="Editar equipamento" className="rounded-lg border border-slate-700 p-2 text-slate-400 transition-colors hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-300"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.5 7.125L16.875 4.5" /></svg></button> : null}{isAdmin ? <button type="button" onClick={handleDelete} disabled={deleting} aria-label="Excluir equipamento" title="Excluir equipamento" className="rounded-lg border border-slate-700 p-2 text-slate-400 transition-colors hover:border-rose-500/50 hover:bg-rose-500/10 hover:text-rose-300 disabled:opacity-60"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673A2.25 2.25 0 0115.916 21.75H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg></button> : null}</div></div><div className="flex items-center gap-2">{equipment.requiresResponsibilityTerm ? <span className="equipment-term-badge equipment-term-badge-required inline-flex rounded-md border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[11px] font-semibold text-amber-200">Exige Termo</span> : <span className="equipment-term-badge equipment-term-badge-ok inline-flex rounded-md border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-200">{"N\u00e3o Exige Termo"}</span>}<button onClick={onClose} className="text-2xl leading-none text-slate-400 transition-colors hover:text-white">×</button></div></div>{error ? <p className="mb-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">{error}</p> : null}<div className="grid grid-cols-1 gap-4 text-sm min-[420px]:grid-cols-2"><Info label="Categoria">{equipment.category}</Info><Info label="Marca">{equipment.brand || "\u2014"}</Info><Info label="Portador atual">{holderLabel(equipment)}</Info><Info label={"Pre\u00e7o"}>{equipment.price ? `R$ ${Number(equipment.price).toFixed(2)}` : "\u2014"}</Info></div><EquipmentAttachmentsInfo equipment={equipment} />{equipment.observations ? <div className="mt-4"><Info label="Observações">{equipment.observations}</Info></div> : null}{!isMine ? <label className="mt-5 block text-sm font-medium text-slate-300"><span className="mb-1 block">Motivo</span><textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={3} className="w-full resize-none rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white" /></label> : <label className="mt-5 block text-sm font-medium text-slate-300"><span className="mb-1 block">Destino</span><select value={targetUserId} onChange={(event) => setTargetUserId(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white"><option value="company">RAROTEC</option>{users.filter((item) => item.id !== currentUserId).map((item) => <option key={item.id} value={item.id}>{item.nome}</option>)}</select><TransferTargetPreview targetUserId={targetUserId} user={selectedUser ?? null} /></label>}{equipment.requiresResponsibilityTerm ? <ActionTermUpload title={actionTermTitle} subtitle={actionTermSubtitle} file={actionTermFile} onFileChange={setActionTermFile} /> : null}<div className="mt-6 flex justify-center"><button disabled={submitting} className={`rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-70 ${actionButtonClass}`} onClick={submit}>{submitting ? "Enviando..." : actionLabel}</button></div>{isAdmin ? null : null}</div></div>;
 }
 
+
+function ActionTermUpload({ title, subtitle, file, onFileChange }: { title: string; subtitle: string; file: File | null; onFileChange: (file: File | null) => void }) {
+  return (
+    <div className="equipment-attachment-card mt-5 rounded-lg border border-slate-800 bg-slate-950/35 px-3 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-slate-300">{title}</p>
+          <p className="mt-0.5 truncate text-xs text-slate-500">{file?.name ?? subtitle}</p>
+        </div>
+        <label className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-700 text-slate-400 transition-colors hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-300" title={title} aria-label={title}>
+          <input type="file" accept="image/*,application/pdf" className="sr-only" onChange={(event) => onFileChange(event.target.files?.[0] ?? null)} />
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94a3 3 0 114.243 4.243L8.56 18.31a1.5 1.5 0 11-2.121-2.121l9.192-9.193" /></svg>
+        </label>
+      </div>
+    </div>
+  );
+}
 function EquipmentAttachmentsInfo({ equipment }: { equipment: Equipment }) {
   return (
     <div className="mt-4 grid grid-cols-1 gap-3">
@@ -403,7 +440,7 @@ function EquipmentAttachmentsInfo({ equipment }: { equipment: Equipment }) {
 
 function EquipmentAttachmentLink({ title, filename, url, emptyText }: { title: string; filename: string | null; url: string | null; emptyText: string }) {
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-950/35 px-3 py-3">
+    <div className="equipment-attachment-card rounded-lg border border-slate-800 bg-slate-950/35 px-3 py-3">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-wider text-slate-500">{title}</p>
@@ -479,6 +516,8 @@ function HolderCell({ equipment, users }: { equipment: Equipment; users: Equipme
 
 function Input({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (value: string) => void; type?: string }) { return <label className="text-sm font-medium text-slate-300"><span className="mb-1 block">{label}</span><input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-white" /></label>; }
 function Info({ label, children }: { label: string; children: React.ReactNode }) { return <div><p className="text-xs uppercase tracking-wider text-slate-500">{label}</p><div className="mt-1 text-slate-300">{children}</div></div>; }
+
+
 
 
 

@@ -42,6 +42,7 @@ type StockHeaderActionsProps = {
   theme: ColorTheme;
   alerts: AlertItem[];
   requestAlerts: EquipmentRequest[];
+  termPendencyCount: number;
   unavailableCount: number;
   belowMinCount: number;
   onToggleTheme: () => void;
@@ -136,6 +137,7 @@ export function StockHeaderActions({
   theme,
   alerts,
   requestAlerts,
+  termPendencyCount,
   unavailableCount,
   belowMinCount,
   onToggleTheme,
@@ -147,7 +149,7 @@ export function StockHeaderActions({
   const [appsLoading, setAppsLoading] = useState(false);
   const [appsError, setAppsError] = useState("");
   const displayName = user?.nome || "Usuário";
-  const totalAlerts = alerts.length + requestAlerts.length;
+  const totalAlerts = alerts.length + requestAlerts.length + (termPendencyCount > 0 ? 1 : 0);
 
   const closeMenu = useCallback(() => setOpenMenu(null), []);
 
@@ -218,6 +220,14 @@ export function StockHeaderActions({
           ) : (
             <>
               <div className="max-h-80 overflow-y-auto">
+                {termPendencyCount > 0 ? (
+                  <Link href="/pessoal" onClick={closeMenu} className="block border-b border-slate-800/50 px-4 py-3 transition-colors hover:bg-slate-800/30">
+                    <div className="flex items-start gap-3">
+                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/15 text-amber-300"><BellIcon /></span>
+                      <span className="min-w-0 flex-1"><span className="block text-sm font-medium text-white">Existem equipamentos sem termos anexados</span><span className="mt-0.5 block text-xs text-slate-400">{termPendencyCount} pendência{termPendencyCount !== 1 ? "s" : ""} de termo</span></span>
+                    </div>
+                  </Link>
+                ) : null}
                 {requestAlerts.map((request) => (
                   <Link
                     key={`request-${request.id}`}
@@ -403,3 +413,5 @@ export function StockHeaderActions({
     </div>
   );
 }
+
+

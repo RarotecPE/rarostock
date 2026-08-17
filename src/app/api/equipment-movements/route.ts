@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { equipmentMovements, equipments } from "@/db/schema";
 import { and, desc, eq, gte, inArray, lte, or } from "drizzle-orm";
@@ -51,6 +51,12 @@ export async function GET(req: NextRequest) {
     toUserName: equipmentMovements.toUserName,
     toUserEmail: equipmentMovements.toUserEmail,
     reason: equipmentMovements.reason,
+    responsibilityTermUrl: equipmentMovements.responsibilityTermUrl,
+    responsibilityTermFilename: equipmentMovements.responsibilityTermFilename,
+    responsibilityTermStoragePath: equipmentMovements.responsibilityTermStoragePath,
+    devolutionTermUrl: equipmentMovements.devolutionTermUrl,
+    devolutionTermFilename: equipmentMovements.devolutionTermFilename,
+    devolutionTermStoragePath: equipmentMovements.devolutionTermStoragePath,
     requestId: equipmentMovements.requestId,
     createdByUserId: equipmentMovements.createdByUserId,
     createdAt: equipmentMovements.createdAt,
@@ -61,3 +67,4 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json(rows);
 }
+

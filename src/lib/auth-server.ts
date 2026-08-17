@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import {
   AppRole,
   getRolePermissions,
@@ -8,6 +8,7 @@ import {
 
 export const AUTH_COOKIE_NAME = "rarostock_global_session";
 export const SSO_STATE_COOKIE_NAME = "rarostock_sso_state";
+export const SSO_NEXT_COOKIE_NAME = "rarostock_sso_next";
 const LEGACY_SESSION_COOKIE_NAME = "rarostock_session";
 const LEGACY_ROLE_COOKIE_NAME = "rarostock_role";
 const PERSISTENT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 365 * 10;
