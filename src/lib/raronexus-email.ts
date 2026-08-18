@@ -61,7 +61,7 @@ export async function notifyEquipmentRequestByEmail(request: EquipmentRequestRow
     ${requiresTerm ? "<p>Este equipamento exige termo, e a tela de decisão permitirá anexar o arquivo antes da aprovação.</p>" : ""}
     <p>Acesse o RaroStock para aprovar ou rejeitar a solicitação.</p>
     <p style="margin: 28px 0;">
-      <a href="${escapeHtml(actionUrl)}" style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 12px 18px; border-radius: 8px; font-weight: 700;">
+      <a href="${escapeHtml(actionUrl)}" style="display: inline-block; background: {{primary_color}}; color: #ffffff; text-decoration: none; padding: 12px 18px; border-radius: 8px; font-weight: 700;">
         Abrir solicitação
       </a>
     </p>
