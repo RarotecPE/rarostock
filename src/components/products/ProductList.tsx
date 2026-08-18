@@ -120,6 +120,7 @@ export function ProductList({ refreshKey = 0, canManageStock, isAdmin = false }:
     const selected = new Set(selectedShoppingItemIds);
     return shoppingListItems.filter(({ item }) => selected.has(item.id));
   }, [selectedShoppingItemIds, shoppingListItems]);
+  const allShoppingItemsSelected = shoppingListItems.length > 0 && selectedShoppingItemIds.length === shoppingListItems.length;
 
   const buildShoppingListUrl = (productIds = selectedShoppingItemIds) => {
     const params = new URLSearchParams();
@@ -204,6 +205,10 @@ export function ProductList({ refreshKey = 0, canManageStock, isAdmin = false }:
     setSelectedShoppingItemIds((current) => (current.includes(id) ? current.filter((itemId) => itemId !== id) : [...current, id]));
   };
 
+  const toggleAllShoppingItems = () => {
+    setSelectedShoppingItemIds((current) => (current.length === shoppingListItems.length ? [] : shoppingListItems.map(({ item }) => item.id)));
+  };
+
 return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 sm:gap-3">
@@ -266,6 +271,14 @@ return (
                 <p className="shopping-list-modal-description mt-1 text-sm">
                   Escolha os produtos que devem entrar no PDF.
                 </p>
+                <label className="mt-2 flex cursor-pointer items-center gap-3 rounded-lg px-3 pt-1 text-sm font-medium text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={allShoppingItemsSelected}
+                    onChange={toggleAllShoppingItems}
+                  />
+                  Selecionar Todos
+                </label>
               </div>
               <button
                 type="button"
@@ -311,14 +324,16 @@ return (
             </div>
 
             <div className="border-t border-slate-800/80 p-5">
-              <label className="mb-4 flex cursor-pointer items-center justify-center gap-2 text-sm font-medium text-slate-300">
-                <input
-                  type="checkbox"
-                  checked={sendShoppingListEmail}
-                  onChange={(event) => setSendShoppingListEmail(event.target.checked)}
-                />
-                Enviar também para meu e-mail
-              </label>
+              <div className="mb-4 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-6">
+                <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={sendShoppingListEmail}
+                    onChange={(event) => setSendShoppingListEmail(event.target.checked)}
+                  />
+                  Enviar também para meu e-mail
+                </label>
+              </div>
               <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <p className="text-xs text-slate-500">
                   {selectedShoppingItems.length} de {shoppingListItems.length} {shoppingListItems.length === 1 ? "item selecionado" : "itens selecionados"}
