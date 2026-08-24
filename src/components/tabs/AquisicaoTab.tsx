@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef, type FormEvent } from "react";
 import { Item, CartItem, normalizeSearch, Acquisition, pluralizeUnit } from "@/types/stock";
-import { InvoicePreviewModal } from "@/components/modals/InvoicePreviewModal";
 import { RefreshButton } from "@/components/ui/RefreshButton";
 import { AcquisitionDetailModal } from "@/components/modals/AcquisitionDetailModal";
 import { Toast } from "@/components/ui/Toast";
@@ -63,10 +62,6 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
   const [endDate, setEndDate] = useState("");
   const [purchaseTypeFilters, setPurchaseTypeFilters] = useState<PurchaseType[]>([]);
   const [showHistoryFilters, setShowHistoryFilters] = useState(false);
-  const [previewInvoice, setPreviewInvoice] = useState<{
-    url: string;
-    filename?: string | null;
-  } | null>(null);
   const [selectedAcqId, setSelectedAcqId] = useState<number | null>(null);
   const [historyPage, setHistoryPage] = useState(1);
   const historyPerPage = 15;
@@ -758,21 +753,11 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
           )}
         </div>
 
-      {/* Invoice Preview Modal */}
-      {previewInvoice && (
-        <InvoicePreviewModal
-          imageUrl={previewInvoice.url}
-          filename={previewInvoice.filename}
-          onClose={() => setPreviewInvoice(null)}
-        />
-      )}
-
       {/* Acquisition Detail Modal */}
       {selectedAcqId && (
         <AcquisitionDetailModal
           acquisitionId={selectedAcqId}
           onClose={() => setSelectedAcqId(null)}
-          onPreviewInvoice={(url, filename) => setPreviewInvoice({ url, filename })}
           canManageStock={canManageStock}
           canDeleteInvoice={canDeleteInvoice}
           units={catalog.units}
