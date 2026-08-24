@@ -1,7 +1,7 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canManageStock } from "@/lib/roles";
-import { uploadInvoiceToFtp } from "@/lib/ftp-storage";
+import { uploadAttachmentToR2 } from "@/lib/r2-storage";
 
 export async function POST(req: NextRequest) {
   const auth = await requirePermission(req, canManageStock);
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const upload = await uploadInvoiceToFtp(file, context);
+    const upload = await uploadAttachmentToR2(file, context);
 
     return NextResponse.json({
       url: upload.url,
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unexpected upload error";
-    const status = message.includes("Tipo de arquivo não permitido") ? 400 : 500;
+    const status = message.includes("Tipo de arquivo") ? 400 : 500;
 
     return NextResponse.json({ error: message }, { status });
   }

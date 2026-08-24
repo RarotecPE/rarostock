@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { acquisitions } from "@/db/schema";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canAdmin, canManageStock } from "@/lib/roles";
-import { deleteInvoiceFromFtp } from "@/lib/ftp-storage";
+import { deleteAttachmentFromStorage } from "@/lib/r2-storage";
 
 export async function PUT(
   req: NextRequest,
@@ -114,7 +114,7 @@ export async function DELETE(
 
   if (current.invoiceStoragePath) {
     try {
-      await deleteInvoiceFromFtp(current.invoiceStoragePath);
+      await deleteAttachmentFromStorage(current.invoiceStoragePath);
       storageDeleted = true;
     } catch (error) {
       const message =

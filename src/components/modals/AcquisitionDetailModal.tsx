@@ -7,7 +7,6 @@ import { useActionCursor } from "@/lib/use-action-cursor";
 interface Props {
   acquisitionId: number;
   onClose: () => void;
-  onPreviewInvoice?: (url: string, filename?: string | null) => void;
   canManageStock: boolean;
   canDeleteInvoice: boolean;
   onInvoiceChanged?: () => void;
@@ -18,7 +17,6 @@ interface Props {
 export function AcquisitionDetailModal({
   acquisitionId,
   onClose,
-  onPreviewInvoice,
   canManageStock,
   canDeleteInvoice,
   onInvoiceChanged,
@@ -212,12 +210,7 @@ export function AcquisitionDetailModal({
                 {acquisition.invoiceUrl ? (
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                     <button
-                      onClick={() =>
-                        onPreviewInvoice?.(
-                          acquisition.invoiceUrl!,
-                          acquisition.invoiceFilename
-                        )
-                      }
+                      onClick={() => window.open(acquisition.invoiceUrl!, "_blank", "noopener,noreferrer")}
                       className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm text-slate-300 transition-colors"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

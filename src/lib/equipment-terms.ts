@@ -1,4 +1,4 @@
-﻿import { uploadInvoiceToFtp } from "@/lib/ftp-storage";
+import { uploadAttachmentToR2 } from "@/lib/r2-storage";
 
 export type EquipmentTermType = "responsibility" | "devolution";
 
@@ -17,7 +17,7 @@ export function termTypeFromValue(value: FormDataEntryValue | null): EquipmentTe
 }
 
 export async function uploadEquipmentTermFile(file: File, termType: EquipmentTermType): Promise<EquipmentTermPayload> {
-  return uploadInvoiceToFtp(
+  return uploadAttachmentToR2(
     file,
     termType === "responsibility" ? "equipmentResponsibilityTerm" : "equipmentDevolutionTerm",
   );
