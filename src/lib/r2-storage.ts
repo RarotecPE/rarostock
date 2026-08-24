@@ -6,6 +6,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { randomUUID } from "crypto";
 import path from "path";
+import sharp from "sharp";
 import { deleteInvoiceFromFtp } from "@/lib/ftp-storage";
 
 const allowedExtensions = new Set(["jpg", "jpeg", "png", "webp", "gif", "pdf"]);
@@ -30,6 +31,12 @@ export type StoredAttachmentFile = {
   body: Uint8Array;
   contentType: string;
   filename: string;
+};
+
+type PreparedUploadFile = {
+  buffer: Buffer;
+  extension: string;
+  contentType: string;
 };
 
 const sanitizeFilename = (filename: string) =>
@@ -63,6 +70,42 @@ const getAllowedFileExtension = (file: File) => {
   }
 
   return extension;
+};
+
+const optimizeImageForStorage = async (
+  buffer: Buffer,
+  extension: string,
+  contentType: string
+): Promise<PreparedUploadFile> => {
+  if (extension === "pdf" || extension === "gif" || !contentType.startsWith("image/")) {
+    return { buffer, extension, contentType };
+  }
+
+  try {
+    const optimized = await sharp(buffer, { failOn: "none" })
+      .rotate()
+      .resize({
+        width: 2000,
+        height: 2000,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .webp({ quality: 90, effort: 4 })
+      .toBuffer();
+
+    if (optimized.length >= buffer.length) {
+      return { buffer, extension, contentType };
+    }
+
+    return {
+      buffer: optimized,
+      extension: "webp",
+      contentType: "image/webp",
+    };
+  } catch (error) {
+    console.warn("r2_image_optimization_failed", error);
+    return { buffer, extension, contentType };
+  }
 };
 
 const getR2Config = () => {
@@ -150,20 +193,25 @@ export const uploadAttachmentToR2 = async (
   const config = getR2Config();
   const extension = getAllowedFileExtension(file);
   const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
+  const originalBuffer = Buffer.from(bytes);
+  const prepared = await optimizeImageForStorage(
+    originalBuffer,
+    extension,
+    file.type || (extension === "pdf" ? "application/pdf" : "application/octet-stream")
+  );
   const baseName = path.posix
     .basename(file.name, path.posix.extname(file.name))
     .slice(0, 80);
   const safeBaseName = sanitizeFilename(baseName) || getFallbackBaseName(context);
-  const storedFilename = `${Date.now()}-${randomUUID().slice(0, 8)}-${safeBaseName}.${extension}`;
+  const storedFilename = `${Date.now()}-${randomUUID().slice(0, 8)}-${safeBaseName}.${prepared.extension}`;
   const key = `${getPrefix(context)}/${storedFilename}`;
 
   await getR2Client().send(
     new PutObjectCommand({
       Bucket: config.bucket,
       Key: key,
-      Body: buffer,
-      ContentType: file.type || (extension === "pdf" ? "application/pdf" : "application/octet-stream"),
+      Body: prepared.buffer,
+      ContentType: prepared.contentType,
     })
   );
 
