@@ -99,7 +99,9 @@ export function AcquisitionDetailModal({
   const handleDeleteInvoice = async () => {
     if (!acquisition?.invoiceUrl || deletingInvoice) return;
 
-    const confirmed = window.confirm("Excluir a nota fiscal desta aquisição?");
+    const confirmed = window.confirm(
+      "Excluir a nota fiscal desta aquisição?\n\nATENÇÃO: Essa operação não pode ser desfeita."
+    );
     if (!confirmed) return;
 
     setDeletingInvoice(true);
