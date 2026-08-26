@@ -4,9 +4,6 @@ import { equipmentRequests, equipments } from "@/db/schema";
 import { and, desc, eq, ne, or } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canAdmin, canView } from "@/lib/roles";
-import { autoMatchEquipmentRequest } from "@/lib/equipment-request-matching";
-import { assignMovementTermPayload, hasConfirmedMissingTerm, parseRequestWithOptionalEquipmentTerm } from "@/lib/equipment-terms";
-import { notifyEquipmentRequestByEmail } from "@/lib/raronexus-email";
 
 export async function GET(req: NextRequest) {
   const auth = await requirePermission(req, canView);
@@ -77,6 +74,15 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const auth = await requirePermission(req, canView);
   if (hasAuthError(auth)) return auth.response;
+  const [
+    { autoMatchEquipmentRequest },
+    { assignMovementTermPayload, hasConfirmedMissingTerm, parseRequestWithOptionalEquipmentTerm },
+    { notifyEquipmentRequestByEmail },
+  ] = await Promise.all([
+    import("@/lib/equipment-request-matching"),
+    import("@/lib/equipment-terms"),
+    import("@/lib/raronexus-email"),
+  ]);
   const { body, termPayload } = await parseRequestWithOptionalEquipmentTerm(req, "responsibility");
   const equipmentId = Number(body.equipmentId);
   const [equipment] = await db.select().from(equipments).where(eq(equipments.id, equipmentId)).limit(1);
