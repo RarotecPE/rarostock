@@ -5,7 +5,10 @@ import { uploadAttachmentToR2 } from "@/lib/r2-storage";
 
 export async function POST(req: NextRequest) {
   const auth = await requirePermission(req, canManageStock);
-  if (hasAuthError(auth)) return auth.response;
+  if (hasAuthError(auth)) {
+    console.error("Auth error:", auth.response);
+    return auth.response
+  }
 
   try {
     const formData = await req.formData();

@@ -4,7 +4,6 @@ import { equipments, equipmentMovements } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canAdmin, canManageStock, canView } from "@/lib/roles";
-import { deleteAttachmentFromStorage } from "@/lib/r2-storage";
 
 export async function GET(req: NextRequest) {
   const auth = await requirePermission(req, canView);
@@ -65,6 +64,7 @@ export async function PUT(req: NextRequest) {
     current.invoiceStoragePath !== nextInvoiceStoragePath
   ) {
     try {
+      const { deleteAttachmentFromStorage } = await import("@/lib/r2-storage");
       await deleteAttachmentFromStorage(current.invoiceStoragePath);
     } catch (error) {
       console.error("Failed to delete old equipment invoice", error);

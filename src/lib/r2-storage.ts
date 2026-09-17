@@ -4,9 +4,9 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+import { Jimp } from "jimp";
 import { randomUUID } from "crypto";
 import path from "path";
-import sharp from "sharp";
 import { deleteInvoiceFromFtp } from "@/lib/ftp-storage";
 
 const allowedExtensions = new Set(["jpg", "jpeg", "png", "webp", "gif", "pdf"]);
@@ -38,6 +38,8 @@ type PreparedUploadFile = {
   extension: string;
   contentType: string;
 };
+
+const maxImageDimension = 2000;
 
 const sanitizeFilename = (filename: string) =>
   filename.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -72,6 +74,33 @@ const getAllowedFileExtension = (file: File) => {
   return extension;
 };
 
+const getContentTypeForExtension = (extension: string) => {
+  if (extension === "pdf") return "application/pdf";
+  if (extension === "gif") return "image/gif";
+  if (extension === "jpg" || extension === "jpeg") return "image/jpeg";
+  if (extension === "png") return "image/png";
+  if (extension === "webp") return "image/webp";
+  return "application/octet-stream";
+};
+
+const getStableJimpOutput = (extension: string, contentType: string) => {
+  if (extension === "jpg" || extension === "jpeg" || contentType === "image/jpeg") {
+    return {
+      extension: extension === "jpeg" ? "jpeg" : "jpg",
+      contentType: "image/jpeg" as const,
+    };
+  }
+
+  if (extension === "png" || contentType === "image/png") {
+    return {
+      extension: "png",
+      contentType: "image/png" as const,
+    };
+  }
+
+  return null;
+};
+
 const optimizeImageForStorage = async (
   buffer: Buffer,
   extension: string,
@@ -82,25 +111,30 @@ const optimizeImageForStorage = async (
   }
 
   try {
-    const optimized = await sharp(buffer, { failOn: "none" })
-      .rotate()
-      .resize({
-        width: 2000,
-        height: 2000,
-        fit: "inside",
-        withoutEnlargement: true,
-      })
-      .webp({ quality: 90, effort: 4 })
-      .toBuffer();
+    const output = getStableJimpOutput(extension, contentType);
+    if (!output) {
+      return { buffer, extension, contentType };
+    }
+
+    const image = await Jimp.read(buffer);
+
+    if (image.width > maxImageDimension || image.height > maxImageDimension) {
+      image.scaleToFit({ w: maxImageDimension, h: maxImageDimension });
+    }
+
+    const optimized =
+      output.contentType === "image/jpeg"
+        ? await image.getBuffer(output.contentType, { quality: 90 })
+        : await image.getBuffer(output.contentType);
 
     if (optimized.length >= buffer.length) {
       return { buffer, extension, contentType };
     }
 
     return {
-      buffer: optimized,
-      extension: "webp",
-      contentType: "image/webp",
+      buffer: Buffer.from(optimized),
+      extension: output.extension,
+      contentType: output.contentType,
     };
   } catch (error) {
     console.warn("r2_image_optimization_failed", error);
@@ -197,7 +231,7 @@ export const uploadAttachmentToR2 = async (
   const prepared = await optimizeImageForStorage(
     originalBuffer,
     extension,
-    file.type || (extension === "pdf" ? "application/pdf" : "application/octet-stream")
+    file.type || getContentTypeForExtension(extension)
   );
   const baseName = path.posix
     .basename(file.name, path.posix.extname(file.name))
