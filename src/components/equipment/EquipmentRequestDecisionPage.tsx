@@ -6,6 +6,7 @@ import { Toast } from "@/components/ui/Toast";
 import { RefreshButton } from "@/components/ui/RefreshButton";
 import { useStockSession } from "@/components/layout/StockAppShell";
 import { EquipmentRequest } from "@/types/stock";
+import { prepareAttachmentForUpload } from "@/lib/client-attachment";
 
 type ToastState = { message: string; type?: "success" | "error" } | null;
 
@@ -86,25 +87,33 @@ export function EquipmentRequestDecisionPage({ requestId }: { requestId: number 
     }
 
     setSaving(true);
-    const formData = new FormData();
-    if (termFile) formData.append("termFile", termFile);
-    if (confirmMissingTerm) formData.append("confirmMissingTerm", "true");
+    try {
+      const formData = new FormData();
+      if (termFile) {
+        const preparedTerm = await prepareAttachmentForUpload(termFile);
+        formData.append("termFile", preparedTerm);
+      }
+      if (confirmMissingTerm) formData.append("confirmMissingTerm", "true");
 
-    const res = await fetch(`/api/equipment-requests/${request.id}/${approve ? "approve" : "reject"}`, {
-      method: "POST",
-      body: formData,
-    });
-    const payload = await res.json().catch(() => null);
-    setSaving(false);
+      const res = await fetch(`/api/equipment-requests/${request.id}/${approve ? "approve" : "reject"}`, {
+        method: "POST",
+        body: formData,
+      });
+      const payload = await res.json().catch(() => null);
+      setSaving(false);
 
-    if (!res.ok) {
-      setToast({ message: payload?.error ?? "Nao foi possivel atualizar a solicitacao.", type: "error" });
-      return;
+      if (!res.ok) {
+        setToast({ message: payload?.error ?? "Nao foi possivel atualizar a solicitacao.", type: "error" });
+        return;
+      }
+
+      setTermFile(null);
+      setToast({ message: approve ? "Solicitacao aprovada." : "Solicitacao rejeitada." });
+      await load();
+    } catch (err) {
+      setSaving(false);
+      setToast({ message: err instanceof Error ? err.message : "Erro ao preparar arquivo.", type: "error" });
     }
-
-    setTermFile(null);
-    setToast({ message: approve ? "Solicitacao aprovada." : "Solicitacao rejeitada." });
-    await load();
   }
 
   return (

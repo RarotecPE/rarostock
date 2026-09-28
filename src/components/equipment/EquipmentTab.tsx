@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Equipment, EquipmentUser, holderLabel, normalizeSearch } from "@/types/stock";
@@ -8,6 +8,7 @@ import { FilterCheckbox, FilterDropdown, FilterSection, toggleFilterValue } from
 import { PaginationControls, getTotalPages, paginate } from "@/components/ui/PaginationControls";
 import { useStockSession } from "@/components/layout/StockAppShell";
 import { useActionCursor } from "@/lib/use-action-cursor";
+import { prepareAttachmentForUpload } from "@/lib/client-attachment";
 
 type ToastState = { message: string; type?: "success" | "error" | "warning"; subMessage?: string } | null;
 type EquipmentDraft = { code: string; name: string; brand: string; category: string; price: string; observations: string; active: boolean; requiresResponsibilityTerm: boolean };
@@ -193,8 +194,9 @@ function EquipmentFormModal({ equipment, categories, onClose, onDone }: { equipm
     let invoicePayload = {};
 
     const uploadAttachment = async (file: File, fallbackMessage: string) => {
+      const preparedFile = await prepareAttachmentForUpload(file);
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", preparedFile);
       formData.append("context", "equipment");
 
       const uploadRes = await fetch("/api/upload", {
@@ -370,7 +372,10 @@ export function EquipmentDetailModal({ equipment, users, currentUserId, isAdmin,
       const formData = new FormData();
       formData.append("reason", reason);
       if (missingRequiredTerm) formData.append("confirmMissingTerm", "true");
-      if (actionTermFile) formData.append("termFile", actionTermFile);
+      if (actionTermFile) {
+        const preparedTerm = await prepareAttachmentForUpload(actionTermFile);
+        formData.append("termFile", preparedTerm);
+      }
       if (isMine) {
         formData.append("toUserId", targetUserId);
         if (selectedUser?.nome) formData.append("toUserName", selectedUser.nome);

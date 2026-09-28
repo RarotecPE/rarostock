@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Equipment, EquipmentMovement, EquipmentRequest, EquipmentTermPendency, EquipmentUser, holderLabel } from "@/types/stock";
@@ -7,6 +7,7 @@ import { Toast } from "@/components/ui/Toast";
 import { useStockSession } from "@/components/layout/StockAppShell";
 import { EquipmentDetailModal } from "@/components/equipment/EquipmentTab";
 import { PaginationControls, getTotalPages, paginate } from "@/components/ui/PaginationControls";
+import { prepareAttachmentForUpload } from "@/lib/client-attachment";
 
 type ToastState = { message: string; type?: "success" | "error" } | null;
 
@@ -116,37 +117,52 @@ export function PersonalEquipmentTab() {
   const paginatedEquipments = useMemo(() => paginate(equipments, currentEquipmentPage), [currentEquipmentPage, equipments]);
 
   const decide = async (id: number, approve: boolean, termFile?: File | null, confirmMissingTerm?: boolean) => {
-    const formData = new FormData();
-    if (termFile) formData.append("termFile", termFile);
-    if (confirmMissingTerm) formData.append("confirmMissingTerm", "true");
-    const res = await fetch(`/api/equipment-requests/${id}/${approve ? "approve" : "reject"}`, {
-      method: "POST",
-      body: formData,
-    });
-    const payload = await res.json().catch(() => null);
-    if (!res.ok) {
+    try {
+      const formData = new FormData();
+      if (termFile) {
+        const preparedTerm = await prepareAttachmentForUpload(termFile);
+        formData.append("termFile", preparedTerm);
+      }
+      if (confirmMissingTerm) formData.append("confirmMissingTerm", "true");
+      const res = await fetch(`/api/equipment-requests/${id}/${approve ? "approve" : "reject"}`, {
+        method: "POST",
+        body: formData,
+      });
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        setToast({
+          message: payload?.error ?? "Não foi possível atualizar a solicitação.",
+          type: "error",
+        });
+        return;
+      }
+      setToast({ message: approve ? "Solicitação aprovada." : "Solicitação rejeitada." });
+      void load();
+    } catch (err) {
       setToast({
-        message: payload?.error ?? "Não foi possível atualizar a solicitação.",
+        message: err instanceof Error ? err.message : "Erro ao preparar o termo.",
         type: "error",
       });
-      return;
     }
-    setToast({ message: approve ? "Solicitação aprovada." : "Solicitação rejeitada." });
-    void load();
   };
 
   const uploadMovementTerm = async (pendency: EquipmentTermPendency, file: File) => {
-    const formData = new FormData();
-    formData.append("termType", pendency.termType);
-    formData.append("termFile", file);
-    const res = await fetch(`/api/equipment-movements/${pendency.movementId}/terms`, { method: "PUT", body: formData });
-    const payload = await res.json().catch(() => null);
-    if (!res.ok) {
-      setToast({ message: payload?.error ?? "Não foi possível anexar o termo.", type: "error" });
-      return;
+    try {
+      const preparedFile = await prepareAttachmentForUpload(file);
+      const formData = new FormData();
+      formData.append("termType", pendency.termType);
+      formData.append("termFile", preparedFile);
+      const res = await fetch(`/api/equipment-movements/${pendency.movementId}/terms`, { method: "PUT", body: formData });
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        setToast({ message: payload?.error ?? "Não foi possível anexar o termo.", type: "error" });
+        return;
+      }
+      setToast({ message: "Termo anexado." });
+      void load();
+    } catch (err) {
+      setToast({ message: err instanceof Error ? err.message : "Não foi possível anexar o termo.", type: "error" });
     }
-    setToast({ message: "Termo anexado." });
-    void load();
   };
 
   return (

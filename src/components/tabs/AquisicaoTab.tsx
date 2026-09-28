@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef, type FormEvent } from "react";
 import { Item, CartItem, normalizeSearch, Acquisition, pluralizeUnit } from "@/types/stock";
@@ -8,6 +8,7 @@ import { Toast } from "@/components/ui/Toast";
 import { FilterCheckbox, FilterDropdown, FilterSection, toggleFilterValue } from "@/components/ui/FilterDropdown";
 import { useStockCatalog } from "@/lib/use-stock-catalog";
 import { useActionCursor } from "@/lib/use-action-cursor";
+import { prepareAttachmentForUpload } from "@/lib/client-attachment";
 
 type PurchaseType = "physical_store" | "online";
 type DropdownPosition = { top: number; left: number; width: number; maxHeight: number };
@@ -213,26 +214,36 @@ export function AquisicaoTab({ canManageStock, canDeleteInvoice }: AquisicaoTabP
     let invoiceStoragePath = "";
 
     if (invoiceFile) {
-      const formData = new FormData();
-      formData.append("file", invoiceFile);
-      const upRes = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const upData = await upRes.json();
+      try {
+        const preparedFile = await prepareAttachmentForUpload(invoiceFile);
+        const formData = new FormData();
+        formData.append("file", preparedFile);
+        const upRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const upData = await upRes.json();
 
-      if (!upRes.ok) {
+        if (!upRes.ok) {
+          setSubmitting(false);
+          setToast({
+            message: upData.error ?? "Não foi possível enviar a nota fiscal.",
+            type: "error",
+          });
+          return;
+        }
+
+        invoiceUrl = upData.url;
+        invoiceFilename = upData.filename;
+        invoiceStoragePath = upData.storagePath;
+      } catch (err) {
         setSubmitting(false);
         setToast({
-          message: upData.error ?? "Não foi possível enviar a nota fiscal.",
+          message: err instanceof Error ? err.message : "Não foi possível enviar a nota fiscal.",
           type: "error",
         });
         return;
       }
-
-      invoiceUrl = upData.url;
-      invoiceFilename = upData.filename;
-      invoiceStoragePath = upData.storagePath;
     }
 
     const effectiveAcqDate = useManualAcqDate
