@@ -1,8 +1,9 @@
-﻿"use client";
+"use client";
 
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { Acquisition, AcquisitionItemWithDetails, pluralizeUnit, type StockUnitOption } from "@/types/stock";
 import { useActionCursor } from "@/lib/use-action-cursor";
+import { prepareAttachmentForUpload } from "@/lib/client-attachment";
 
 interface Props {
   acquisitionId: number;
@@ -52,8 +53,9 @@ export function AcquisitionDetailModal({
     setAttaching(true);
 
     try {
+      const preparedFile = await prepareAttachmentForUpload(file);
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", preparedFile);
 
       const uploadRes = await fetch("/api/upload", {
         method: "POST",
