@@ -182,6 +182,12 @@ src/app/icon.svg
 
 Ao atualizar a marca, substitua os dois arquivos para manter menu principal e favicon alinhados.
 
+## Autenticacao
+
+O login usa SSO com RaroNexus, sessao global em cookie HttpOnly e validacao server-side por introspeccao. As regras de permissao ficam na aplicacao; a chave do perfil e recebida do RaroNexus.
+
+Consulte [authentication.md](authentication.md) para configurar a integracao e implementar o mesmo padrao em novos projetos. O guia descreve variaveis de ambiente, contratos, cookies, perfis e testes de integracao.
+
 ## Atualizando Este README
 
 Atualize este documento sempre que houver:
