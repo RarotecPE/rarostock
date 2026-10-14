@@ -115,6 +115,9 @@ export async function PUT(req: NextRequest) {
   const limits = validateProductLimits(body);
   if (limits.error) return NextResponse.json({ error: limits.error }, { status: 400 });
 
+  const [existing] = await db.select().from(products).where(eq(products.id, id)).limit(1);
+  if (!existing) return NextResponse.json({ error: "Produto não encontrado." }, { status: 404 });
+
   const result = await db.update(products).set({
     name: String(body.name || "").trim(),
     category: String(body.category || "").trim(),
@@ -152,6 +155,10 @@ export async function PUT(req: NextRequest) {
       },
     ],
     context: getRequestContext(req),
+    diff: {
+      before: existing as unknown as Record<string, unknown>,
+      after: updated as unknown as Record<string, unknown>,
+    },
     details: {
       code: updated.code,
       name: updated.name,
