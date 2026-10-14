@@ -1,9 +1,10 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { acquisitions, acquisitionItems, products } from "@/db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canManageStock, canView } from "@/lib/roles";
+import { auditClient, getRequestContext } from "@/lib/audit";
 
 export async function GET(req: NextRequest) {
   const auth = await requirePermission(req, canView);
@@ -43,9 +44,9 @@ export async function POST(req: NextRequest) {
   }
 
   const productIds = cartItems.map((item) => item.itemId);
-  const validProducts = await db.select({ id: products.id }).from(products);
-  const validIds = new Set(validProducts.map((item) => item.id));
-  if (productIds.some((id) => !validIds.has(id))) {
+  const validProducts = await db.select({ id: products.id, code: products.code, name: products.name }).from(products);
+  const validProductMap = new Map(validProducts.map((item) => [item.id, item]));
+  if (productIds.some((id) => !validProductMap.has(id))) {
     return NextResponse.json({ error: "A aquisição só pode conter produtos cadastrados." }, { status: 400 });
   }
 
@@ -76,6 +77,46 @@ export async function POST(req: NextRequest) {
     }
 
     return createdAcquisition;
+  });
+
+  auditClient.log({
+    system: "rarostock",
+    category: "inventory",
+    action: "stock.acquisition",
+    severity: "INFO",
+    status: "SUCCESS",
+    actor: {
+      type: "user",
+      userId: auth.user.id,
+      name: auth.user.nome,
+      email: auth.user.email,
+      role: auth.role,
+    },
+    targets: cartItems.map((ci) => {
+      const prod = validProductMap.get(ci.itemId);
+      return {
+        type: "product",
+        id: String(ci.itemId),
+        label: prod ? `${prod.code} - ${prod.name}` : `Product #${ci.itemId}`,
+      };
+    }),
+    context: getRequestContext(req),
+    details: {
+      acquisitionId: acq.id,
+      date,
+      purchaseType,
+      itemCount: cartItems.length,
+      items: cartItems.map((ci) => {
+        const prod = validProductMap.get(ci.itemId);
+        return {
+          itemId: ci.itemId,
+          productCode: prod?.code,
+          productName: prod?.name,
+          quantity: ci.quantity,
+          unitPrice: ci.unitPrice,
+        };
+      }),
+    },
   });
 
   return NextResponse.json(acq, { status: 201 });

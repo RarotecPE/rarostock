@@ -10,6 +10,17 @@ if ([string]::IsNullOrWhiteSpace($Symbol)) {
 }
 
 $ErrorActionPreference = "Stop"
+
+if (-not (Get-Command rg -ErrorAction SilentlyContinue)) {
+  $knownRg = @(
+    "C:\Program Files\Azure Data Studio\resources\app\node_modules.asar.unpacked\@vscode\ripgrep\bin\rg.exe",
+    "$env:LOCALAPPDATA\Programs\Microsoft VS Code\resources\app\node_modules.asar.unpacked\@vscode\ripgrep\bin\rg.exe"
+  ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+  if ($knownRg) {
+    Set-Alias -Name rg -Value $knownRg -Scope Script
+  }
+}
+
 $root = (Resolve-Path ".").Path
 $preferredRoots = @("src", "app", "components", "lib", "hooks", "scripts", "supabase", "migrations", "docs")
 $searchRoots = @()

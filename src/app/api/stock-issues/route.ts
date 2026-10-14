@@ -1,9 +1,10 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { stockIssues, products, acquisitionItems, acquisitions } from "@/db/schema";
 import { eq, sql, and, desc, inArray, asc } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canManageStock, canView } from "@/lib/roles";
+import { auditClient, getRequestContext } from "@/lib/audit";
 
 export async function GET(req: NextRequest) {
   const auth = await requirePermission(req, canView);
@@ -92,6 +93,36 @@ export async function POST(req: NextRequest) {
     const [createdIssue] = await tx.insert(stockIssues).values({ productId: itemId, quantity, date: new Date(), reason }).returning();
     await tx.update(products).set({ quantity: sql`${products.quantity} - ${quantity}`, updatedAt: new Date() }).where(eq(products.id, itemId));
     return createdIssue;
+  });
+
+  auditClient.log({
+    system: "rarostock",
+    category: "inventory",
+    action: "stock.issue",
+    severity: "INFO",
+    status: "SUCCESS",
+    actor: {
+      type: "user",
+      userId: auth.user.id,
+      name: auth.user.nome,
+      email: auth.user.email,
+      role: auth.role,
+    },
+    targets: [
+      {
+        type: "product",
+        id: String(itemId),
+        label: `${product[0].code} - ${product[0].name}`,
+      },
+    ],
+    context: getRequestContext(req),
+    details: {
+      issueId: issue.id,
+      quantity,
+      reason,
+      previousQuantity: product[0].quantity,
+      newQuantity: product[0].quantity - quantity,
+    },
   });
 
   return NextResponse.json(issue, { status: 201 });

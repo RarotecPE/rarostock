@@ -1,9 +1,10 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { products } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canManageStock, canView } from "@/lib/roles";
+import { auditClient, getRequestContext } from "@/lib/audit";
 
 function parseLimit(value: unknown) {
   if (value === null || value === undefined || value === "") return null;
@@ -67,7 +68,40 @@ export async function POST(req: NextRequest) {
     quantity: 0,
   }).returning();
 
-  return NextResponse.json(result[0], { status: 201 });
+  const created = result[0];
+
+  auditClient.log({
+    system: "rarostock",
+    category: "inventory",
+    action: "product.created",
+    severity: "INFO",
+    status: "SUCCESS",
+    actor: {
+      type: "user",
+      userId: auth.user.id,
+      name: auth.user.nome,
+      email: auth.user.email,
+      role: auth.role,
+    },
+    targets: [
+      {
+        type: "product",
+        id: String(created.id),
+        label: `${created.code} - ${created.name}`,
+      },
+    ],
+    context: getRequestContext(req),
+    details: {
+      code: created.code,
+      name: created.name,
+      category: created.category,
+      unit: created.unit,
+      minimumLimit: created.minimumLimit,
+      desiredLimit: created.desiredLimit,
+    },
+  });
+
+  return NextResponse.json(created, { status: 201 });
 }
 
 export async function PUT(req: NextRequest) {
@@ -94,5 +128,39 @@ export async function PUT(req: NextRequest) {
   }).where(eq(products.id, id)).returning();
 
   if (!result.length) return NextResponse.json({ error: "Produto não encontrado." }, { status: 404 });
-  return NextResponse.json(result[0]);
+
+  const updated = result[0];
+
+  auditClient.log({
+    system: "rarostock",
+    category: "inventory",
+    action: "product.updated",
+    severity: "INFO",
+    status: "SUCCESS",
+    actor: {
+      type: "user",
+      userId: auth.user.id,
+      name: auth.user.nome,
+      email: auth.user.email,
+      role: auth.role,
+    },
+    targets: [
+      {
+        type: "product",
+        id: String(updated.id),
+        label: `${updated.code} - ${updated.name}`,
+      },
+    ],
+    context: getRequestContext(req),
+    details: {
+      code: updated.code,
+      name: updated.name,
+      category: updated.category,
+      unit: updated.unit,
+      minimumLimit: updated.minimumLimit,
+      desiredLimit: updated.desiredLimit,
+    },
+  });
+
+  return NextResponse.json(updated);
 }

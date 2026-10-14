@@ -1,9 +1,10 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { products, acquisitionItems, acquisitions, stockIssues } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canAdmin, canView } from "@/lib/roles";
+import { auditClient, getRequestContext } from "@/lib/audit";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requirePermission(req, canView);
@@ -60,7 +61,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return NextResponse.json({ error: "Produto inválido." }, { status: 400 });
   }
 
-  const [product] = await db.select({ id: products.id }).from(products).where(eq(products.id, productId)).limit(1);
+  const [product] = await db.select({ id: products.id, code: products.code, name: products.name }).from(products).where(eq(products.id, productId)).limit(1);
   if (!product) {
     return NextResponse.json({ error: "Produto não encontrado." }, { status: 404 });
   }
@@ -76,5 +77,34 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   }
 
   await db.delete(products).where(eq(products.id, productId));
+
+  auditClient.log({
+    system: "rarostock",
+    category: "inventory",
+    action: "product.deleted",
+    severity: "WARNING",
+    status: "SUCCESS",
+    actor: {
+      type: "user",
+      userId: auth.user.id,
+      name: auth.user.nome,
+      email: auth.user.email,
+      role: auth.role,
+    },
+    targets: [
+      {
+        type: "product",
+        id: String(productId),
+        label: `${product.code} - ${product.name}`,
+      },
+    ],
+    context: getRequestContext(req),
+    details: {
+      productId,
+      code: product.code,
+      name: product.name,
+    },
+  });
+
   return NextResponse.json({ ok: true });
 }

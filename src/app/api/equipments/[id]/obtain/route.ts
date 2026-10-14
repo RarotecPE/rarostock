@@ -1,10 +1,11 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { equipments, equipmentMovements } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canView } from "@/lib/roles";
 import { assignMovementTermPayload, hasConfirmedMissingTerm, parseRequestWithOptionalEquipmentTerm } from "@/lib/equipment-terms";
+import { auditClient, getRequestContext } from "@/lib/audit";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requirePermission(req, canView);
@@ -26,6 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     holderUserEmail: auth.user.email,
     updatedAt: new Date(),
   }).where(eq(equipments.id, equipmentId)).returning();
+
   await db.insert(equipmentMovements).values({
     equipmentId,
     fromHolderType: "company",
@@ -37,5 +39,36 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     createdByUserId: auth.user.id,
     ...assignMovementTermPayload("responsibility", termPayload),
   });
+
+  auditClient.log({
+    system: "rarostock",
+    category: "inventory",
+    action: "equipment.obtained",
+    severity: "INFO",
+    status: "SUCCESS",
+    actor: {
+      type: "user",
+      userId: auth.user.id,
+      name: auth.user.nome,
+      email: auth.user.email,
+      role: auth.role,
+    },
+    targets: [
+      {
+        type: "equipment",
+        id: String(equipmentId),
+        label: `${equipment.code} - ${equipment.name}`,
+      },
+    ],
+    context: getRequestContext(req),
+    details: {
+      equipmentId,
+      code: equipment.code,
+      name: equipment.name,
+      reason: body.reason ?? null,
+      holderUserId: auth.user.id,
+    },
+  });
+
   return NextResponse.json(updated);
 }

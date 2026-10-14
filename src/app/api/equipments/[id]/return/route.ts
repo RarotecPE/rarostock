@@ -8,6 +8,7 @@ import { cancelPendingEquipmentRequestsForHolderChange } from "@/lib/equipment-r
 import { autoMatchEquipmentRequest } from "@/lib/equipment-request-matching";
 import { assignMovementTermPayload, hasConfirmedMissingTerm, parseRequestWithOptionalEquipmentTerm } from "@/lib/equipment-terms";
 import { notifyEquipmentRequestByEmail } from "@/lib/raronexus-email";
+import { auditClient, getRequestContext } from "@/lib/audit";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requirePermission(req, canView);
@@ -64,6 +65,37 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         note: "Anulada automaticamente porque o portador iniciou transferência para outro usuário.",
       });
       await notifyEquipmentRequestByEmail(request, equipment);
+
+      auditClient.log({
+        system: "rarostock",
+        category: "inventory",
+        action: "equipment.transfer_requested",
+        severity: "INFO",
+        status: "SUCCESS",
+        actor: {
+          type: "user",
+          userId: auth.user.id,
+          name: auth.user.nome,
+          email: auth.user.email,
+          role: auth.role,
+        },
+        targets: [
+          {
+            type: "equipment",
+            id: String(equipmentId),
+            label: `${equipment.code} - ${equipment.name}`,
+          },
+        ],
+        context: getRequestContext(req),
+        details: {
+          equipmentId,
+          code: equipment.code,
+          name: equipment.name,
+          toUserId: target.id,
+          toUserName: target.nome,
+        },
+      });
+
       return NextResponse.json(request, { status: 201 });
     } catch (error) {
       if ((error as { code?: string }).code === "23505") {
@@ -80,6 +112,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     holderUserEmail: null,
     updatedAt: new Date(),
   }).where(eq(equipments.id, equipmentId)).returning();
+
   await db.insert(equipmentMovements).values({
     equipmentId,
     fromHolderType: "user",
@@ -91,11 +124,43 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     createdByUserId: auth.user.id,
     ...assignMovementTermPayload("devolution", termPayload),
   });
+
   await cancelPendingEquipmentRequestsForHolderChange({
     equipmentId,
     previousHolderUserId: auth.user.id,
     decidedByUserId: auth.user.id,
     note: "Anulada automaticamente porque o equipamento foi devolvido para RAROTEC.",
   });
+
+  auditClient.log({
+    system: "rarostock",
+    category: "inventory",
+    action: "equipment.returned",
+    severity: "INFO",
+    status: "SUCCESS",
+    actor: {
+      type: "user",
+      userId: auth.user.id,
+      name: auth.user.nome,
+      email: auth.user.email,
+      role: auth.role,
+    },
+    targets: [
+      {
+        type: "equipment",
+        id: String(equipmentId),
+        label: `${equipment.code} - ${equipment.name}`,
+      },
+    ],
+    context: getRequestContext(req),
+    details: {
+      equipmentId,
+      code: equipment.code,
+      name: equipment.name,
+      reason: body.reason ?? "Devolução para RAROTEC",
+      returnedByUserId: auth.user.id,
+    },
+  });
+
   return NextResponse.json(updated);
 }
