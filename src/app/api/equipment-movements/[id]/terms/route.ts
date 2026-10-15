@@ -1,10 +1,11 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { equipmentMovements, equipments } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canView } from "@/lib/roles";
 import { assignMovementTermPayload, termTypeFromValue, uploadOptionalEquipmentTermFromFormData } from "@/lib/equipment-terms";
+import { auditClient, getRequestContext } from "@/lib/audit";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requirePermission(req, canView);
@@ -37,6 +38,41 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const [updated] = await db.update(equipmentMovements).set({
     ...assignMovementTermPayload(termType, termPayload),
   }).where(eq(equipmentMovements.id, movementId)).returning();
+
+  auditClient.log({
+    system: "rarostock",
+    category: "inventory",
+    action: "equipment_term.uploaded",
+    severity: "INFO",
+    status: "SUCCESS",
+    actor: {
+      type: "user",
+      userId: auth.user.id,
+      name: auth.user.nome,
+      email: auth.user.email,
+      role: auth.role,
+    },
+    targets: [
+      {
+        type: "equipment",
+        id: String(movement.equipmentId),
+        label: `Equipamento #${movement.equipmentId}`,
+      },
+      {
+        type: "equipment_movement",
+        id: String(movementId),
+        label: `Movimentação #${movementId}`,
+      },
+    ],
+    context: getRequestContext(req),
+    details: {
+      movementId,
+      equipmentId: movement.equipmentId,
+      termType,
+      filename: termPayload.filename,
+      storagePath: termPayload.storagePath,
+    },
+  });
 
   return NextResponse.json(updated);
 }

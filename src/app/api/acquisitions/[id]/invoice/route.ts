@@ -1,10 +1,11 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { acquisitions } from "@/db/schema";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canAdmin, canManageStock } from "@/lib/roles";
 import { deleteAttachmentFromStorage } from "@/lib/r2-storage";
+import { auditClient, getRequestContext } from "@/lib/audit";
 
 export async function PUT(
   req: NextRequest,
@@ -76,6 +77,35 @@ export async function PUT(
     .where(eq(acquisitions.id, acquisitionId))
     .returning();
 
+  auditClient.log({
+    system: "rarostock",
+    category: "inventory",
+    action: "acquisition.invoice_uploaded",
+    severity: "INFO",
+    status: "SUCCESS",
+    actor: {
+      type: "user",
+      userId: auth.user.id,
+      name: auth.user.nome,
+      email: auth.user.email,
+      role: auth.role,
+    },
+    targets: [
+      {
+        type: "acquisition",
+        id: String(acquisitionId),
+        label: `Aquisição #${acquisitionId}`,
+      },
+    ],
+    context: getRequestContext(req),
+    details: {
+      acquisitionId,
+      invoiceFilename: updated.invoiceFilename,
+      invoiceUrl: updated.invoiceUrl,
+      invoiceStoragePath: updated.invoiceStoragePath,
+    },
+  });
+
   return NextResponse.json({ acquisition: updated });
 }
 
@@ -135,6 +165,34 @@ export async function DELETE(
     })
     .where(eq(acquisitions.id, acquisitionId))
     .returning();
+
+  auditClient.log({
+    system: "rarostock",
+    category: "inventory",
+    action: "acquisition.invoice_deleted",
+    severity: "WARNING",
+    status: "SUCCESS",
+    actor: {
+      type: "user",
+      userId: auth.user.id,
+      name: auth.user.nome,
+      email: auth.user.email,
+      role: auth.role,
+    },
+    targets: [
+      {
+        type: "acquisition",
+        id: String(acquisitionId),
+        label: `Aquisição #${acquisitionId}`,
+      },
+    ],
+    context: getRequestContext(req),
+    details: {
+      acquisitionId,
+      removedInvoiceFilename: current.invoiceFilename,
+      storageDeleted,
+    },
+  });
 
   return NextResponse.json({ acquisition: updated, storageDeleted });
 }

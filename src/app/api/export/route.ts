@@ -1,9 +1,10 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { products } from "@/db/schema";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canExport } from "@/lib/roles";
 import { getStockStatus, formatLimit } from "@/types/stock";
+import { auditClient, getRequestContext } from "@/lib/audit";
 
 export async function GET(req: NextRequest) {
   const auth = await requirePermission(req, canExport);
@@ -38,5 +39,36 @@ export async function GET(req: NextRequest) {
   ].join(";"));
 
   const csv = "\uFEFF" + headers.join(";") + "\n" + rows.join("\n");
+
+  auditClient.log({
+    system: "rarostock",
+    category: "inventory",
+    action: "stock.exported",
+    severity: "INFO",
+    status: "SUCCESS",
+    actor: {
+      type: "user",
+      userId: auth.user.id,
+      name: auth.user.nome,
+      email: auth.user.email,
+      role: auth.role,
+    },
+    targets: [
+      {
+        type: "export",
+        id: "csv_products",
+        label: "Exportação CSV de Produtos",
+      },
+    ],
+    context: getRequestContext(req),
+    details: {
+      format: "csv",
+      itemCount: allProducts.length,
+      categoryFilters,
+      statusFilters,
+      search: search || null,
+    },
+  });
+
   return new NextResponse(csv, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": 'attachment; filename="rarostock_produtos.csv"' } });
 }

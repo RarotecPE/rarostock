@@ -4,6 +4,7 @@ import { equipmentRequests, equipments } from "@/db/schema";
 import { and, desc, eq, ne, or } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canAdmin, canView } from "@/lib/roles";
+import { auditClient, getRequestContext } from "@/lib/audit";
 
 export async function GET(req: NextRequest) {
   const auth = await requirePermission(req, canView);
@@ -127,8 +128,87 @@ export async function POST(req: NextRequest) {
     }).returning();
     const match = await autoMatchEquipmentRequest(request, auth.user.id);
     if (match) {
+      auditClient.log({
+        system: "rarostock",
+        category: "inventory",
+        action: "equipment_request.auto_approved",
+        severity: "INFO",
+        status: "SUCCESS",
+        actor: {
+          type: "user",
+          userId: auth.user.id,
+          name: auth.user.nome,
+          email: auth.user.email,
+          role: auth.role,
+        },
+        targets: [
+          {
+            type: "equipment",
+            id: String(equipment.id),
+            label: `${equipment.code} - ${equipment.name}`,
+          },
+          {
+            type: "equipment_request",
+            id: String(request.id),
+            label: `Solicitação #${request.id}`,
+          },
+        ],
+        context: getRequestContext(req),
+        details: {
+          requestId: request.id,
+          counterpartRequestId: match.matchedRequest.id,
+          equipmentId: equipment.id,
+          fromUserId: request.fromUserId,
+          fromUserName: request.fromUserName,
+          toUserId: request.toUserId,
+          toUserName: request.toUserName,
+          autoApproved: true,
+        },
+      });
+
       return NextResponse.json({ ...match, autoApproved: true }, { status: 201 });
     }
+
+    auditClient.log({
+      system: "rarostock",
+      category: "inventory",
+      action: "equipment_request.created",
+      severity: "INFO",
+      status: "SUCCESS",
+      actor: {
+        type: "user",
+        userId: auth.user.id,
+        name: auth.user.nome,
+        email: auth.user.email,
+        role: auth.role,
+      },
+      targets: [
+        {
+          type: "equipment",
+          id: String(equipment.id),
+          label: `${equipment.code} - ${equipment.name}`,
+        },
+        {
+          type: "equipment_request",
+          id: String(request.id),
+          label: `Solicitação #${request.id}`,
+        },
+      ],
+      context: getRequestContext(req),
+      details: {
+        requestId: request.id,
+        equipmentId: equipment.id,
+        equipmentCode: equipment.code,
+        equipmentName: equipment.name,
+        fromUserId: request.fromUserId,
+        fromUserName: request.fromUserName,
+        toUserId: request.toUserId,
+        toUserName: request.toUserName,
+        reason: request.reason,
+        hasResponsibilityTerm: Boolean(termPayload || request.responsibilityTermUrl),
+      },
+    });
+
     await notifyEquipmentRequestByEmail(request, equipment);
     return NextResponse.json(request, { status: 201 });
   } catch (error) {

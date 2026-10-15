@@ -4,6 +4,7 @@ import { equipmentRequests } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canView } from "@/lib/roles";
+import { auditClient, getRequestContext } from "@/lib/audit";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requirePermission(req, canView);
@@ -28,6 +29,42 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     decisionNote: typeof body.note === "string" ? body.note : null,
     updatedAt: new Date(),
   }).where(eq(equipmentRequests.id, requestId)).returning();
+
+  auditClient.log({
+    system: "rarostock",
+    category: "inventory",
+    action: "equipment_request.rejected",
+    severity: "INFO",
+    status: "SUCCESS",
+    actor: {
+      type: "user",
+      userId: auth.user.id,
+      name: auth.user.nome,
+      email: auth.user.email,
+      role: auth.role,
+    },
+    targets: [
+      {
+        type: "equipment",
+        id: String(request.equipmentId),
+        label: `Equipamento #${request.equipmentId}`,
+      },
+      {
+        type: "equipment_request",
+        id: String(request.id),
+        label: `Solicitação #${request.id}`,
+      },
+    ],
+    context: getRequestContext(req),
+    details: {
+      requestId: request.id,
+      equipmentId: request.equipmentId,
+      requesterUserId: request.requesterUserId,
+      fromUserId: request.fromUserId,
+      toUserId: request.toUserId,
+      decisionNote: updatedRequest.decisionNote,
+    },
+  });
 
   return NextResponse.json({ request: updatedRequest });
 }

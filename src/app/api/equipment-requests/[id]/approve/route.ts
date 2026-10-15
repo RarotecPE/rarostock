@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { equipmentMovements, equipmentRequests, equipments } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -6,6 +6,7 @@ import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canView } from "@/lib/roles";
 import { cancelPendingEquipmentRequestsForHolderChange } from "@/lib/equipment-request-cancellation";
 import { assignMovementTermPayload, hasConfirmedMissingTerm, parseRequestWithOptionalEquipmentTerm } from "@/lib/equipment-terms";
+import { auditClient, getRequestContext } from "@/lib/audit";
 
 const APPROVE = true;
 
@@ -92,6 +93,45 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         note: "Anulada automaticamente porque outra solicitação movimentou este equipamento.",
       });
     }
+
+    auditClient.log({
+      system: "rarostock",
+      category: "inventory",
+      action: "equipment_request.approved",
+      severity: "INFO",
+      status: "SUCCESS",
+      actor: {
+        type: "user",
+        userId: auth.user.id,
+        name: auth.user.nome,
+        email: auth.user.email,
+        role: auth.role,
+      },
+      targets: [
+        {
+          type: "equipment",
+          id: String(equipment.id),
+          label: `${equipment.code} - ${equipment.name}`,
+        },
+        {
+          type: "equipment_request",
+          id: String(request.id),
+          label: `Solicitação #${request.id}`,
+        },
+      ],
+      context: getRequestContext(req),
+      details: {
+        requestId: request.id,
+        equipmentId: equipment.id,
+        fromUserId: request.fromUserId,
+        fromUserName: request.fromUserName,
+        toUserId: request.toUserId,
+        toUserName: request.toUserName,
+        decisionNote: updatedRequest.decisionNote,
+        hasDecisionTerm: Boolean(termPayload),
+      },
+    });
+
     return NextResponse.json({ request: updatedRequest, equipment });
   }
 

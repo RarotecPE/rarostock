@@ -1,9 +1,10 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { equipments, equipmentMovements } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canAdmin, canManageStock, canView } from "@/lib/roles";
+import { auditClient, getRequestContext } from "@/lib/audit";
 
 export async function GET(req: NextRequest) {
   const auth = await requirePermission(req, canView);
@@ -41,6 +42,40 @@ export async function POST(req: NextRequest) {
     reason: "Cadastro inicial",
     createdByUserId: auth.user.id,
   });
+
+  auditClient.log({
+    system: "rarostock",
+    category: "inventory",
+    action: "equipment.created",
+    severity: "INFO",
+    status: "SUCCESS",
+    actor: {
+      type: "user",
+      userId: auth.user.id,
+      name: auth.user.nome,
+      email: auth.user.email,
+      role: auth.role,
+    },
+    targets: [
+      {
+        type: "equipment",
+        id: String(row.id),
+        label: `${row.code} - ${row.name}`,
+      },
+    ],
+    context: getRequestContext(req),
+    details: {
+      equipmentId: row.id,
+      code: row.code,
+      name: row.name,
+      category: row.category,
+      brand: row.brand,
+      price: row.price,
+      invoiceFilename: row.invoiceFilename,
+      requiresResponsibilityTerm: row.requiresResponsibilityTerm,
+    },
+  });
+
   return NextResponse.json(row, { status: 201 });
 }
 
@@ -85,6 +120,63 @@ export async function PUT(req: NextRequest) {
     active: typeof body.active === "boolean" ? body.active : true,
     updatedAt: new Date(),
   }).where(eq(equipments.id, id)).returning();
+
+  auditClient.log({
+    system: "rarostock",
+    category: "inventory",
+    action: "equipment.updated",
+    severity: "INFO",
+    status: "SUCCESS",
+    actor: {
+      type: "user",
+      userId: auth.user.id,
+      name: auth.user.nome,
+      email: auth.user.email,
+      role: auth.role,
+    },
+    targets: [
+      {
+        type: "equipment",
+        id: String(row.id),
+        label: `${row.code} - ${row.name}`,
+      },
+    ],
+    context: getRequestContext(req),
+    details: {
+      equipmentId: row.id,
+      code: row.code,
+      name: row.name,
+      category: row.category,
+      brand: row.brand,
+      price: row.price,
+      active: row.active,
+      invoiceFilename: row.invoiceFilename,
+      requiresResponsibilityTerm: row.requiresResponsibilityTerm,
+    },
+    diff: {
+      before: {
+        code: current.code,
+        name: current.name,
+        category: current.category,
+        brand: current.brand,
+        price: current.price,
+        active: current.active,
+        invoiceFilename: current.invoiceFilename,
+        requiresResponsibilityTerm: current.requiresResponsibilityTerm,
+      },
+      after: {
+        code: row.code,
+        name: row.name,
+        category: row.category,
+        brand: row.brand,
+        price: row.price,
+        active: row.active,
+        invoiceFilename: row.invoiceFilename,
+        requiresResponsibilityTerm: row.requiresResponsibilityTerm,
+      },
+    },
+  });
+
   return NextResponse.json(row);
 }
 
@@ -103,6 +195,35 @@ export async function DELETE(req: NextRequest) {
     active: false,
     updatedAt: new Date(),
   }).where(eq(equipments.id, id));
+
+  auditClient.log({
+    system: "rarostock",
+    category: "inventory",
+    action: "equipment.deleted",
+    severity: "WARNING",
+    status: "SUCCESS",
+    actor: {
+      type: "user",
+      userId: auth.user.id,
+      name: auth.user.nome,
+      email: auth.user.email,
+      role: auth.role,
+    },
+    targets: [
+      {
+        type: "equipment",
+        id: String(current.id),
+        label: `${current.code} - ${current.name}`,
+      },
+    ],
+    context: getRequestContext(req),
+    details: {
+      equipmentId: current.id,
+      code: current.code,
+      name: current.name,
+      category: current.category,
+    },
+  });
 
   return NextResponse.json({ ok: true });
 }
