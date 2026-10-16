@@ -75,6 +75,10 @@ export function sanitizeData<T>(data: T, depth = 0): T {
     return data;
   }
 
+  if (data instanceof Date) {
+    return (isNaN(data.getTime()) ? null : data.toISOString()) as unknown as T;
+  }
+
   if (Array.isArray(data)) {
     return data.map((item) => sanitizeData(item, depth + 1)) as unknown as T;
   }
