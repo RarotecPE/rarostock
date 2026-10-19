@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hasAuthError, requirePermission } from "@/lib/auth-server";
 import { canExport } from "@/lib/roles";
-import { auditClient, getRequestContext } from "@/lib/audit";
 import {
   formatShoppingListFilters,
   getShoppingListFilename,
@@ -92,36 +91,6 @@ export async function POST(req: NextRequest) {
       const errorPayload = await response.json().catch(() => null);
       return NextResponse.json({ error: errorPayload?.message ?? errorPayload?.error ?? "Não foi possível enviar o e-mail." }, { status: response.status });
     }
-
-    auditClient.log({
-      system: "rarostock",
-      category: "inventory",
-      action: "shopping_list.dispatched",
-      severity: "INFO",
-      status: "SUCCESS",
-      actor: {
-        type: "user",
-        userId: auth.user.id,
-        name: auth.user.nome,
-        email: auth.user.email,
-        role: auth.role,
-      },
-      targets: [
-        {
-          type: "shopping_list",
-          id: filename,
-          label: `Lista de Compras (${shoppingItems.length} itens)`,
-        },
-      ],
-      context: getRequestContext(req),
-      details: {
-        filename,
-        recipientEmail: auth.user.email,
-        productCount: shoppingItems.length,
-        totalQuantity,
-        filters: filtersLabel,
-      },
-    });
 
     return NextResponse.json({ sent: true });
   } catch (error) {
