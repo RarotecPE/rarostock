@@ -100,6 +100,7 @@ export async function PUT(
     context: getRequestContext(req),
     details: {
       acquisitionId,
+      hasInvoice: true,
       invoiceFilename: updated.invoiceFilename,
       invoiceUrl: updated.invoiceUrl,
       invoiceStoragePath: updated.invoiceStoragePath,
@@ -189,6 +190,7 @@ export async function DELETE(
     context: getRequestContext(req),
     details: {
       acquisitionId,
+      hasInvoice: false,
       removedInvoiceFilename: current.invoiceFilename,
       storageDeleted,
     },

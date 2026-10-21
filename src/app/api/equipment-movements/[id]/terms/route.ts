@@ -69,6 +69,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       movementId,
       equipmentId: movement.equipmentId,
       termType,
+      hasTerm: true,
       filename: termPayload.filename,
       storagePath: termPayload.storagePath,
     },
