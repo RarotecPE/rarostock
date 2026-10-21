@@ -163,6 +163,9 @@ export async function POST(req: NextRequest) {
           toUserId: request.toUserId,
           toUserName: request.toUserName,
           autoApproved: true,
+          hasResponsibilityTerm: Boolean(termPayload || request.responsibilityTermUrl),
+          termFilename: termPayload?.filename ?? request.responsibilityTermFilename ?? null,
+          termStoragePath: termPayload?.storagePath ?? request.responsibilityTermStoragePath ?? null,
         },
       });
 
@@ -206,6 +209,8 @@ export async function POST(req: NextRequest) {
         toUserName: request.toUserName,
         reason: request.reason,
         hasResponsibilityTerm: Boolean(termPayload || request.responsibilityTermUrl),
+        termFilename: termPayload?.filename ?? request.responsibilityTermFilename ?? null,
+        termStoragePath: termPayload?.storagePath ?? request.responsibilityTermStoragePath ?? null,
       },
     });
 

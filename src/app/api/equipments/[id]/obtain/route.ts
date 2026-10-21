@@ -67,6 +67,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       name: equipment.name,
       reason: body.reason ?? null,
       holderUserId: auth.user.id,
+      hasTerm: Boolean(termPayload),
+      termFilename: termPayload?.filename ?? null,
+      termStoragePath: termPayload?.storagePath ?? null,
     },
   });
 

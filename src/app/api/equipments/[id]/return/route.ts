@@ -93,6 +93,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           name: equipment.name,
           toUserId: target.id,
           toUserName: target.nome,
+          reason: body.reason ?? null,
+          hasTerm: Boolean(termPayload),
+          termFilename: termPayload?.filename ?? null,
+          termStoragePath: termPayload?.storagePath ?? null,
         },
       });
 
@@ -159,6 +163,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       name: equipment.name,
       reason: body.reason ?? "Devolução para RAROTEC",
       returnedByUserId: auth.user.id,
+      hasTerm: Boolean(termPayload),
+      termFilename: termPayload?.filename ?? null,
+      termStoragePath: termPayload?.storagePath ?? null,
     },
   });
 

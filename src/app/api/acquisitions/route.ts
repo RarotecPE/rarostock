@@ -106,6 +106,9 @@ export async function POST(req: NextRequest) {
       date,
       purchaseType,
       itemCount: cartItems.length,
+      hasInvoice: Boolean(invoiceUrl || invoiceFilename),
+      invoiceFilename: invoiceFilename || null,
+      invoiceStoragePath: invoiceStoragePath || null,
       items: cartItems.map((ci) => {
         const prod = validProductMap.get(ci.itemId);
         return {

@@ -128,7 +128,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         toUserId: request.toUserId,
         toUserName: request.toUserName,
         decisionNote: updatedRequest.decisionNote,
-        hasDecisionTerm: Boolean(termPayload),
+        hasDecisionTerm: Boolean(termPayload || (decisionTermType === "responsibility" ? updatedRequest.responsibilityTermFilename : updatedRequest.devolutionTermFilename)),
+        termFilename: termPayload?.filename ?? (decisionTermType === "responsibility" ? updatedRequest.responsibilityTermFilename : updatedRequest.devolutionTermFilename) ?? null,
+        termStoragePath: termPayload?.storagePath ?? (decisionTermType === "responsibility" ? updatedRequest.responsibilityTermStoragePath : updatedRequest.devolutionTermStoragePath) ?? null,
       },
     });
 
